@@ -255,7 +255,6 @@ function copyToWeChat() {
             class="cursor-pointer px-3 h-8 text-sm font-normal"
             @click="toggleShowUploadImgDialog()"
           >
-            <Image class="mr-1.5 size-4" />
             <span>{{ t('menu.image') }}</span>
           </MenubarTrigger>
         </MenubarMenu>
