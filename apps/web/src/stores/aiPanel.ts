@@ -45,7 +45,7 @@ export const useAIPanelStore = defineStore(`aiPanel`, () => {
       if (anchor) {
         // First open: position next to sidebar icon, aligned with preview top
         const preview = typeof document !== 'undefined' ? document.getElementById('output') : null
-        const top = preview ? preview.getBoundingClientRect().top : anchor.top
+        const top = preview ? preview.getBoundingClientRect().top : 20
         position.value = {
           x: Math.max(20, anchor.right + 8),
           y: Math.max(20, top),
