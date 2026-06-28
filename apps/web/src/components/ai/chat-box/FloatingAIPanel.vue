@@ -496,11 +496,13 @@ function handleConfigSaved() {
 const quickCommands = computed(() => quickCmdStore.commands)
 
 function resetToAnchor() {
-  // Find the sidebar AI icon
+  // Find the sidebar AI icon and preview area
   const icon = document.querySelector('.editor-ai-toolbar .utools-sidebar-edge')
+  const preview = document.getElementById('output')
   if (icon) {
-    const rect = icon.getBoundingClientRect()
-    panelStore.setPosition(Math.max(20, rect.right + 8), Math.max(20, rect.top))
+    const iconRect = icon.getBoundingClientRect()
+    const top = preview ? preview.getBoundingClientRect().top : iconRect.top
+    panelStore.setPosition(Math.max(20, iconRect.right + 8), Math.max(20, top))
   }
   else {
     panelStore.resetPosition()

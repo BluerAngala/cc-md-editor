@@ -43,10 +43,12 @@ export const useAIPanelStore = defineStore(`aiPanel`, () => {
     // If position is default or out of bounds, determine initial position
     if (isDefault || isOutOfBounds) {
       if (anchor) {
-        // First open: position next to sidebar icon
+        // First open: position next to sidebar icon, aligned with preview top
+        const preview = typeof document !== 'undefined' ? document.getElementById('output') : null
+        const top = preview ? preview.getBoundingClientRect().top : anchor.top
         position.value = {
           x: Math.max(20, anchor.right + 8),
-          y: Math.max(20, anchor.top),
+          y: Math.max(20, top),
         }
       }
       else {
