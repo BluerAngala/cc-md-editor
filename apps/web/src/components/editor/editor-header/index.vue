@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Copy, FolderKanban, Image, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
+import { Copy, FolderKanban, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
 import { defineAsyncComponent } from 'vue'
 import { useEditorRefresh } from '@/composables/useEditorRefresh'
 import { generatePureHTML, processClipboardContent } from '@/services/export'
@@ -245,19 +245,19 @@ function copyToWeChat() {
         <FolderKanban class="mr-1.5 size-4" />
         <span>草稿箱</span>
       </Button>
-      <Button
-        variant="ghost"
-        class="h-8 px-3 text-sm font-normal"
-        @click="toggleShowUploadImgDialog()"
-      >
-        <Image class="mr-1.5 size-4" />
-        <span>{{ t('menu.image') }}</span>
-      </Button>
       <Menubar class="menubar border-0">
         <FileDropdown />
         <EditDropdown @copy="handleCopy" />
         <FormatDropdown />
         <InsertDropdown />
+        <MenubarMenu>
+          <MenubarTrigger
+            class="cursor-pointer"
+            @click.prevent="toggleShowUploadImgDialog()"
+          >
+            {{ t('menu.image') }}
+          </MenubarTrigger>
+        </MenubarMenu>
         <StyleDropdown />
         <HelpDropdown />
       </Menubar>
