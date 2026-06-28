@@ -232,27 +232,26 @@ async function streamResponse(replyMessage: ChatMessage) {
   }
   const headers = buildAIHeaders(apiKey.value, type.value)
   const url = resolveEndpointUrl(endpoint.value, `chat`)
-  console.log(`[AI] Request:`, { url, model: model.value, type: type.value, endpoint: endpoint.value })
 
   try {
     await fetchSSE(url, headers, payload, {
       onDelta(content) {
         const last = messages.value[messages.value.length - 1]
-        if (last !== replyMessage)
+        if (last.id !== replyMessage.id)
           return
         last.content += content
         scrollToBottom()
       },
       onReasoningDelta(reasoning) {
         const last = messages.value[messages.value.length - 1]
-        if (last !== replyMessage)
+        if (last.id !== replyMessage.id)
           return
         last.reasoning = (last.reasoning || ``) + reasoning
         scrollToBottom()
       },
       onDone() {
         const last = messages.value[messages.value.length - 1]
-        if (last.role === `assistant`) {
+        if (last.id === replyMessage.id && last.role === `assistant`) {
           if (!last.content && !last.reasoning)
             last.content = `(AI 未返回内容)`
           last.done = true

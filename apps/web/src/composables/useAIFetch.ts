@@ -67,7 +67,6 @@ export function useAIFetch() {
         signal: abortController.value.signal,
       })
 
-      console.log(`[AI] Response:`, { status: res.status, statusText: res.statusText, url })
       if (!res.ok || !res.body)
         throw new Error(`响应错误：${res.status} ${res.statusText}`)
 
@@ -89,7 +88,6 @@ export function useAIFetch() {
         for (const line of lines) {
           if (!line.trim() || line.trim() === `data: [DONE]`)
             continue
-          console.log(`[AI] SSE line:`, line.substring(0, 200))
           try {
             const json = JSON.parse(line.replace(/^data: /, ``))
             const delta = json.choices?.[0]?.delta || {}
@@ -98,10 +96,8 @@ export function useAIFetch() {
             if (delta.reasoning_content)
               callbacks.onReasoningDelta?.(delta.reasoning_content)
           }
-          catch (parseErr) {
+          catch {
             // Skip non-JSON lines (SSE comments, etc.)
-            if (line.trim().startsWith(`data:`))
-              console.warn(`[AI] SSE parse error:`, parseErr, line)
           }
         }
       }
