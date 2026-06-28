@@ -12,6 +12,7 @@ export default {
   chat: {
     title: `AI 对话`,
     configParams: `配置参数`,
+    configTitle: `AI 配置`,
     imageGen: `AI 文生图`,
     newSession: `新建会话`,
     loadConversation: `加载对话`,
@@ -61,6 +62,7 @@ export default {
   image: {
     title: `AI 文生图`,
     configParams: `配置参数`,
+    configTitle: `AI 配置`,
     chat: `AI 对话`,
     clearImages: `清空图像`,
     description: `使用 AI 根据文字描述生成图像`,
@@ -100,6 +102,7 @@ export default {
   toolbox: {
     title: `AI 工具箱`,
     configParams: `配置参数`,
+    configTitle: `AI 配置`,
     selectAction: `选择操作`,
     selectActionPlaceholder: `请选择要执行的操作`,
     originalText: `原文`,

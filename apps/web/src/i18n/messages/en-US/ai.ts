@@ -12,6 +12,7 @@ export default {
   chat: {
     title: `AI Chat`,
     configParams: `Settings`,
+    configTitle: `AI Config`,
     imageGen: `AI Image Gen`,
     newSession: `New session`,
     loadConversation: `Load conversation`,
@@ -61,6 +62,7 @@ export default {
   image: {
     title: `AI Image Gen`,
     configParams: `Settings`,
+    configTitle: `AI Config`,
     chat: `AI Chat`,
     clearImages: `Clear images`,
     description: `Generate images from text descriptions with AI`,
@@ -100,6 +102,7 @@ export default {
   toolbox: {
     title: `AI Toolbox`,
     configParams: `Settings`,
+    configTitle: `AI Config`,
     selectAction: `Select action`,
     selectActionPlaceholder: `Choose an action`,
     originalText: `Original text`,
