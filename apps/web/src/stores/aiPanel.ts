@@ -31,10 +31,20 @@ export const useAIPanelStore = defineStore(`aiPanel`, () => {
   const messages: Ref<AIMessage[]> = ref([])
   const isStreaming = ref(false)
 
-  function open(text?: string) {
+  function open(text?: string, anchor?: { right: number, top: number }) {
     if (text !== undefined)
       selectedText.value = text
     visible.value = true
+
+    // Position next to anchor (e.g. sidebar icon) if provided
+    if (anchor) {
+      position.value = {
+        x: Math.max(20, anchor.right - size.value.width - 8),
+        y: Math.max(20, anchor.top - size.value.height / 3),
+      }
+      return
+    }
+
     const pos = position.value
     const needsCenter = pos.x < 0 || pos.y < 0
       || pos.x > window.innerWidth - 50

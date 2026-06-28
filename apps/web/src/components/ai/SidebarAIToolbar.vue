@@ -101,9 +101,11 @@ const currentSelectedText = computed(() => {
 // 切换展开/收起状态
 
 // 打开AI助手（浮动面板）
-function openAIChat() {
+function openAIChat(e: MouseEvent) {
   const selected = getSelectedText()
-  aiPanelStore.open(selected || undefined)
+  // Get the clicked element's position to anchor the panel
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  aiPanelStore.open(selected || undefined, { right: rect.left, top: rect.top })
 }
 
 // 打开AI文生图
