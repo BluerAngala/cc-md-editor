@@ -38,6 +38,9 @@ export default {
     requestFailed: `❌ 请求失败: {message}`,
     systemQuote: `下面是一篇 Markdown 文章全文，请严格以此为主完成后续指令：\n\n{content}`,
     systemPrompt: `你是一个专业的 Markdown 编辑器助手，请用简洁中文回答。`,
+    reasoning: `思考过程`,
+    resetPosition: `重置位置`,
+    replaceSelection: `替换选中`,
   },
   image: {
     title: `AI 文生图`,

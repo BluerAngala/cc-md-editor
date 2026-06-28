@@ -463,7 +463,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
               >
                 <details v-if="msg.reasoning" class="mb-2 text-xs text-muted-foreground">
                   <summary class="cursor-pointer hover:underline">
-                    {{ t('ai.chat.reasoning') || '思考过程' }}
+                    {{ t('ai.chat.reasoning') }}
                   </summary>
                   <pre class="mt-1 whitespace-pre-wrap">{{ msg.reasoning }}</pre>
                 </details>
@@ -486,7 +486,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
                     variant="ghost"
                     size="icon"
                     class="h-6 w-6"
-                    :title="t('ai.chat.replaceSelection') || '替换选中'"
+                    :title="t('ai.chat.replaceSelection')"
                     @click.stop="replaceSelection(msg.content, index)"
                   >
                     <RefreshCcw class="w-3 h-3" />
@@ -546,7 +546,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
                 {{ t('ai.chat.quoteFullText') }}
               </label>
               <Button variant="ghost" size="sm" class="h-5 text-xs px-1.5" @click.stop="panelStore.resetPosition()">
-                {{ t('ai.chat.resetPosition') || '重置位置' }}
+                {{ t('ai.chat.resetPosition') }}
               </Button>
             </div>
           </div>

@@ -38,6 +38,9 @@ export default {
     requestFailed: `❌ Request failed: {message}`,
     systemQuote: `Below is the full Markdown article. Follow it strictly for subsequent instructions:\n\n{content}`,
     systemPrompt: `You are a professional Markdown editor assistant. Reply concisely in the user's language.`,
+    reasoning: `Reasoning`,
+    resetPosition: `Reset position`,
+    replaceSelection: `Replace selection`,
   },
   image: {
     title: `AI Image Gen`,
