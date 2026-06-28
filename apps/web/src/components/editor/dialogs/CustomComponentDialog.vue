@@ -294,6 +294,49 @@ function onUpdate(val: boolean) {
 
 const PREVIEW_FALLBACK_HTML = computed(() => `<span style="color:#aaa;font-size:12px;">${t('component.noContent')}</span>`)
 
+/** 用默认 prop 值渲染内置组件预览，required prop 无 default 时填示例值 */
+function getComponentPreviewHtml(def: CustomComponentDef): string {
+  const propExamples: Record<string, string> = {
+    url: 'https://example.com',
+    name: '示例作者',
+    nickname: '示例公众号',
+    mpId: 'MzIxNjA5ODQ0OQ==',
+    content: '这是一条示例提示内容，用于预览展示效果。',
+    avatar: 'https://avatars.githubusercontent.com/u/21008209?v=4',
+    headimg: 'https://cdn-doocs.oss-cn-shenzhen.aliyuncs.com/gh/doocs/md/images/mp-logo.png',
+    signature: 'GitHub 开源组织',
+    bio: '专注于开源项目的开发者',
+    title: '提示',
+    text: '扫码访问',
+    headers: '["名称","版本","状态"]',
+    rows: '[["Vue","3.x","稳定"],["Vite","8.x","稳定"]]',
+    items: '[{"label":"作者","value":"张三"},{"label":"版本","value":"v1.0"},{"label":"许可证","value":"MIT"},{"label":"语言","value":"TypeScript"}]',
+    tags: '["Vue 3","TypeScript","Vite"]',
+  }
+  const propValues: Record<string, string> = {}
+  for (const p of def.props) {
+    if (p.default !== undefined && p.default !== '')
+      propValues[p.name] = p.default
+    else if (propExamples[p.name])
+      propValues[p.name] = propExamples[p.name]
+    else if (p.required)
+      propValues[p.name] = p.type === 'array' ? '["item1","item2"]' : '示例'
+    else if (p.type === 'array')
+      propValues[p.name] = '[]'
+    else if (p.type === 'boolean')
+      propValues[p.name] = 'true'
+    else if (p.type === 'number')
+      propValues[p.name] = '0'
+  }
+  try {
+    const raw = previewComponent(def, propValues)
+    return DOMPurify.sanitize(raw, { ADD_TAGS: [`mp-common-profile`] }) || ''
+  }
+  catch {
+    return ''
+  }
+}
+
 function getPropDefaultPlaceholder(type: string): string {
   return type === 'array' ? '["item1","item2"]' : t('component.defaultValue')
 }
@@ -670,6 +713,33 @@ watch(() => uiStore.isShowComponentDialog, (val) => {
                   leave-to-class="opacity-0 -translate-y-1"
                 >
                   <div v-if="expandedId === def.id" class="border-t px-3 sm:px-4 py-3 space-y-3 bg-muted/20">
+                    <!-- 组件预览 -->
+                    <div v-if="getComponentPreviewHtml(findBuiltinDef(def.id) ?? def)">
+                      <p class="text-xs font-medium text-muted-foreground mb-1.5">
+                        {{ t('component.previewLabel') }}
+                      </p>
+                      <div
+                        class="rounded-lg border bg-white dark:bg-card p-3 text-sm overflow-x-auto"
+                        v-html="getComponentPreviewHtml(findBuiltinDef(def.id) ?? def)"
+                      />
+                    </div>
+                    <div>
+                      <p class="text-xs font-medium text-muted-foreground mb-1.5">
+                        {{ t('component.example') }}
+                      </p>
+                      <div class="relative group">
+                        <pre class="text-xs font-mono bg-muted rounded-lg px-3 py-2.5 overflow-x-auto text-foreground/80 pr-10 leading-relaxed"><code>{{ def.example || componentStore.buildSnippet(def) }}</code></pre>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          class="absolute right-1.5 top-1.5 size-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          @click="copySnippet(def)"
+                        >
+                          <Check v-if="copiedId === def.id" class="size-3 text-green-500" />
+                          <Copy v-else class="size-3 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    </div>
                     <div v-if="def.props.length > 0">
                       <p class="text-xs font-medium text-muted-foreground mb-2">
                         {{ t('component.propDocs') }}
@@ -746,24 +816,6 @@ watch(() => uiStore.isShowComponentDialog, (val) => {
                             <code class="bg-muted px-1.5 py-0.5 rounded text-foreground">{{ prop.default }}</code>
                           </div>
                         </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p class="text-xs font-medium text-muted-foreground mb-1.5">
-                        {{ t('component.example') }}
-                      </p>
-                      <div class="relative group">
-                        <pre class="text-xs font-mono bg-muted rounded-lg px-3 py-2.5 overflow-x-auto text-foreground/80 pr-10 leading-relaxed"><code>{{ def.example || componentStore.buildSnippet(def) }}</code></pre>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          class="absolute right-1.5 top-1.5 size-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          @click="copySnippet(def)"
-                        >
-                          <Check v-if="copiedId === def.id" class="size-3 text-green-500" />
-                          <Copy v-else class="size-3 text-muted-foreground" />
-                        </Button>
                       </div>
                     </div>
 
@@ -940,6 +992,33 @@ watch(() => uiStore.isShowComponentDialog, (val) => {
                     leave-to-class="opacity-0 -translate-y-1"
                   >
                     <div v-if="expandedId === def.id" class="border-t px-3 sm:px-4 py-3 space-y-3 bg-muted/20">
+                      <!-- 组件预览 -->
+                      <div v-if="getComponentPreviewHtml(def)">
+                        <p class="text-xs font-medium text-muted-foreground mb-1.5">
+                          {{ t('component.previewLabel') }}
+                        </p>
+                        <div
+                          class="rounded-lg border bg-white dark:bg-card p-3 text-sm overflow-x-auto"
+                          v-html="getComponentPreviewHtml(def)"
+                        />
+                      </div>
+                      <div>
+                        <p class="text-xs font-medium text-muted-foreground mb-1.5">
+                          {{ t('component.example') }}
+                        </p>
+                        <div class="relative group">
+                          <pre class="text-xs font-mono bg-muted rounded-lg px-3 py-2.5 overflow-x-auto text-foreground/80 pr-10 leading-relaxed"><code>{{ def.example || componentStore.buildSnippet(def) }}</code></pre>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            class="absolute right-1.5 top-1.5 size-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            @click="copySnippet(def)"
+                          >
+                            <Check v-if="copiedId === def.id" class="size-3 text-green-500" />
+                            <Copy v-else class="size-3 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      </div>
                       <div v-if="def.props.length > 0">
                         <p class="text-xs font-medium text-muted-foreground mb-2">
                           {{ t('component.propDocs') }}
@@ -1022,24 +1101,6 @@ watch(() => uiStore.isShowComponentDialog, (val) => {
                         <p class="text-xs text-muted-foreground italic">
                           {{ t('component.noPropsDefined') }}
                         </p>
-                      </div>
-
-                      <div>
-                        <p class="text-xs font-medium text-muted-foreground mb-1.5">
-                          {{ t('component.example') }}
-                        </p>
-                        <div class="relative group">
-                          <pre class="text-xs font-mono bg-muted rounded-lg px-3 py-2.5 overflow-x-auto text-foreground/80 pr-10 leading-relaxed"><code>{{ def.example || componentStore.buildSnippet(def) }}</code></pre>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            class="absolute right-1.5 top-1.5 size-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            @click="copySnippet(def)"
-                          >
-                            <Check v-if="copiedId === def.id" class="size-3 text-green-500" />
-                            <Copy v-else class="size-3 text-muted-foreground" />
-                          </Button>
-                        </div>
                       </div>
                       <div class="flex items-center gap-2 pt-1 border-t">
                         <Button
