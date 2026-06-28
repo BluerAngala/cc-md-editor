@@ -377,14 +377,16 @@ const quickCommands = computed(() => quickCmdStore.commands)
             <MessageCircle class="w-4 h-4" />
             <span>{{ t('ai.chat.title') }}</span>
           </div>
-          <div class="flex items-center gap-0.5">
-            <Button variant="ghost" size="icon" class="h-7 w-7" :title="t('ai.chat.configParams')" @click.stop="configVisible = !configVisible">
+          <div class="flex items-center gap-1">
+            <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" @click.stop="configVisible = !configVisible">
               <Settings class="w-3.5 h-3.5" />
+              <span>{{ t('ai.chat.configParams') }}</span>
             </Button>
-            <Button variant="ghost" size="icon" class="h-7 w-7" :title="t('ai.chat.newSession')" @click.stop="resetMessages">
+            <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" @click.stop="resetMessages">
               <Plus class="w-3.5 h-3.5" />
+              <span>{{ t('ai.chat.newSession') }}</span>
             </Button>
-            <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="panelStore.close()">
+            <Button variant="destructive" size="icon" class="h-7 w-7 rounded-full" @click.stop="panelStore.close()">
               <X class="w-3.5 h-3.5" />
             </Button>
           </div>
