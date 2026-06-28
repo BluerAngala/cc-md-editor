@@ -96,7 +96,11 @@ export function useAIFetch() {
             if (delta.reasoning_content)
               callbacks.onReasoningDelta?.(delta.reasoning_content)
           }
-          catch {}
+          catch (parseErr) {
+            // Skip non-JSON lines (SSE comments, etc.)
+            if (line.trim().startsWith(`data:`))
+              console.warn(`[AI] SSE parse error:`, parseErr, line)
+          }
         }
       }
     }
