@@ -386,7 +386,8 @@ const quickCommands = computed(() => quickCmdStore.commands)
 
         <!-- ============ Config Panel (slide-over) ============ -->
         <Transition name="overlay-fade">
-          <div v-if="configVisible" class="absolute inset-0 z-10 bg-black/30" @click.stop="configVisible = false" />
+          <!-- eslint-disable vue/html-self-closing -->
+          <div v-if="configVisible" class="absolute inset-0 z-10 bg-black/30" @click.stop="configVisible = false"></div>
         </Transition>
         <Transition name="config-slide">
           <div v-if="configVisible" class="absolute top-0 right-0 bottom-0 z-20 flex flex-col bg-card shadow-xl" style="width: 60%;">
