@@ -98,6 +98,8 @@ async function testConnection() {
     loading.value = false
   }
 }
+
+defineExpose({ saveConfig, clearConfig, testConnection, loading: computed(() => loading.value), testResult: computed(() => testResult.value) })
 </script>
 
 <template>
@@ -211,29 +213,6 @@ async function testConnection() {
         :placeholder="t('ai.config.maxTokensPlaceholder')"
         class="focus:border-gray-400 focus:ring-1 focus:ring-gray-300"
       />
-    </div>
-
-    <!-- 操作按钮区域 (sticky bottom) -->
-    <div class="sticky bottom-0 mt-2 flex flex-col gap-2 sm:flex-row bg-card pt-2 pb-2 border-t">
-      <Button size="sm" @click="saveConfig">
-        {{ t('common.save') }}
-      </Button>
-      <Button size="sm" variant="ghost" @click="clearConfig">
-        {{ t('common.clear') }}
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        :disabled="loading"
-        @click="testConnection"
-      >
-        {{ loading ? t('common.testing') : t('common.testConnection') }}
-      </Button>
-    </div>
-
-    <!-- 测试结果显示 -->
-    <div v-if="testResult" class="mt-1 text-xs text-gray-500">
-      {{ testResult }}
     </div>
   </div>
 </template>

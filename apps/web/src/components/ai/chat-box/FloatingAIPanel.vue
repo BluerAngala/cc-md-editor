@@ -112,6 +112,7 @@ const copiedIndex = ref<number | null>(null)
 const insertedIndex = ref<number | null>(null)
 const isQuoteAllContent = ref(false)
 const chatContainerRef = ref<HTMLElement | null>(null)
+const aiConfigRef = ref<InstanceType<typeof AIConfig> | null>(null)
 
 interface ChatMessage {
   role: `user` | `assistant` | `system`
@@ -397,7 +398,21 @@ const quickCommands = computed(() => quickCmdStore.commands)
               </Button>
               <span class="text-sm font-medium">{{ t('ai.chat.configParams') }}</span>
             </div>
-            <AIConfig class="flex-1 overflow-y-auto px-4 pt-2 !max-h-none" @saved="handleConfigSaved" />
+            <AIConfig ref="aiConfigRef" class="flex-1 overflow-y-auto px-4 pt-2" @saved="handleConfigSaved" />
+            <div class="shrink-0 border-t px-4 py-3 flex flex-col gap-2 sm:flex-row">
+              <Button size="sm" @click="aiConfigRef?.saveConfig()">
+                {{ t('common.save') }}
+              </Button>
+              <Button size="sm" variant="ghost" @click="aiConfigRef?.clearConfig()">
+                {{ t('common.clear') }}
+              </Button>
+              <Button size="sm" variant="outline" :disabled="aiConfigRef?.loading" @click="aiConfigRef?.testConnection()">
+                {{ aiConfigRef?.loading ? t('common.testing') : t('common.testConnection') }}
+              </Button>
+            </div>
+            <div v-if="aiConfigRef?.testResult" class="shrink-0 px-4 pb-2 text-xs text-gray-500">
+              {{ aiConfigRef.testResult }}
+            </div>
           </div>
         </Transition>
 
