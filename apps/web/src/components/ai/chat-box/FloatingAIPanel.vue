@@ -517,7 +517,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
             </Button>
             <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs" @click.stop="configVisible = true; configTab = 'presets'">
               <SlidersHorizontal class="w-3 h-3" />
-              <span>{{ t('ai.chat.morePresets') || '预设' }}</span>
+              <span>{{ t('ai.chat.advancedConfig') || '高级配置' }}</span>
             </Button>
             <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs" @click.stop="resetMessages">
               <Plus class="w-3 h-3" />
@@ -553,7 +553,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
                 :class="configTab === 'presets' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
                 @click.stop="configTab = 'presets'"
               >
-                {{ t('ai.chat.morePresets') || '预设' }}
+                {{ t('ai.chat.advancedConfig') || '高级配置' }}
               </button>
             </div>
 
