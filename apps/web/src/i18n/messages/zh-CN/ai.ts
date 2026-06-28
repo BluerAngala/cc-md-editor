@@ -41,6 +41,7 @@ export default {
     reasoning: `思考过程`,
     resetPosition: `重置位置`,
     replaceSelection: `替换选中`,
+    editMessage: `编辑`,
   },
   image: {
     title: `AI 文生图`,

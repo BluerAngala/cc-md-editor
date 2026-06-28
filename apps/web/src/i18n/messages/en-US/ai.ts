@@ -41,6 +41,7 @@ export default {
     reasoning: `Reasoning`,
     resetPosition: `Reset position`,
     replaceSelection: `Replace selection`,
+    editMessage: `Edit`,
   },
   image: {
     title: `AI Image Gen`,

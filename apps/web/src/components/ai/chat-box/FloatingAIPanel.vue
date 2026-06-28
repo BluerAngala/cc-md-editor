@@ -5,6 +5,7 @@ import {
   Check,
   Copy,
   MessageCircle,
+  Pencil,
   Pin,
   Plus,
   RefreshCcw,
@@ -108,6 +109,7 @@ const input = ref(``)
 const inputHistory = ref<string[]>([])
 const historyIndex = ref<number | null>(null)
 const configVisible = ref(false)
+const editingMessageId = ref<string | null>(null)
 const copiedIndex = ref<number | null>(null)
 const insertedIndex = ref<number | null>(null)
 const isQuoteAllContent = ref(false)
@@ -169,16 +171,30 @@ async function sendMessage() {
   const userInput = input.value.trim()
   const contextText = panelStore.selectedText.trim()
 
-  // Add selected text as context message if present
-  if (contextText) {
-    messages.value.push({
-      role: `system`,
-      content: `以下是用户选中的参考内容：\n\n${contextText}`,
-      id: uuidv4(),
-    })
+  if (editingMessageId.value) {
+    // Editing: replace original user message and remove old AI reply
+    const editIdx = messages.value.findIndex(m => m.id === editingMessageId.value)
+    if (editIdx !== -1) {
+      messages.value[editIdx].content = userInput
+      // Remove the AI reply after the edited message (if exists)
+      if (editIdx + 1 < messages.value.length && messages.value[editIdx + 1].role === `assistant`) {
+        messages.value.splice(editIdx + 1, 1)
+      }
+    }
+    editingMessageId.value = null
+  }
+  else {
+    // New message
+    if (contextText) {
+      messages.value.push({
+        role: `system`,
+        content: `以下是用户选中的参考内容：\n\n${contextText}`,
+        id: uuidv4(),
+      })
+    }
+    messages.value.push({ role: `user`, content: userInput, id: uuidv4() })
   }
 
-  messages.value.push({ role: `user`, content: userInput, id: uuidv4() })
   input.value = ``
   panelStore.selectedText = ``
 
@@ -282,6 +298,16 @@ async function copyToClipboard(text: string, index: number) {
   copyPlain(text)
   copiedIndex.value = index
   setTimeout(() => (copiedIndex.value = null), FEEDBACK_INDICATOR_TIMEOUT_MS)
+}
+
+function editMessage(msg: ChatMessage) {
+  editingMessageId.value = msg.id
+  input.value = msg.content
+  nextTick(() => {
+    const textarea = chatContainerRef.value?.querySelector(`textarea`)
+    textarea?.focus()
+    textarea?.setSelectionRange(textarea.value.length, textarea.value.length)
+  })
 }
 
 async function resetMessages() {
@@ -472,6 +498,9 @@ const quickCommands = computed(() => quickCmdStore.commands)
                   <Button variant="ghost" size="icon" class="h-6 w-6" @click.stop="copyToClipboard(msg.content, index)">
                     <Check v-if="copiedIndex === index" class="w-3 h-3 text-green-500" />
                     <Copy v-else class="w-3 h-3" />
+                  </Button>
+                  <Button variant="ghost" size="icon" class="h-6 w-6" :title="t('ai.chat.editMessage')" @click.stop="editMessage(msg)">
+                    <Pencil class="w-3 h-3" />
                   </Button>
                 </div>
 
