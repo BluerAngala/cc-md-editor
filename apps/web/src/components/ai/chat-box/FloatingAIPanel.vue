@@ -543,9 +543,8 @@ function resetToAnchor() {
               <SlidersHorizontal class="w-3 h-3" />
               <span>{{ t('ai.chat.advancedConfig') || '高级配置' }}</span>
             </Button>
-            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs" @click.stop="resetMessages">
-              <Plus class="w-3 h-3" />
-              <span>{{ t('ai.chat.newSession') }}</span>
+            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs" @click.stop="resetToAnchor()">
+              <span>{{ t('ai.chat.resetPosition') }}</span>
             </Button>
           </div>
           <Button variant="destructive" size="icon" class="h-6 w-6 rounded-full" @click.stop="panelStore.close()">
@@ -805,22 +804,23 @@ function resetToAnchor() {
                 <input v-model="isQuoteAllContent" type="checkbox" class="rounded">
                 {{ t('ai.chat.quoteFullText') }}
               </label>
-              <Button variant="ghost" size="sm" class="h-5 text-xs px-1.5" @click.stop="resetToAnchor()">
-                {{ t('ai.chat.resetPosition') }}
+              <Button variant="ghost" size="sm" class="h-5 text-xs px-1.5" @click.stop="resetMessages">
+                <Plus class="w-3 h-3 mr-0.5" />
+                {{ t('ai.chat.newSession') }}
               </Button>
             </div>
           </div>
-        </div>
 
-        <!-- ============ Resize Handle ============ -->
-        <div
-          class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
-          style="z-index: 10;"
-          @mousedown="onResizeStart"
-        >
-          <svg class="w-3 h-3 absolute bottom-0.5 right-0.5 text-muted-foreground/40" viewBox="0 0 16 16">
-            <path d="M14 16L16 14M10 16L16 10M6 16L16 6" stroke="currentColor" stroke-width="1.5" fill="none" />
-          </svg>
+          <!-- ============ Resize Handle ============ -->
+          <div
+            class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+            style="z-index: 10;"
+            @mousedown="onResizeStart"
+          >
+            <svg class="w-3 h-3 absolute bottom-0.5 right-0.5 text-muted-foreground/40" viewBox="0 0 16 16">
+              <path d="M14 16L16 14M10 16L16 10M6 16L16 6" stroke="currentColor" stroke-width="1.5" fill="none" />
+            </svg>
+          </div>
         </div>
       </div>
     </Transition>
