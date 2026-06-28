@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent, unref } from 'vue'
+import FloatingAIPanel from '@/components/ai/chat-box/FloatingAIPanel.vue'
 import EditorPanel from '@/components/editor/EditorPanel.vue'
 import PreviewPanel from '@/components/editor/PreviewPanel.vue'
 import {
@@ -9,6 +10,8 @@ import {
 } from '@/components/ui/resizable'
 import { useCursorSync } from '@/composables/useCursorSync'
 import { useScrollSync } from '@/composables/useScrollSync'
+import { useAIPanelStore } from '@/stores/aiPanel'
+import { useEditorStore } from '@/stores/editor'
 import { useUIStore } from '@/stores/ui'
 
 const PostSlider = defineAsyncComponent(() => import('@/components/editor/post-slider/index.vue'))
@@ -24,6 +27,8 @@ const TemplateDialog = defineAsyncComponent(() => import('@/components/editor/di
 const CustomComponentDialog = defineAsyncComponent(() => import('@/components/editor/dialogs/CustomComponentDialog.vue'))
 
 const uiStore = useUIStore()
+const editorStore = useEditorStore()
+const aiPanelStore = useAIPanelStore()
 
 const {
   isMobile,
@@ -87,6 +92,23 @@ onUnmounted(() => {
 function handleUploadImage(file: File, cb?: any, applyUrl?: boolean) {
   editorPanelCompRef.value?.uploadImage(file, cb, applyUrl)
 }
+
+// --- AI 浮动面板快捷键 (Cmd+J / Ctrl+J) ---
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key === `j`) {
+    e.preventDefault()
+    const selected = editorStore.getSelection()
+    aiPanelStore.toggle(selected || undefined)
+  }
+}
+
+onMounted(() => {
+  document.addEventListener(`keydown`, handleGlobalKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener(`keydown`, handleGlobalKeydown)
+})
 
 // --- 面板尺寸配置 ---
 const hasSidePanel = computed(() => !isMobile.value && (isOpenRightSlider.value || uiStore.isShowCssEditor))
@@ -307,6 +329,9 @@ const isImgLoading = computed(() => unref(editorPanelCompRef.value?.isImgLoading
     </main>
 
     <Footer />
+
+    <!-- AI 浮动面板 -->
+    <FloatingAIPanel />
   </div>
 </template>
 

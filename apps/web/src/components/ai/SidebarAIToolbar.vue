@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Bot, Image as ImageIcon, Settings2, Wand2 } from '@lucide/vue'
 import { defineAsyncComponent } from 'vue'
+import { useAIPanelStore } from '@/stores/aiPanel'
 import { useEditorStore } from '@/stores/editor'
 import { useUIStore } from '@/stores/ui'
 import { AIPolishPopover } from './tool-box'
@@ -9,17 +10,17 @@ defineProps<{
   isMobile: boolean
   showEditor: boolean
 }>()
-const AIAssistantPanel = defineAsyncComponent(() => import('./chat-box/AIAssistantPanel.vue'))
 const AIImageGeneratorPanel = defineAsyncComponent(() => import('./image-generator/AIImageGeneratorPanel.vue'))
 
 const SELECTION_HINT_TIMEOUT_MS = 3000
 
 const uiStore = useUIStore()
-const { aiDialogVisible, aiImageDialogVisible } = storeToRefs(uiStore)
-const { toggleAIDialog, toggleAIImageDialog } = uiStore
+const { aiImageDialogVisible } = storeToRefs(uiStore)
+const { toggleAIImageDialog } = uiStore
 
 const editorStore = useEditorStore()
 const { editor } = storeToRefs(editorStore)
+const aiPanelStore = useAIPanelStore()
 
 const { hasShownAIToolboxHint } = storeToRefs(uiStore)
 const { t } = useI18n()
@@ -111,9 +112,10 @@ function toggleExpanded() {
   }
 }
 
-// 打开AI助手
+// 打开AI助手（浮动面板）
 function openAIChat() {
-  toggleAIDialog(true)
+  const selected = getSelectedText()
+  aiPanelStore.open(selected || undefined)
 }
 
 // 打开AI文生图
@@ -160,7 +162,7 @@ onMounted(() => {
       `.dropdown`,
       `.tooltip`,
       `.floating`,
-      `.ai-assistant-panel`,
+      `.ai-floating-panel`,
       `.ai-image-generator-panel`,
     ]
 
@@ -292,8 +294,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- AI面板组件 -->
-    <AIAssistantPanel v-if="aiDialogVisible" v-model:open="aiDialogVisible" />
+    <!-- AI文生图弹窗 -->
     <AIImageGeneratorPanel v-if="aiImageDialogVisible" v-model:open="aiImageDialogVisible" />
 
     <!-- AI工具箱弹窗 -->
@@ -308,242 +309,55 @@ onMounted(() => {
 <style scoped>
 /* 确保工具栏与编辑器完美集成 */
 .editor-ai-toolbar {
-  z-index: 30;
-  contain: layout style;
-  pointer-events: auto;
-  max-width: calc(100% - 0.5rem);
+  /* 工具栏动画 */
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 工具栏自适应高度 */
-.editor-ai-toolbar > div {
-  height: auto;
-  min-height: fit-content;
-}
-
-/* 确保按钮悬浮提示正确显示 */
-.editor-ai-toolbar .absolute {
-  overflow: visible;
-}
-
-/* 选中文本时的脉冲动画 */
-@keyframes pulse-hint {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
-  }
-}
-
-.animate-pulse-hint {
-  animation: pulse-hint 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* 提示气泡的轻微弹跳动画 */
-@keyframes bounce-gentle {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(-4px);
-  }
-}
-
-.animate-bounce-gentle {
-  animation: bounce-gentle 1s ease-in-out infinite;
-}
-
-/* 提示气泡淡入淡出过渡 */
+/* 提示气泡动画 */
 .hint-fade-enter-active,
 .hint-fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hint-fade-enter-from {
   opacity: 0;
-  transform: translateX(8px);
+  transform: translateX(10px) translateY(-50%);
 }
 
 .hint-fade-leave-to {
   opacity: 0;
-  transform: translateX(8px);
+  transform: translateX(10px) translateY(-50%);
 }
 
-.hint-fade-enter-to,
-.hint-fade-leave-from {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .editor-ai-toolbar {
-    transform: translateY(-50%);
-    transform-origin: right center;
+/* 微弹跳动画 */
+@keyframes bounce-gentle {
+  0%,
+  100% {
+    transform: translateY(-50%) scale(1);
   }
-
-  /* 移动端图标稍微再大一点 */
-  .editor-ai-toolbar .lucide {
-    width: 1.125rem !important; /* h-4.5 w-4.5 */
-    height: 1.125rem !important;
+  50% {
+    transform: translateY(-53%) scale(1.02);
   }
 }
 
-/* 提高可访问性 */
-@media (prefers-reduced-motion: reduce) {
-  .transition-all,
-  .transform {
-    transition: none !important;
-  }
-
-  .hover\:scale-105:hover,
-  .active\:scale-95:active {
-    transform: none !important;
-  }
-
-  .backdrop-blur-lg {
-    backdrop-filter: none;
-  }
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
 }
 
-/* 确保在小屏幕上不会遮挡内容 */
-@media (max-height: 500px) {
-  .min-h-\[120px\] {
-    min-height: 80px;
-  }
-
-  .min-h-\[80px\] {
-    min-height: 60px;
-  }
-}
-
-/* 毛玻璃效果优化 */
-@supports (backdrop-filter: blur(16px)) {
-  .backdrop-blur-lg {
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-  }
-}
-
-/* 确保渐变按钮在深色模式下显示正确 */
-.bg-gradient-to-br {
-  background-attachment: fixed;
-}
-
-/* 悬浮提示样式优化 */
-.group:hover > div {
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(4px);
-  }
-  to {
+/* 脉冲提示动画 */
+@keyframes pulse-hint {
+  0%,
+  100% {
     opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* uTools 插件模式下使用黑白风格 */
-.is-utools .utools-sidebar-edge {
-  background: rgb(0 0 0 / 0.9) !important;
-  border-color: rgb(0 0 0 / 0.5) !important;
-}
-
-.is-utools .utools-sidebar-edge:hover {
-  background: rgb(0 0 0 / 0.95) !important;
-}
-
-.is-utools.dark .utools-sidebar-edge {
-  background: rgb(255 255 255 / 0.9) !important;
-  border-color: rgb(255 255 255 / 0.5) !important;
-}
-
-.is-utools.dark .utools-sidebar-edge:hover {
-  background: rgb(255 255 255 / 0.95) !important;
-}
-
-.is-utools.dark .utools-sidebar-edge .lucide {
-  color: rgb(0 0 0) !important;
-}
-
-/* uTools 模式下提示气泡使用黑白风格 */
-.is-utools .hint-bubble {
-  background: rgb(0 0 0 / 0.9) !important;
-  background-image: none !important;
-  color: rgb(255 255 255) !important;
-}
-
-.is-utools.dark .hint-bubble {
-  background: rgb(255 255 255 / 0.9) !important;
-  background-image: none !important;
-  color: rgb(0 0 0) !important;
-}
-
-.is-utools .hint-arrow {
-  border-left-color: rgb(0 0 0 / 0.9) !important;
-}
-
-.is-utools.dark .hint-arrow {
-  border-left-color: rgb(255 255 255 / 0.9) !important;
-}
-
-/* uTools 模式下脉冲动画使用黑白风格 */
-@keyframes pulse-hint-utools {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7);
+    transform: scaleY(1);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(0, 0, 0, 0);
+    opacity: 0.7;
+    transform: scaleY(1.1);
   }
 }
 
-@keyframes pulse-hint-utools-dark {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
-  }
-}
-
-.is-utools .animate-pulse-hint {
-  animation: pulse-hint-utools 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.is-utools.dark .animate-pulse-hint {
-  animation: pulse-hint-utools-dark 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* uTools 模式下 AI 按钮使用黑白风格 */
-.is-utools .utools-ai-button {
-  background: rgb(0 0 0 / 0.85) !important;
-  background-image: none !important;
-}
-
-.is-utools .utools-ai-button:hover {
-  background: rgb(0 0 0 / 0.95) !important;
-  background-image: none !important;
-}
-
-.is-utools.dark .utools-ai-button {
-  background: rgb(255 255 255 / 0.85) !important;
-  background-image: none !important;
-  color: rgb(0 0 0) !important;
-}
-
-.is-utools.dark .utools-ai-button:hover {
-  background: rgb(255 255 255 / 0.95) !important;
-  background-image: none !important;
-}
-
-.is-utools.dark .utools-ai-button .lucide {
-  color: rgb(0 0 0) !important;
+.animate-pulse-hint {
+  animation: pulse-hint 1.5s ease-in-out 3;
 }
 </style>
