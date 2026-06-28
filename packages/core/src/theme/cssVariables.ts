@@ -22,9 +22,9 @@ export interface CSSVariableConfig {
  */
 function lightenColor(hex: string): string {
   // ponytail: simple hex lighten for dark mode visibility
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
+  const r = Number.parseInt(hex.slice(1, 3), 16)
+  const g = Number.parseInt(hex.slice(3, 5), 16)
+  const b = Number.parseInt(hex.slice(5, 7), 16)
   const lr = Math.round(r + (255 - r) * 0.35)
   const lg = Math.round(g + (255 - g) * 0.35)
   const lb = Math.round(b + (255 - b) * 0.35)
