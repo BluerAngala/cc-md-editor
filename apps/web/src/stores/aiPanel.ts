@@ -46,7 +46,7 @@ export const useAIPanelStore = defineStore(`aiPanel`, () => {
         // First open: position next to sidebar icon
         position.value = {
           x: Math.max(20, anchor.right + 8),
-          y: Math.max(20, anchor.top - size.value.height / 3),
+          y: Math.max(20, anchor.top),
         }
       }
       else {

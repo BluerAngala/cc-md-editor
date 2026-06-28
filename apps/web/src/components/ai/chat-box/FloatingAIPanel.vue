@@ -500,7 +500,7 @@ function resetToAnchor() {
   const icon = document.querySelector('.editor-ai-toolbar .utools-sidebar-edge')
   if (icon) {
     const rect = icon.getBoundingClientRect()
-    panelStore.setPosition(Math.max(20, rect.right + 8), Math.max(20, rect.top - panelStore.size.height / 3))
+    panelStore.setPosition(Math.max(20, rect.right + 8), Math.max(20, rect.top))
   }
   else {
     panelStore.resetPosition()
