@@ -114,10 +114,95 @@ const editingMessageId = ref<string | null>(null)
 const copiedIndex = ref<number | null>(null)
 const insertedIndex = ref<number | null>(null)
 const isQuoteAllContent = ref(false)
-const presetsVisible = ref(false)
-const presetDateEnabled = useStorage(`ai-preset-date`, true)
-const presetEditorEnabled = useStorage(`ai-preset-editor`, false)
 const chatContainerRef = ref<HTMLElement | null>(null)
+const presetsVisible = ref(false)
+const editingPresetId = ref<string | null>(null)
+const presetFormName = ref(``)
+const presetFormContent = ref(``)
+const presetFormType = ref<`always` | `ondemand`>(`always`)
+
+interface ContextPreset {
+  id: string
+  name: string
+  content: string
+  type: `always` | `ondemand`
+  enabled: boolean
+  builtin?: boolean
+}
+
+const defaultPresets: ContextPreset[] = [
+  { id: `date`, name: `当前日期时间`, content: ``, type: `always`, enabled: true, builtin: true },
+  { id: `editor`, name: `编辑器全文内容`, content: ``, type: `always`, enabled: false, builtin: true },
+]
+
+const presets = useStorage<ContextPreset[]>(`ai-context-presets`, defaultPresets)
+
+// Ensure built-in presets exist
+if (!presets.value.some(p => p.id === `date`)) {
+  presets.value.unshift({ id: `date`, name: `当前日期时间`, content: ``, type: `always`, enabled: true, builtin: true })
+}
+if (!presets.value.some(p => p.id === `editor`)) {
+  presets.value.splice(1, 0, { id: `editor`, name: `编辑器全文内容`, content: ``, type: `always`, enabled: false, builtin: true })
+}
+
+const alwaysPresets = computed(() => presets.value.filter(p => p.type === `always`))
+const ondemandPresets = computed(() => presets.value.filter(p => p.type === `ondemand`))
+
+function togglePreset(id: string) {
+  const p = presets.value.find(x => x.id === id)
+  if (p)
+    p.enabled = !p.enabled
+}
+
+function insertPresetContent(preset: ContextPreset) {
+  input.value = input.value ? `${input.value}\n${preset.content}` : preset.content
+  presetsVisible.value = false
+  nextTick(() => {
+    const textarea = chatContainerRef.value?.querySelector(`textarea`)
+    textarea?.focus()
+  })
+}
+
+function startEditPreset(preset: ContextPreset) {
+  editingPresetId.value = preset.id
+  presetFormName.value = preset.name
+  presetFormContent.value = preset.content
+  presetFormType.value = preset.type
+}
+
+function savePreset() {
+  if (!presetFormName.value.trim())
+    return
+  if (editingPresetId.value) {
+    const p = presets.value.find(x => x.id === editingPresetId.value)
+    if (p) {
+      p.name = presetFormName.value.trim()
+      p.content = presetFormContent.value.trim()
+      p.type = presetFormType.value
+    }
+  }
+  else {
+    presets.value.push({
+      id: crypto.randomUUID(),
+      name: presetFormName.value.trim(),
+      content: presetFormContent.value.trim(),
+      type: presetFormType.value,
+      enabled: true,
+    })
+  }
+  cancelEditPreset()
+}
+
+function deletePreset(id: string) {
+  presets.value = presets.value.filter(p => p.id !== id)
+}
+
+function cancelEditPreset() {
+  editingPresetId.value = null
+  presetFormName.value = ``
+  presetFormContent.value = ``
+  presetFormType.value = `always`
+}
 const aiConfigRef = ref<InstanceType<typeof AIConfig> | null>(null)
 
 interface ChatMessage {
@@ -237,27 +322,26 @@ async function streamResponse(replyMessage: ChatMessage) {
     ? [{ role: `system`, content: t(`ai.chat.systemQuote`, { content: editor.value?.state.doc.toString() ?? `` }) }]
     : []
 
-  // Build preset context
+  // Build preset context from enabled always-on presets
   const presetContexts: string[] = []
-  if (presetDateEnabled.value) {
-    const now = new Date()
-    presetContexts.push(`当前日期时间：${now.toLocaleString(`zh-CN`, { dateStyle: `full`, timeStyle: `short` })}（星期${[`日`, `一`, `二`, `三`, `四`, `五`, `六`][now.getDay()]}）`)
-  }
-  if (presetEditorEnabled.value && editor.value) {
-    const doc = editor.value.state.doc.toString()
-    if (doc.trim()) {
-      presetContexts.push(`当前编辑器内容：
-${doc}`)
+  for (const p of presets.value.filter(x => x.type === `always` && x.enabled)) {
+    if (p.id === `date`) {
+      const now = new Date()
+      presetContexts.push(`当前日期时间：${now.toLocaleString(`zh-CN`, { dateStyle: `full`, timeStyle: `short` })}（星期${[`日`, `一`, `二`, `三`, `四`, `五`, `六`][now.getDay()]}）`)
+    }
+    else if (p.id === `editor` && editor.value) {
+      const doc = editor.value.state.doc.toString()
+      if (doc.trim())
+        presetContexts.push(`当前编辑器内容：\n${doc}`)
+    }
+    else if (p.content) {
+      presetContexts.push(p.content)
     }
   }
 
   const systemMessages = [
     { role: `system` as const, content: t(`ai.chat.systemPrompt`) },
-    ...presetContexts.length
-      ? [{ role: `system` as const, content: `补充上下文信息：
-${presetContexts.join(`
-`)}` }]
-      : [],
+    ...presetContexts.length ? [{ role: `system` as const, content: `补充上下文信息：\n${presetContexts.join(`\n`)}` }] : [],
     ...quoteMessages,
   ]
 
@@ -501,18 +585,69 @@ const quickCommands = computed(() => quickCmdStore.commands)
                 <span>{{ t('ai.chat.morePresets') || '预设' }}</span>
               </Button>
               <Transition name="fade">
-                <div v-if="presetsVisible" class="absolute right-0 top-full mt-1 z-30 w-56 bg-card border rounded-lg shadow-lg p-3 space-y-2.5">
-                  <div class="text-xs font-medium text-muted-foreground">
-                    {{ t('ai.chat.presetContext') || '预设上下文' }}
+                <div v-if="presetsVisible" class="absolute right-0 top-full mt-1 z-30 w-72 bg-card border rounded-lg shadow-lg overflow-hidden">
+                  <!-- Always-on presets -->
+                  <div class="px-3 pt-3 pb-1">
+                    <div class="text-xs font-medium text-muted-foreground mb-2">
+                      🔄 {{ t('ai.chat.alwaysContext') || '自动上下文（每次请求附带）' }}
+                    </div>
+                    <div v-for="p in alwaysPresets" :key="p.id" class="flex items-center gap-2 py-1">
+                      <label class="flex items-center gap-2 text-xs cursor-pointer flex-1">
+                        <input :checked="p.enabled" type="checkbox" class="rounded" @change="togglePreset(p.id)" />
+                        <span>{{ p.name }}</span>
+                      </label>
+                      <Button v-if="!p.builtin" variant="ghost" size="icon" class="h-5 w-5" @click.stop="startEditPreset(p)">
+                        <Pencil class="w-2.5 h-2.5" />
+                      </Button>
+                      <Button v-if="!p.builtin" variant="ghost" size="icon" class="h-5 w-5" @click.stop="deletePreset(p.id)">
+                        <X class="w-2.5 h-2.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <label class="flex items-center gap-2 text-xs cursor-pointer">
-                    <input v-model="presetDateEnabled" type="checkbox" class="rounded" />
-                    <span>{{ t('ai.chat.presetDate') || '当前日期时间' }}</span>
-                  </label>
-                  <label class="flex items-center gap-2 text-xs cursor-pointer">
-                    <input v-model="presetEditorEnabled" type="checkbox" class="rounded" />
-                    <span>{{ t('ai.chat.presetEditor') || '编辑器全文内容' }}</span>
-                  </label>
+                  <!-- On-demand presets -->
+                  <div class="px-3 pt-1 pb-1 border-t">
+                    <div class="text-xs font-medium text-muted-foreground mb-2">
+                      📌 {{ t('ai.chat.ondemandContext') || '手动引用（点击使用）' }}
+                    </div>
+                    <div v-if="ondemandPresets.length === 0" class="text-xs text-muted-foreground/50 py-1">
+                      {{ t('ai.chat.noOndemandPresets') || '暂无，点击下方添加' }}
+                    </div>
+                    <div v-for="p in ondemandPresets" :key="p.id" class="flex items-center gap-1 py-1">
+                      <Button variant="outline" size="sm" class="h-6 text-xs flex-1 justify-start truncate" @click.stop="insertPresetContent(p)">
+                        {{ p.name }}
+                      </Button>
+                      <Button variant="ghost" size="icon" class="h-5 w-5" @click.stop="startEditPreset(p)">
+                        <Pencil class="w-2.5 h-2.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" class="h-5 w-5" @click.stop="deletePreset(p.id)">
+                        <X class="w-2.5 h-2.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <!-- Add / Edit form -->
+                  <div class="border-t px-3 py-2 space-y-1.5">
+                    <div v-if="editingPresetId" class="text-xs font-medium text-muted-foreground">
+                      {{ t('ai.chat.editPreset') || '编辑预设' }}
+                    </div>
+                    <input v-model="presetFormName" :placeholder="t('ai.chat.presetNamePlaceholder') || '预设名称'" class="w-full text-xs border rounded px-2 py-1 bg-background" />
+                    <textarea v-model="presetFormContent" :placeholder="t('ai.chat.presetContentPlaceholder') || '内容（手动引用时填入输入框）'" rows="2" class="w-full text-xs border rounded px-2 py-1 bg-background resize-none" />
+                    <div class="flex items-center gap-2">
+                      <select v-model="presetFormType" class="text-xs border rounded px-1.5 py-1 bg-background flex-1">
+                        <option value="always">
+                          {{ t('ai.chat.alwaysType') || '自动上下文' }}
+                        </option>
+                        <option value="ondemand">
+                          {{ t('ai.chat.ondemandType') || '手动引用' }}
+                        </option>
+                      </select>
+                      <Button size="sm" class="h-6 text-xs" @click.stop="savePreset">
+                        {{ editingPresetId ? (t('common.save') || '保存') : (t('ai.chat.addPreset') || '添加') }}
+                      </Button>
+                      <Button v-if="editingPresetId" variant="ghost" size="sm" class="h-6 text-xs" @click.stop="cancelEditPreset">
+                        {{ t('common.cancel') || '取消' }}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </Transition>
             </div>
