@@ -25,7 +25,6 @@ import { useQuickCommandsStore } from '@/stores/quickCommands'
 import AIConfig from './AIConfig.vue'
 
 const FEEDBACK_INDICATOR_TIMEOUT_MS = 1500
-const CONFIG_SIDEBAR_WIDTH = 240
 
 const panelStore = useAIPanelStore()
 const editorStore = useEditorStore()
@@ -356,7 +355,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
         :style="{
           left: `${x}px`,
           top: `${y}px`,
-          width: `${configVisible ? w + CONFIG_SIDEBAR_WIDTH : w}px`,
+          width: `${w}px`,
           height: `${h}px`,
           zIndex: 100,
         }"
@@ -385,16 +384,22 @@ const quickCommands = computed(() => quickCmdStore.commands)
           </div>
         </div>
 
-        <!-- ============ Config Sidebar (expands outward) ============ -->
-        <div v-if="configVisible" class="flex flex-col border-r shrink-0" style="width: 240px;">
-          <div class="flex items-center gap-2 px-3 py-2 border-b shrink-0">
-            <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="configVisible = false">
-              <ArrowLeft class="w-4 h-4" />
-            </Button>
-            <span class="text-sm font-medium">{{ t('ai.chat.configParams') }}</span>
+        <!-- ============ Config Panel (slide-over) ============ -->
+        <Transition name="overlay-fade">
+          <!-- eslint-disable vue/html-self-closing -->
+          <div v-if="configVisible" class="absolute inset-0 z-10 bg-black/30" @click.stop="configVisible = false"></div>
+        </Transition>
+        <Transition name="config-slide">
+          <div v-if="configVisible" class="absolute top-0 right-0 bottom-0 z-20 flex flex-col bg-card shadow-xl" style="width: 60%;">
+            <div class="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 border-b shrink-0 bg-card">
+              <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="configVisible = false">
+                <ArrowLeft class="w-4 h-4" />
+              </Button>
+              <span class="text-sm font-medium">{{ t('ai.chat.configParams') }}</span>
+            </div>
+            <AIConfig class="flex-1 overflow-y-auto px-4 pt-2" @saved="handleConfigSaved" />
           </div>
-          <AIConfig class="flex-1 overflow-y-auto px-3 pt-2" @saved="handleConfigSaved" />
-        </div>
+        </Transition>
 
         <!-- ============ Chat Area ============ -->
         <div class="flex flex-col flex-1 min-h-0">
