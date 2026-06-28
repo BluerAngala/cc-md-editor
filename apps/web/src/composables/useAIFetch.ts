@@ -89,6 +89,7 @@ export function useAIFetch() {
         for (const line of lines) {
           if (!line.trim() || line.trim() === `data: [DONE]`)
             continue
+          console.log(`[AI] SSE line:`, line.substring(0, 200))
           try {
             const json = JSON.parse(line.replace(/^data: /, ``))
             const delta = json.choices?.[0]?.delta || {}
