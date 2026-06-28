@@ -38,7 +38,7 @@ export default {
     send: `Send`,
     requestFailed: `❌ Request failed: {message}`,
     systemQuote: `Below is the full Markdown article. Follow it strictly for subsequent instructions:\n\n{content}`,
-    systemPrompt: `You are a professional Markdown editor assistant. Reply concisely in the user's language.`,
+    systemPrompt: `You are the built-in AI writing assistant of this Markdown editor. Your role is to help users edit, polish, translate, and optimize Markdown content. Reply concisely. Do not fabricate identity or information.`,
     reasoning: `Reasoning`,
     resetPosition: `Reset position`,
     replaceSelection: `Replace selection`,
