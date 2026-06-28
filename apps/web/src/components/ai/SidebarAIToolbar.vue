@@ -99,10 +99,8 @@ const currentSelectedText = computed(() => {
 })
 
 // 切换展开/收起状态
-function toggleExpanded() {
+function _toggleExpanded() {
   isExpanded.value = !isExpanded.value
-
-  // 展开后隐藏提示
   if (isExpanded.value) {
     showSelectionHint.value = false
     if (selectionHintTimer) {
@@ -205,7 +203,7 @@ onMounted(() => {
       class="w-5 h-16 bg-gradient-to-b from-blue-500/90 to-purple-500/90 hover:from-blue-600/95 hover:to-purple-600/95 dark:from-blue-400/90 dark:to-purple-400/90 dark:hover:from-blue-500/95 dark:hover:to-purple-500/95 backdrop-blur-lg border-l border-y border-blue-300/50 dark:border-blue-600/50 cursor-pointer transition-all duration-200 flex items-center justify-center rounded-l-lg shadow-lg group utools-sidebar-edge"
       :class="{ 'animate-pulse-hint': showSelectionHint }"
       :title="t('ai.toolbar.expand')"
-      @click="toggleExpanded"
+      @click="openAIChat"
     >
       <Settings2 class="h-4 w-4 text-white drop-shadow-sm group-hover:scale-110 transition-transform duration-200" />
 
