@@ -252,6 +252,8 @@ async function streamResponse(replyMessage: ChatMessage) {
       onDone() {
         const last = messages.value[messages.value.length - 1]
         if (last.role === `assistant`) {
+          if (!last.content && !last.reasoning)
+            last.content = `(AI 未返回内容)`
           last.done = true
           scrollToBottom(true)
         }
