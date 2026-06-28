@@ -43,6 +43,10 @@ export default {
     replaceSelection: `Replace selection`,
     editMessage: `Edit`,
     recallMessage: `Recall`,
+    morePresets: `Presets`,
+    presetContext: `Preset context`,
+    presetDate: `Current date & time`,
+    presetEditor: `Editor full content`,
   },
   image: {
     title: `AI Image Gen`,

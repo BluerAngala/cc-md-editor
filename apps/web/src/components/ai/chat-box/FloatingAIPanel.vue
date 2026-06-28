@@ -10,6 +10,7 @@ import {
   RefreshCcw,
   Send,
   Settings,
+  SlidersHorizontal,
   Undo2,
   X,
 } from '@lucide/vue'
@@ -113,6 +114,9 @@ const editingMessageId = ref<string | null>(null)
 const copiedIndex = ref<number | null>(null)
 const insertedIndex = ref<number | null>(null)
 const isQuoteAllContent = ref(false)
+const presetsVisible = ref(false)
+const presetDateEnabled = useStorage(`ai-preset-date`, true)
+const presetEditorEnabled = useStorage(`ai-preset-editor`, false)
 const chatContainerRef = ref<HTMLElement | null>(null)
 const aiConfigRef = ref<InstanceType<typeof AIConfig> | null>(null)
 
@@ -233,9 +237,32 @@ async function streamResponse(replyMessage: ChatMessage) {
     ? [{ role: `system`, content: t(`ai.chat.systemQuote`, { content: editor.value?.state.doc.toString() ?? `` }) }]
     : []
 
-  const payloadMessages = [
-    { role: `system`, content: t(`ai.chat.systemPrompt`) },
+  // Build preset context
+  const presetContexts: string[] = []
+  if (presetDateEnabled.value) {
+    const now = new Date()
+    presetContexts.push(`当前日期时间：${now.toLocaleString(`zh-CN`, { dateStyle: `full`, timeStyle: `short` })}（星期${[`日`, `一`, `二`, `三`, `四`, `五`, `六`][now.getDay()]}）`)
+  }
+  if (presetEditorEnabled.value && editor.value) {
+    const doc = editor.value.state.doc.toString()
+    if (doc.trim()) {
+      presetContexts.push(`当前编辑器内容：
+${doc}`)
+    }
+  }
+
+  const systemMessages = [
+    { role: `system` as const, content: t(`ai.chat.systemPrompt`) },
+    ...presetContexts.length
+      ? [{ role: `system` as const, content: `补充上下文信息：
+${presetContexts.join(`
+`)}` }]
+      : [],
     ...quoteMessages,
+  ]
+
+  const payloadMessages = [
+    ...systemMessages,
     ...contextHistory,
   ]
 
@@ -456,8 +483,8 @@ const quickCommands = computed(() => quickCmdStore.commands)
 
         <!-- ============ Chat Area ============ -->
         <div class="flex flex-col flex-1 min-h-0">
-          <!-- Quick Commands -->
-          <div v-if="quickCommands.length > 0" class="flex gap-1.5 px-3 py-2 border-b overflow-x-auto shrink-0">
+          <!-- Quick Commands + Presets -->
+          <div class="flex gap-1.5 px-3 py-2 border-b overflow-x-auto shrink-0 items-center">
             <Button
               v-for="cmd in quickCommands"
               :key="cmd.id"
@@ -468,6 +495,27 @@ const quickCommands = computed(() => quickCmdStore.commands)
             >
               {{ cmd.label }}
             </Button>
+            <div class="relative ml-auto shrink-0">
+              <Button variant="ghost" size="sm" class="h-6 text-xs gap-0.5" @click.stop="presetsVisible = !presetsVisible">
+                <SlidersHorizontal class="w-3 h-3" />
+                <span>{{ t('ai.chat.morePresets') || '预设' }}</span>
+              </Button>
+              <Transition name="fade">
+                <div v-if="presetsVisible" class="absolute right-0 top-full mt-1 z-30 w-56 bg-card border rounded-lg shadow-lg p-3 space-y-2.5">
+                  <div class="text-xs font-medium text-muted-foreground">
+                    {{ t('ai.chat.presetContext') || '预设上下文' }}
+                  </div>
+                  <label class="flex items-center gap-2 text-xs cursor-pointer">
+                    <input v-model="presetDateEnabled" type="checkbox" class="rounded" />
+                    <span>{{ t('ai.chat.presetDate') || '当前日期时间' }}</span>
+                  </label>
+                  <label class="flex items-center gap-2 text-xs cursor-pointer">
+                    <input v-model="presetEditorEnabled" type="checkbox" class="rounded" />
+                    <span>{{ t('ai.chat.presetEditor') || '编辑器全文内容' }}</span>
+                  </label>
+                </div>
+              </Transition>
+            </div>
           </div>
 
           <!-- Messages -->
@@ -624,6 +672,15 @@ const quickCommands = computed(() => quickCmdStore.commands)
 
 .ai-chat-messages :deep(code) {
   font-size: 0.75rem;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 .ai-panel-enter-active,
