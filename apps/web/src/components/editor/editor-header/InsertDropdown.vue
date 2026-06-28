@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Blocks, Image, Table } from '@lucide/vue'
+import { Blocks, Table } from '@lucide/vue'
 import { normalizeFormulaInput } from '@/lib/markdown/formula'
 import { useEditorStore } from '@/stores/editor'
 import { useUIStore } from '@/stores/ui'
@@ -15,7 +15,7 @@ const { t } = useI18n()
 const uiStore = useUIStore()
 const editorStore = useEditorStore()
 
-const { toggleShowInsertFormDialog, toggleShowUploadImgDialog, toggleShowComponentDialog } = uiStore
+const { toggleShowInsertFormDialog, toggleShowComponentDialog } = uiStore
 
 function openFormulaEditor() {
   const selection = normalizeFormulaInput(editorStore.getSelection())
@@ -33,10 +33,6 @@ function openFormulaEditor() {
       {{ t('menu.insert') }}
     </MenubarSubTrigger>
     <MenubarSubContent class="w-52">
-      <MenubarItem @click="toggleShowUploadImgDialog()">
-        <Image class="mr-2 h-4 w-4" />
-        {{ t('menu.image') }}
-      </MenubarItem>
       <MenubarItem @click="openFormulaEditor()">
         <span class="mr-2 inline-flex h-4 w-4 items-center justify-center text-xs font-semibold">ƒ</span>
         {{ t('menu.formula') }}
@@ -58,10 +54,6 @@ function openFormulaEditor() {
       {{ t('menu.insert') }}
     </MenubarTrigger>
     <MenubarContent class="w-52" align="start">
-      <MenubarItem @click="toggleShowUploadImgDialog()">
-        <Image class="mr-2 h-4 w-4" />
-        {{ t('menu.image') }}
-      </MenubarItem>
       <MenubarItem @click="openFormulaEditor()">
         <span class="mr-2 inline-flex h-4 w-4 items-center justify-center text-xs font-semibold">ƒ</span>
         {{ t('menu.formula') }}
