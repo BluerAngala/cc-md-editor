@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { QuickCommandRuntime } from '@/stores/quickCommands'
 import {
+  ArrowLeft,
   Check,
   Copy,
   MessageCircle,
@@ -383,11 +384,21 @@ const quickCommands = computed(() => quickCmdStore.commands)
           </div>
         </div>
 
-        <!-- ============ Config Panel ============ -->
-        <AIConfig v-if="configVisible" class="flex-1 overflow-y-auto px-4 pt-2" @saved="handleConfigSaved" />
+        <!-- ============ Config Panel (slide-over) ============ -->
+        <Transition name="config-slide">
+          <div v-if="configVisible" class="absolute inset-0 z-10 flex flex-col bg-card">
+            <div class="flex items-center gap-2 px-3 py-2 border-b shrink-0">
+              <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="configVisible = false">
+                <ArrowLeft class="w-4 h-4" />
+              </Button>
+              <span class="text-sm font-medium">{{ t('ai.chat.configParams') }}</span>
+            </div>
+            <AIConfig class="flex-1 overflow-y-auto px-4 pt-2" @saved="handleConfigSaved" />
+          </div>
+        </Transition>
 
         <!-- ============ Chat Area ============ -->
-        <template v-else>
+        <template>
           <!-- Quick Commands -->
           <div v-if="quickCommands.length > 0" class="flex gap-1.5 px-3 py-2 border-b overflow-x-auto shrink-0">
             <Button
@@ -573,6 +584,18 @@ const quickCommands = computed(() => quickCmdStore.commands)
   border-radius: 9999px;
   background: hsl(var(--muted-foreground) / 0.2);
 }
+/* Config slide-over */
+.config-slide-enter-active,
+.config-slide-leave-active {
+  transition: transform 0.2s ease;
+}
+.config-slide-enter-from {
+  transform: translateX(100%);
+}
+.config-slide-leave-to {
+  transform: translateX(100%);
+}
+
 .ai-chat-messages::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.4);
 }
