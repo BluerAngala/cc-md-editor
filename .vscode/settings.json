@@ -25,7 +25,7 @@
     { "rule": "*semi", "severity": "off" }
   ],
 
-  // Enable eslint for all supported languages
+  // Enable eslint for all supported languages (excluding markdown to avoid false positives in code blocks)
   "eslint.validate": [
     "javascript",
     "javascriptreact",
@@ -33,7 +33,6 @@
     "typescriptreact",
     "vue",
     "html",
-    "markdown",
     "json",
     "jsonc",
     "yaml",
