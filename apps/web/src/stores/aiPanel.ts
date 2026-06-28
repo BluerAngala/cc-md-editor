@@ -36,25 +36,28 @@ export const useAIPanelStore = defineStore(`aiPanel`, () => {
       selectedText.value = text
     visible.value = true
 
-    // Position next to anchor (e.g. sidebar icon) if provided
-    if (anchor) {
-      position.value = {
-        x: Math.max(20, anchor.right - size.value.width - 8),
-        y: Math.max(20, anchor.top - size.value.height / 3),
-      }
-      return
-    }
-
     const pos = position.value
-    const needsCenter = pos.x < 0 || pos.y < 0
-      || pos.x > window.innerWidth - 50
-      || pos.y > window.innerHeight - 50
-    if (needsCenter) {
-      position.value = {
-        x: Math.max(20, (window.innerWidth - size.value.width) / 2),
-        y: Math.max(20, (window.innerHeight - size.value.height) / 3),
+    const isDefault = pos.x < 0 || pos.y < 0
+    const isOutOfBounds = pos.x > window.innerWidth - 50 || pos.y > window.innerHeight - 50
+
+    // If position is default or out of bounds, determine initial position
+    if (isDefault || isOutOfBounds) {
+      if (anchor) {
+        // First open: position next to sidebar icon
+        position.value = {
+          x: Math.max(20, anchor.right - size.value.width - 8),
+          y: Math.max(20, anchor.top - size.value.height / 3),
+        }
+      }
+      else {
+        // No anchor (Cmd+J): center on screen
+        position.value = {
+          x: Math.max(20, (window.innerWidth - size.value.width) / 2),
+          y: Math.max(20, (window.innerHeight - size.value.height) / 3),
+        }
       }
     }
+    // Otherwise: keep stored position (user has moved the panel)
   }
 
   function close() {
