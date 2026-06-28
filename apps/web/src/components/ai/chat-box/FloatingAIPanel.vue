@@ -43,14 +43,14 @@ const w = ref(panelStore.size.width)
 const h = ref(panelStore.size.height)
 
 // Sync store → local when panel opens
-watch(() => panelStore.visible, (val) => {
-  if (val) {
+watch([() => panelStore.visible, () => panelStore.position.x, () => panelStore.position.y], ([vis]) => {
+  if (vis) {
     x.value = panelStore.position.x
     y.value = panelStore.position.y
     w.value = panelStore.size.width
     h.value = panelStore.size.height
   }
-})
+}, { immediate: true })
 
 // ── Drag (update local refs only, sync store on mouseup) ──
 function onDragStart(e: MouseEvent) {
