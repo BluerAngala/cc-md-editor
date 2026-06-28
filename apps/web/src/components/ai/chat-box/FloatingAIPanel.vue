@@ -386,7 +386,8 @@ const quickCommands = computed(() => quickCmdStore.commands)
 
         <!-- ============ Config Panel (slide-over) ============ -->
         <Transition name="config-slide">
-          <div v-if="configVisible" class="absolute top-0 right-0 bottom-0 z-10 flex flex-col bg-card" style="width: 60%;">
+          <div v-if="configVisible" class="absolute inset-0 z-10 bg-black/30" @click.stop="configVisible = false" />
+          <div v-if="configVisible" class="absolute top-0 right-0 bottom-0 z-20 flex flex-col bg-card shadow-xl" style="width: 60%;">
             <div class="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 border-b shrink-0 bg-card">
               <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="configVisible = false">
                 <ArrowLeft class="w-4 h-4" />
