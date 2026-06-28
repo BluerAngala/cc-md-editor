@@ -4,8 +4,8 @@ import {
   ArrowLeft,
   Check,
   Copy,
+  FileInput,
   MessageCircle,
-  Pin,
   Plus,
   RefreshCcw,
   Send,
@@ -517,7 +517,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
                   </Button>
                   <Button variant="ghost" size="icon" class="h-6 w-6" :title="t('ai.chat.insertDoc')" @click.stop="insertToDocument(msg.content, index)">
                     <Check v-if="insertedIndex === index" class="w-3 h-3 text-green-500" />
-                    <Pin v-else class="w-3 h-3" />
+                    <FileInput v-else class="w-3 h-3" />
                   </Button>
                   <Button variant="ghost" size="icon" class="h-6 w-6" :title="t('ai.chat.regenerate')" @click.stop="regenerateLast">
                     <RefreshCcw class="w-3 h-3" />
