@@ -520,11 +520,11 @@ const quickCommands = computed(() => quickCmdStore.commands)
           <div class="flex items-center gap-1 text-sm font-medium">
             <MessageCircle class="w-4 h-4" />
             <span>{{ t('ai.chat.title') }}</span>
-            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs ml-1" @click.stop="configVisible = !configVisible; configTab = 'ai'">
+            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs ml-1" @click.stop="configVisible = true; configTab = 'ai'">
               <Settings class="w-3 h-3" />
               <span>{{ t('ai.chat.configParams') }}</span>
             </Button>
-            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs" @click.stop="configVisible = !configVisible; configTab = 'presets'">
+            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs" @click.stop="configVisible = true; configTab = 'presets'">
               <SlidersHorizontal class="w-3 h-3" />
               <span>{{ t('ai.chat.morePresets') || '预设' }}</span>
             </Button>
