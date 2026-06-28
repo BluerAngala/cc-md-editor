@@ -807,7 +807,7 @@ function resetToAnchor() {
                 {{ t('ai.chat.quoteFullText') }}
               </label>
               <span v-if="currentPost" class="flex-1 min-w-0 mx-2 truncate text-center text-muted-foreground/60">
-                {{ currentPost.title }}
+                当前:{{ currentPost.title }}
               </span>
               <Button variant="ghost" size="sm" class="h-5 text-xs px-1.5 shrink-0" @click.stop="resetMessages">
                 <Plus class="w-3 h-3 mr-0.5" />
