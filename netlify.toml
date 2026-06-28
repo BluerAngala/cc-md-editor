@@ -1,0 +1,16 @@
+[build]
+command = "pnpm web build:h5-netlify"
+publish = "apps/web/dist"
+functions = "apps/web/netlify/functions"
+
+# 分享页面路由 → Netlify Function
+[[redirects]]
+from = "/s/:id"
+to = "/.netlify/functions/share-get?id=:id"
+status = 200
+
+# SPA 路由兜底
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200

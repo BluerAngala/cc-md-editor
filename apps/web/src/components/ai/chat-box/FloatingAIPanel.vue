@@ -41,8 +41,6 @@ const quickCmdStore = useQuickCommandsStore()
 const { t } = useI18n()
 
 // ── Local position/size refs (decoupled from store for smooth drag/resize) ──
-const panelRef = ref<HTMLElement | null>(null)
-const dragHandleRef = ref<HTMLElement | null>(null)
 const x = ref(panelStore.position.x)
 const y = ref(panelStore.position.y)
 const w = ref(panelStore.size.width)

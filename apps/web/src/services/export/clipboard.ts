@@ -206,7 +206,7 @@ export async function processClipboardContent(_primaryColor: string) {
       }
     })
     // 清除列表转换来的段落的 margin
-    clipboardDiv.querySelectorAll(`p[data-from-list]`).forEach((p) => {
+    clipboardDiv.querySelectorAll<HTMLElement>(`p[data-from-list]`).forEach((p) => {
       p.removeAttribute(`data-from-list`)
       p.style.marginTop = `0`
       p.style.marginBottom = `0`

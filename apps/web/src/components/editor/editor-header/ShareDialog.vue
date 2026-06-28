@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { captureShareSnapshot } from '@/services/share/capture-snapshot'
-import { isShareConfigured, isShareProUser, ShareApiError, ShareClient } from '@/services/share/client'
+import { isNetlifyMode, isShareConfigured, isShareProUser, NetlifyShareClient, ShareApiError, ShareClient } from '@/services/share/client'
 import { useAuthStore } from '@/stores/auth'
 import { useConfirmStore } from '@/stores/confirm'
 import { useLocaleStore } from '@/stores/locale'
@@ -95,7 +95,9 @@ const dialogOpen = computed({
   },
 })
 
-const shareClient = new ShareClient(() => authStore.token)
+const shareClient = isNetlifyMode()
+  ? new NetlifyShareClient()
+  : new ShareClient(() => authStore.token)
 const passwordMode = ref<SharePasswordMode>(`none`)
 const expiresMode = ref<ShareExpiresMode>(`1d`)
 const customPassword = ref(``)
@@ -228,7 +230,7 @@ function formatShareError(err: unknown): string {
 }
 
 async function createShare() {
-  if (isSubmitting.value || !isLoggedIn.value || !canSubmit.value)
+  if (isSubmitting.value || (!isNetlifyMode() && !isLoggedIn.value) || !canSubmit.value)
     return
 
   isSubmitting.value = true
@@ -245,12 +247,12 @@ async function createShare() {
     submitStage.value = t(`share.stageUploading`)
 
     const currentPost = postStore.currentPost
-    if (!currentPost?.id)
+    if (!isNetlifyMode() && !currentPost?.id)
       throw new Error(t(`share.invalidPost`))
 
     const result = await shareClient.create({
-      postId: currentPost.id,
-      title: currentPost.title ?? ``,
+      postId: currentPost?.id ?? `anonymous`,
+      title: currentPost?.title ?? ``,
       htmlSnapshot,
       passwordMode: passwordMode.value,
       ...(passwordMode.value === `custom` ? { password: customPassword.value.trim() } : {}),
@@ -353,7 +355,7 @@ watch(isProUser, (pro) => {
     />
 
     <CloudFeatureState
-      v-else-if="!isLoggedIn"
+      v-else-if="!isLoggedIn && !isNetlifyMode()"
       :icon="Share2"
       :title="t('share.loginTitle')"
       :action-label="t('common.login')"

@@ -289,7 +289,7 @@ watch(isMobile, () => {
             {{ label }}
           </Button>
           <div class="col-span-3 relative">
-            <Button variant="outline" class="h-auto w-full px-1.5 py-2 text-xs whitespace-nowrap" @click="$refs.primaryColorInput.click()">
+            <Button variant="outline" class="h-auto w-full px-1.5 py-2 text-xs whitespace-nowrap" @click="($refs.primaryColorInput as HTMLInputElement).click()">
               <span class="mr-1.5 inline-block size-3 shrink-0 rounded-full" :style="{ background: primaryColor }" />
               {{ t('menu.customPrimaryColor') }}
             </Button>
@@ -315,7 +315,7 @@ watch(isMobile, () => {
             {{ label }}
           </Button>
           <div class="col-span-3 relative">
-            <Button variant="outline" class="h-auto w-full px-1.5 py-2 text-xs whitespace-nowrap" @click="$refs.bgColorInput.click()">
+            <Button variant="outline" class="h-auto w-full px-1.5 py-2 text-xs whitespace-nowrap" @click="($refs.bgColorInput as HTMLInputElement).click()">
               <span class="mr-1.5 inline-block size-3 shrink-0 rounded-full border" :style="{ background: backgroundColor }" />
               {{ t('menu.customPrimaryColor') }}
             </Button>
