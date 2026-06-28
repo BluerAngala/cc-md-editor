@@ -139,7 +139,7 @@ function resetForm() {
 }
 
 function resetDialog() {
-  activeTab.value = shareDialogInitialTab.value === `manage` && isProUser.value
+  activeTab.value = shareDialogInitialTab.value === `manage` && (isProUser.value || isNetlifyMode())
     ? `manage`
     : `create`
   resetForm()
@@ -329,12 +329,12 @@ watch(() => props.open, (visible) => {
 })
 
 watch(activeTab, (tab) => {
-  if (tab === `manage` && props.open && isProUser.value)
+  if (tab === `manage` && props.open && (isProUser.value || isNetlifyMode()))
     loadShareList()
 })
 
 watch(isProUser, (pro) => {
-  if (!pro && activeTab.value === `manage`)
+  if (!pro && !isNetlifyMode() && activeTab.value === `manage`)
     activeTab.value = `create`
 })
 </script>
@@ -364,7 +364,7 @@ watch(isProUser, (pro) => {
     />
 
     <Tabs v-else v-model="activeTab" class="gap-0">
-      <TabsList v-if="isProUser" class="mx-4 mt-4 grid w-auto grid-cols-2 sm:mx-6">
+      <TabsList v-if="isProUser || isNetlifyMode()" class="mx-4 mt-4 grid w-auto grid-cols-2 sm:mx-6">
         <TabsTrigger value="create">
           {{ t('share.tabCreate') }}
         </TabsTrigger>
@@ -533,7 +533,7 @@ watch(isProUser, (pro) => {
         </template>
       </TabsContent>
 
-      <TabsContent v-if="isProUser" value="manage" class="mt-0">
+      <TabsContent v-if="isProUser || isNetlifyMode()" value="manage" class="mt-0">
         <div class="space-y-3 px-4 py-4 sm:px-6">
           <div class="flex items-center justify-between gap-2">
             <p class="text-xs text-muted-foreground">

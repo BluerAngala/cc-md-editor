@@ -1,4 +1,4 @@
-import type { CreateShareRequest, CreateShareResponse, ListSharesResponse } from './types'
+import type { CreateShareRequest, CreateShareResponse, ListSharesResponse, ShareListItem } from './types'
 import type { AccountUser } from '@/services/account/types'
 import { ApiError, MdApiClient } from '@/services/account/client'
 import { isAccountConfigured, MD_API_URL } from '@/services/account/config'
@@ -21,7 +21,6 @@ export function isShareProUser(user: Pick<AccountUser, `plan` | `planExpiresAt`>
   return user.planExpiresAt != null && user.planExpiresAt > Date.now()
 }
 
-
 /** 是否在 UI 中展示分享入口 */
 export function isShareUiEnabled(): boolean {
   const flag = import.meta.env.VITE_SHARE_UI_ENABLED
@@ -36,6 +35,26 @@ export function getSharePageUrl(id: string): string {
     return `${origin}/s/${id}`
   }
   return `${MD_API_URL}/s/${id}`
+}
+
+const NETLIFY_SHARES_KEY = `netlify_shares`
+
+function loadLocalShares(): ShareListItem[] {
+  try {
+    return JSON.parse(localStorage.getItem(NETLIFY_SHARES_KEY) || `[]`)
+  }
+  catch { return [] }
+}
+
+function saveLocalShare(item: ShareListItem): void {
+  const list = loadLocalShares()
+  list.unshift(item)
+  localStorage.setItem(NETLIFY_SHARES_KEY, JSON.stringify(list))
+}
+
+function removeLocalShare(id: string): void {
+  const list = loadLocalShares().filter(s => s.id !== id)
+  localStorage.setItem(NETLIFY_SHARES_KEY, JSON.stringify(list))
 }
 
 /** Netlify 匿名分享客户端（无需登录，调用本地 Function） */
@@ -56,15 +75,28 @@ export class NetlifyShareClient {
       catch { /* ignore */ }
       throw new ApiError(res.status, message)
     }
-    return res.json() as Promise<CreateShareResponse>
+    const result = await res.json() as CreateShareResponse
+    saveLocalShare({
+      id: result.id,
+      postId: payload.postId ?? ``,
+      title: payload.title ?? ``,
+      url: result.url,
+      createdAt: Date.now(),
+      expiresAt: result.expiresAt,
+      viewCount: 0,
+      protected: result.protected,
+      expired: false,
+    })
+    return result
   }
 
-  // Netlify 模式不支持 list/revoke（无账户体系）
   async list(): Promise<ListSharesResponse> {
-    return { shares: [] }
+    return { shares: loadLocalShares() }
   }
 
-  async revoke(): Promise<{ ok: true }> {
+  async revoke(id: string): Promise<{ ok: true }> {
+    await fetch(`/.netlify/functions/share-delete?id=${id}`, { method: `DELETE` })
+    removeLocalShare(id)
     return { ok: true }
   }
 }

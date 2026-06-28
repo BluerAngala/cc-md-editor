@@ -34,6 +34,8 @@
     "@lucide/vue": "^1.21.0",
     "@md/core": "workspace:*",
     "@md/shared": "workspace:*",
+    "@netlify/blobs": "^10.7.9",
+    "@netlify/functions": "^5.3.0",
     "@vee-validate/yup": "^4.15.1",
     "@vueuse/core": "^14.3.0",
     "browser-image-compression": "^2.0.2",

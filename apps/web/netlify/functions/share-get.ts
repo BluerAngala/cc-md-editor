@@ -54,7 +54,11 @@ function renderSharePage(record: ShareRecord): string {
     color: #333;
     line-height: 1.6;
   }
-  .container {
+  .share-content ul,
+  .share-content ol {
+    list-style: none;
+  }
+  .share-content {
     max-width: 677px;
     margin: 20px auto;
     background: #fff;
@@ -63,7 +67,7 @@ function renderSharePage(record: ShareRecord): string {
     border-radius: 4px;
   }
   @media (max-width: 720px) {
-    .container { margin: 0; border-radius: 0; }
+    .share-content { margin: 0; border-radius: 0; }
   }
   .powered-by {
     text-align: center;
@@ -77,7 +81,7 @@ function renderSharePage(record: ShareRecord): string {
 ${record.stylesHtml}
 </head>
 <body>
-<div class="container">
+<div class="share-content">
   ${record.bodyHtml}
 </div>
 <div class="powered-by">
