@@ -1,16 +1,16 @@
 {
-  "name": "md",
+  "name": "cc-md-editor",
   "type": "module",
   "version": "2.1.0",
   "private": false,
-  "description": "WeChat Markdown Editor | 一款高度简洁的微信 Markdown 编辑器：支持 Markdown 语法、自定义主题样式、内容管理、多图床、AI 助手等特性",
-  "homepage": "https://github.com/doocs/md",
+  "description": "CC Markdown 编辑器 — 基于 doocs/md 二次开发的微信 Markdown 编辑器，深度优化 AI 辅助写作、公众号排版兼容性与主题系统",
+  "homepage": "https://github.com/BluerAngala/cc-md-editor",
   "repository": {
     "type": "git",
-    "url": "https://github.com/doocs/md"
+    "url": "https://github.com/BluerAngala/cc-md-editor"
   },
   "bugs": {
-    "url": "https://github.com/doocs/md/issues"
+    "url": "https://github.com/BluerAngala/cc-md-editor/issues"
   },
   "engines": {
     "node": ">=22.22.2"
