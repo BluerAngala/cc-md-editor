@@ -110,12 +110,12 @@ const input = ref(``)
 const inputHistory = ref<string[]>([])
 const historyIndex = ref<number | null>(null)
 const configVisible = ref(false)
+const configTab = ref<`ai` | `presets`>(`ai`)
 const editingMessageId = ref<string | null>(null)
 const copiedIndex = ref<number | null>(null)
 const insertedIndex = ref<number | null>(null)
 const isQuoteAllContent = ref(false)
 const chatContainerRef = ref<HTMLElement | null>(null)
-const presetsVisible = ref(false)
 const editingPresetId = ref<string | null>(null)
 const presetFormName = ref(``)
 const presetFormContent = ref(``)
@@ -520,9 +520,13 @@ const quickCommands = computed(() => quickCmdStore.commands)
           <div class="flex items-center gap-1 text-sm font-medium">
             <MessageCircle class="w-4 h-4" />
             <span>{{ t('ai.chat.title') }}</span>
-            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs ml-1" @click.stop="configVisible = !configVisible">
+            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs ml-1" @click.stop="configVisible = !configVisible; configTab = 'ai'">
               <Settings class="w-3 h-3" />
               <span>{{ t('ai.chat.configParams') }}</span>
+            </Button>
+            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs" @click.stop="configVisible = !configVisible; configTab = 'presets'">
+              <SlidersHorizontal class="w-3 h-3" />
+              <span>{{ t('ai.chat.morePresets') || '预设' }}</span>
             </Button>
             <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs" @click.stop="resetMessages">
               <Plus class="w-3 h-3" />
@@ -541,26 +545,110 @@ const quickCommands = computed(() => quickCmdStore.commands)
         </Transition>
         <Transition name="config-slide">
           <div v-if="configVisible" class="absolute top-0 right-0 bottom-0 z-20 flex flex-col bg-card shadow-xl" style="width: 60%;">
-            <div class="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 border-b shrink-0 bg-card">
-              <Button variant="ghost" size="icon" class="h-7 w-7" @click.stop="configVisible = false">
+            <!-- Header with tabs -->
+            <div class="sticky top-0 z-10 flex items-center gap-1 px-2 py-1.5 border-b shrink-0 bg-card">
+              <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" @click.stop="configVisible = false">
                 <ArrowLeft class="w-4 h-4" />
               </Button>
-              <span class="text-sm font-medium">{{ t('ai.chat.configParams') }}</span>
+              <button
+                class="px-2.5 py-1 text-xs rounded-md transition-colors"
+                :class="configTab === 'ai' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
+                @click.stop="configTab = 'ai'"
+              >
+                {{ t('ai.chat.configParams') }}
+              </button>
+              <button
+                class="px-2.5 py-1 text-xs rounded-md transition-colors"
+                :class="configTab === 'presets' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
+                @click.stop="configTab = 'presets'"
+              >
+                {{ t('ai.chat.morePresets') || '预设' }}
+              </button>
             </div>
-            <AIConfig ref="aiConfigRef" class="flex-1 overflow-y-auto px-4 pt-2" @saved="handleConfigSaved" />
-            <div class="shrink-0 border-t px-4 py-3 flex flex-col gap-2 sm:flex-row">
-              <Button size="sm" @click="aiConfigRef?.saveConfig()">
-                {{ t('common.save') }}
-              </Button>
-              <Button size="sm" variant="ghost" @click="aiConfigRef?.clearConfig()">
-                {{ t('common.clear') }}
-              </Button>
-              <Button size="sm" variant="outline" :disabled="aiConfigRef?.loading" @click="aiConfigRef?.testConnection()">
-                {{ aiConfigRef?.loading ? t('common.testing') : t('common.testConnection') }}
-              </Button>
-            </div>
-            <div v-if="aiConfigRef?.testResult" class="shrink-0 px-4 pb-2 text-xs text-gray-500">
-              {{ aiConfigRef.testResult }}
+
+            <!-- AI Config tab -->
+            <template v-if="configTab === 'ai'">
+              <AIConfig ref="aiConfigRef" class="flex-1 overflow-y-auto px-4 pt-2" @saved="handleConfigSaved" />
+              <div class="shrink-0 border-t px-4 py-3 flex flex-col gap-2 sm:flex-row">
+                <Button size="sm" @click="aiConfigRef?.saveConfig()">
+                  {{ t('common.save') }}
+                </Button>
+                <Button size="sm" variant="ghost" @click="aiConfigRef?.clearConfig()">
+                  {{ t('common.clear') }}
+                </Button>
+                <Button size="sm" variant="outline" :disabled="aiConfigRef?.loading" @click="aiConfigRef?.testConnection()">
+                  {{ aiConfigRef?.loading ? t('common.testing') : t('common.testConnection') }}
+                </Button>
+              </div>
+              <div v-if="aiConfigRef?.testResult" class="shrink-0 px-4 pb-2 text-xs text-gray-500">
+                {{ aiConfigRef.testResult }}
+              </div>
+            </template>
+
+            <!-- Presets tab -->
+            <div v-else class="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+              <!-- Always-on presets -->
+              <div>
+                <div class="text-xs font-medium text-muted-foreground mb-2">
+                  🔄 {{ t('ai.chat.alwaysContext') || '自动上下文' }}
+                </div>
+                <div v-for="p in alwaysPresets" :key="p.id" class="flex items-center gap-2 py-1.5 border-b border-border/30">
+                  <label class="flex items-center gap-2 text-xs cursor-pointer flex-1">
+                    <input :checked="p.enabled" type="checkbox" class="rounded" @change="togglePreset(p.id)" />
+                    <span>{{ p.name }}</span>
+                  </label>
+                  <Button v-if="!p.builtin" variant="ghost" size="icon" class="h-5 w-5" @click.stop="startEditPreset(p)">
+                    <Pencil class="w-2.5 h-2.5" />
+                  </Button>
+                  <Button v-if="!p.builtin" variant="ghost" size="icon" class="h-5 w-5" @click.stop="deletePreset(p.id)">
+                    <X class="w-2.5 h-2.5" />
+                  </Button>
+                </div>
+              </div>
+
+              <!-- On-demand presets -->
+              <div>
+                <div class="text-xs font-medium text-muted-foreground mb-2">
+                  📌 {{ t('ai.chat.ondemandContext') || '手动引用' }}
+                </div>
+                <div v-if="ondemandPresets.length === 0" class="text-xs text-muted-foreground/50 py-1">
+                  {{ t('ai.chat.noOndemandPresets') || '暂无' }}
+                </div>
+                <div v-for="p in ondemandPresets" :key="p.id" class="flex items-center gap-1 py-1.5 border-b border-border/30">
+                  <span class="text-xs flex-1 truncate">{{ p.name }}</span>
+                  <Button variant="ghost" size="icon" class="h-5 w-5" @click.stop="startEditPreset(p)">
+                    <Pencil class="w-2.5 h-2.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" class="h-5 w-5" @click.stop="deletePreset(p.id)">
+                    <X class="w-2.5 h-2.5" />
+                  </Button>
+                </div>
+              </div>
+
+              <!-- Add / Edit form -->
+              <div class="border-t pt-3 space-y-1.5">
+                <div v-if="editingPresetId" class="text-xs font-medium">
+                  {{ t('ai.chat.editPreset') || '编辑预设' }}
+                </div>
+                <input v-model="presetFormName" :placeholder="t('ai.chat.presetNamePlaceholder') || '预设名称'" class="w-full text-xs border rounded px-2 py-1.5 bg-background" />
+                <textarea v-model="presetFormContent" :placeholder="t('ai.chat.presetContentPlaceholder') || '内容'" rows="2" class="w-full text-xs border rounded px-2 py-1.5 bg-background resize-none" />
+                <div class="flex items-center gap-2">
+                  <select v-model="presetFormType" class="text-xs border rounded px-1.5 py-1.5 bg-background flex-1">
+                    <option value="always">
+                      {{ t('ai.chat.alwaysType') || '自动上下文' }}
+                    </option>
+                    <option value="ondemand">
+                      {{ t('ai.chat.ondemandType') || '手动引用' }}
+                    </option>
+                  </select>
+                  <Button size="sm" class="h-7 text-xs" @click.stop="savePreset">
+                    {{ editingPresetId ? (t('common.save') || '保存') : (t('ai.chat.addPreset') || '添加') }}
+                  </Button>
+                  <Button v-if="editingPresetId" variant="ghost" size="sm" class="h-7 text-xs" @click.stop="cancelEditPreset">
+                    {{ t('common.cancel') || '取消' }}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </Transition>
