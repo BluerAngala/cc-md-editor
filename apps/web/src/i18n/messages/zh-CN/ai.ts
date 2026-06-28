@@ -42,6 +42,7 @@ export default {
     resetPosition: `重置位置`,
     replaceSelection: `替换选中`,
     editMessage: `编辑`,
+    recallMessage: `撤回`,
   },
   image: {
     title: `AI 文生图`,

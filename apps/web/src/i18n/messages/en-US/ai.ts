@@ -42,6 +42,7 @@ export default {
     resetPosition: `Reset position`,
     replaceSelection: `Replace selection`,
     editMessage: `Edit`,
+    recallMessage: `Recall`,
   },
   image: {
     title: `AI Image Gen`,

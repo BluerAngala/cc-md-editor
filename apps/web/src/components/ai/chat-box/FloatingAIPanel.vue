@@ -5,12 +5,12 @@ import {
   Check,
   Copy,
   MessageCircle,
-  Pencil,
   Pin,
   Plus,
   RefreshCcw,
   Send,
   Settings,
+  Undo2,
   X,
 } from '@lucide/vue'
 import { v4 as uuidv4 } from 'uuid'
@@ -300,9 +300,16 @@ async function copyToClipboard(text: string, index: number) {
   setTimeout(() => (copiedIndex.value = null), FEEDBACK_INDICATOR_TIMEOUT_MS)
 }
 
-function editMessage(msg: ChatMessage) {
-  editingMessageId.value = msg.id
+function recallMessage(msg: ChatMessage, index: number) {
+  // Remove the AI reply after this message (if exists)
+  if (index + 1 < messages.value.length && messages.value[index + 1].role === `assistant`) {
+    messages.value.splice(index + 1, 1)
+  }
+  // Remove the user message
+  messages.value.splice(index, 1)
+  // Put content back in input
   input.value = msg.content
+  editingMessageId.value = msg.id
   nextTick(() => {
     const textarea = chatContainerRef.value?.querySelector(`textarea`)
     textarea?.focus()
@@ -399,23 +406,21 @@ const quickCommands = computed(() => quickCmdStore.commands)
           @mousedown="onDragStart"
           @dblclick="panelStore.resetPosition()"
         >
-          <div class="flex items-center gap-2 text-sm font-medium">
+          <div class="flex items-center gap-1 text-sm font-medium">
             <MessageCircle class="w-4 h-4" />
             <span>{{ t('ai.chat.title') }}</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" @click.stop="configVisible = !configVisible">
-              <Settings class="w-3.5 h-3.5" />
+            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs ml-1" @click.stop="configVisible = !configVisible">
+              <Settings class="w-3 h-3" />
               <span>{{ t('ai.chat.configParams') }}</span>
             </Button>
-            <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" @click.stop="resetMessages">
-              <Plus class="w-3.5 h-3.5" />
+            <Button variant="ghost" size="sm" class="h-6 gap-0.5 text-xs" @click.stop="resetMessages">
+              <Plus class="w-3 h-3" />
               <span>{{ t('ai.chat.newSession') }}</span>
             </Button>
-            <Button variant="destructive" size="icon" class="h-7 w-7 rounded-full" @click.stop="panelStore.close()">
-              <X class="w-3.5 h-3.5" />
-            </Button>
           </div>
+          <Button variant="destructive" size="icon" class="h-6 w-6 rounded-full" @click.stop="panelStore.close()">
+            <X class="w-3.5 h-3.5" />
+          </Button>
         </div>
 
         <!-- ============ Config Panel (slide-over) ============ -->
@@ -499,8 +504,8 @@ const quickCommands = computed(() => quickCmdStore.commands)
                     <Check v-if="copiedIndex === index" class="w-3 h-3 text-green-500" />
                     <Copy v-else class="w-3 h-3" />
                   </Button>
-                  <Button variant="ghost" size="icon" class="h-6 w-6" :title="t('ai.chat.editMessage')" @click.stop="editMessage(msg)">
-                    <Pencil class="w-3 h-3" />
+                  <Button variant="ghost" size="icon" class="h-6 w-6" :title="t('ai.chat.recallMessage')" @click.stop="recallMessage(msg, index)">
+                    <Undo2 class="w-3 h-3" />
                   </Button>
                 </div>
 
