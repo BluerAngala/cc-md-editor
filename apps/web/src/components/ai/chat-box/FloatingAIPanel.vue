@@ -318,7 +318,7 @@ function handleConfigSaved() {
   scrollToBottom(true)
 }
 
-const quickCommands = computed(() => quickCmdStore.resolvedCommands)
+const quickCommands = computed(() => quickCmdStore.commands)
 </script>
 
 <template>
@@ -375,7 +375,7 @@ const quickCommands = computed(() => quickCmdStore.resolvedCommands)
               class="h-6 text-xs shrink-0"
               @click.stop="applyQuickCommand(cmd)"
             >
-              {{ cmd.name }}
+              {{ cmd.label }}
             </Button>
           </div>
 
