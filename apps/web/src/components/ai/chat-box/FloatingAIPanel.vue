@@ -309,7 +309,7 @@ function recallMessage(msg: ChatMessage, index: number) {
   messages.value.splice(index, 1)
   // Put content back in input
   input.value = msg.content
-  editingMessageId.value = msg.id
+  editingMessageId.value = null
   nextTick(() => {
     const textarea = chatContainerRef.value?.querySelector(`textarea`)
     textarea?.focus()
