@@ -23,6 +23,7 @@ import { store } from '@/storage'
 import useAIConfigStore from '@/stores/aiConfig'
 import { useAIPanelStore } from '@/stores/aiPanel'
 import { useEditorStore } from '@/stores/editor'
+import { usePostStore } from '@/stores/post'
 import { useQuickCommandsStore } from '@/stores/quickCommands'
 import AIConfig from './AIConfig.vue'
 
@@ -33,6 +34,8 @@ const editorStore = useEditorStore()
 const { editor } = storeToRefs(editorStore)
 const configStore = useAIConfigStore()
 const { apiKey, endpoint, model, temperature, maxToken, type } = storeToRefs(configStore)
+const postStore = usePostStore()
+const { currentPost } = storeToRefs(postStore)
 const quickCmdStore = useQuickCommandsStore()
 
 const { t } = useI18n()
@@ -796,30 +799,32 @@ function resetToAnchor() {
                 >
                   <X class="w-3.5 h-3.5" />
                 </Button>
+                <div class="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                  <label class="flex items-center gap-1 cursor-pointer shrink-0">
+                    <input v-model="isQuoteAllContent" type="checkbox" class="rounded">
+                    {{ t('ai.chat.quoteFullText') }}
+                  </label>
+                  <span v-if="currentPost" class="flex-1 min-w-0 mx-2 truncate text-center text-muted-foreground/60">
+                    {{ currentPost.title }}
+                  </span>
+                  <Button variant="ghost" size="sm" class="h-5 text-xs px-1.5 shrink-0" @click.stop="resetMessages">
+                    <Plus class="w-3 h-3 mr-0.5" />
+                    {{ t('ai.chat.newSession') }}
+                  </Button>
+                </div>
+              </div>
+
+              <!-- ============ Resize Handle ============ -->
+              <div
+                class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+                style="z-index: 10;"
+                @mousedown="onResizeStart"
+              >
+                <svg class="w-3 h-3 absolute bottom-0.5 right-0.5 text-muted-foreground/40" viewBox="0 0 16 16">
+                  <path d="M14 16L16 14M10 16L16 10M6 16L16 6" stroke="currentColor" stroke-width="1.5" fill="none" />
+                </svg>
               </div>
             </div>
-
-            <div class="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-              <label class="flex items-center gap-1 cursor-pointer">
-                <input v-model="isQuoteAllContent" type="checkbox" class="rounded">
-                {{ t('ai.chat.quoteFullText') }}
-              </label>
-              <Button variant="ghost" size="sm" class="h-5 text-xs px-1.5" @click.stop="resetMessages">
-                <Plus class="w-3 h-3 mr-0.5" />
-                {{ t('ai.chat.newSession') }}
-              </Button>
-            </div>
-          </div>
-
-          <!-- ============ Resize Handle ============ -->
-          <div
-            class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
-            style="z-index: 10;"
-            @mousedown="onResizeStart"
-          >
-            <svg class="w-3 h-3 absolute bottom-0.5 right-0.5 text-muted-foreground/40" viewBox="0 0 16 16">
-              <path d="M14 16L16 14M10 16L16 10M6 16L16 6" stroke="currentColor" stroke-width="1.5" fill="none" />
-            </svg>
           </div>
         </div>
       </div>
