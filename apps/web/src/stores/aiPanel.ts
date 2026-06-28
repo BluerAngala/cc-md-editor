@@ -35,11 +35,14 @@ export const useAIPanelStore = defineStore(`aiPanel`, () => {
     if (text !== undefined)
       selectedText.value = text
     visible.value = true
-    // first-open: center the panel
-    if (position.value.x < 0 || position.value.y < 0) {
+    const pos = position.value
+    const needsCenter = pos.x < 0 || pos.y < 0
+      || pos.x > window.innerWidth - 50
+      || pos.y > window.innerHeight - 50
+    if (needsCenter) {
       position.value = {
-        x: Math.max(0, (window.innerWidth - size.value.width) / 2),
-        y: Math.max(0, (window.innerHeight - size.value.height) / 3),
+        x: Math.max(20, (window.innerWidth - size.value.width) / 2),
+        y: Math.max(20, (window.innerHeight - size.value.height) / 3),
       }
     }
   }

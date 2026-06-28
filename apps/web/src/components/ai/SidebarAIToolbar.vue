@@ -99,16 +99,6 @@ const currentSelectedText = computed(() => {
 })
 
 // 切换展开/收起状态
-function _toggleExpanded() {
-  isExpanded.value = !isExpanded.value
-  if (isExpanded.value) {
-    showSelectionHint.value = false
-    if (selectionHintTimer) {
-      clearTimeout(selectionHintTimer)
-      selectionHintTimer = null
-    }
-  }
-}
 
 // 打开AI助手（浮动面板）
 function openAIChat() {

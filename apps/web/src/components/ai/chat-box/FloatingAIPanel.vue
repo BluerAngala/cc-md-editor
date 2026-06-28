@@ -384,7 +384,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
         </div>
 
         <!-- ============ Config Panel ============ -->
-        <AIConfig v-if="configVisible" class="flex-1 overflow-y-auto" @saved="handleConfigSaved" />
+        <AIConfig v-if="configVisible" class="flex-1 overflow-y-auto px-4 pt-2" @saved="handleConfigSaved" />
 
         <!-- ============ Chat Area ============ -->
         <template v-else>
