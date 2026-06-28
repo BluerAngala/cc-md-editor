@@ -213,8 +213,8 @@ async function testConnection() {
       />
     </div>
 
-    <!-- 操作按钮区域 -->
-    <div class="mt-2 flex flex-col gap-2 sm:flex-row">
+    <!-- 操作按钮区域 (sticky bottom) -->
+    <div class="sticky bottom-0 mt-2 flex flex-col gap-2 sm:flex-row bg-card pt-2 pb-2 border-t">
       <Button size="sm" @click="saveConfig">
         {{ t('common.save') }}
       </Button>
