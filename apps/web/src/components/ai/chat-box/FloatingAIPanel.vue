@@ -11,7 +11,6 @@ import {
   Settings,
   X,
 } from '@lucide/vue'
-import { useDraggable } from '@vueuse/core'
 import { v4 as uuidv4 } from 'uuid'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -35,49 +34,73 @@ const quickCmdStore = useQuickCommandsStore()
 
 const { t } = useI18n()
 
-// ── Drag ──
+// ── Local position/size refs (decoupled from store for smooth drag/resize) ──
 const panelRef = ref<HTMLElement | null>(null)
 const dragHandleRef = ref<HTMLElement | null>(null)
-const { isDragging } = useDraggable(panelRef, {
-  handle: dragHandleRef,
-  initialValue: { x: panelStore.position.x, y: panelStore.position.y },
-  onEnd: (pos) => {
-    panelStore.setPosition(pos.x, pos.y)
-  },
+const x = ref(panelStore.position.x)
+const y = ref(panelStore.position.y)
+const w = ref(panelStore.size.width)
+const h = ref(panelStore.size.height)
+
+// Sync store → local when panel opens
+watch(() => panelStore.visible, (val) => {
+  if (val) {
+    x.value = panelStore.position.x
+    y.value = panelStore.position.y
+    w.value = panelStore.size.width
+    h.value = panelStore.size.height
+  }
 })
 
-// ── Resize ──
-const isResizing = ref(false)
-const resizeStart = reactive({ x: 0, y: 0, w: 0, h: 0 })
+// ── Drag (update local refs only, sync store on mouseup) ──
+function onDragStart(e: MouseEvent) {
+  if (!(e.target as HTMLElement)?.closest(`.ai-panel-header`))
+    return
+  if ((e.target as HTMLElement).closest(`button`))
+    return
 
+  e.preventDefault()
+  const startX = e.clientX - x.value
+  const startY = e.clientY - y.value
+
+  function onMove(ev: MouseEvent) {
+    x.value = ev.clientX - startX
+    y.value = ev.clientY - startY
+  }
+
+  function onUp() {
+    document.removeEventListener(`mousemove`, onMove)
+    document.removeEventListener(`mouseup`, onUp)
+    panelStore.setPosition(x.value, y.value)
+  }
+
+  document.addEventListener(`mousemove`, onMove)
+  document.addEventListener(`mouseup`, onUp)
+}
+
+// ── Resize (update local refs only, sync store on mouseup) ──
 function onResizeStart(e: MouseEvent) {
   e.preventDefault()
   e.stopPropagation()
-  isResizing.value = true
-  resizeStart.x = e.clientX
-  resizeStart.y = e.clientY
-  resizeStart.w = panelStore.size.width
-  resizeStart.h = panelStore.size.height
-  document.addEventListener(`mousemove`, onResizeMove)
-  document.addEventListener(`mouseup`, onResizeEnd)
-}
+  const startX = e.clientX
+  const startY = e.clientY
+  const startW = w.value
+  const startH = h.value
 
-function onResizeMove(e: MouseEvent) {
-  const dw = e.clientX - resizeStart.x
-  const dh = e.clientY - resizeStart.y
-  panelStore.setSize(resizeStart.w + dw, resizeStart.h + dh)
-}
+  function onMove(ev: MouseEvent) {
+    w.value = Math.max(panelStore.MIN_WIDTH, startW + ev.clientX - startX)
+    h.value = Math.max(panelStore.MIN_HEIGHT, startH + ev.clientY - startY)
+  }
 
-function onResizeEnd() {
-  isResizing.value = false
-  document.removeEventListener(`mousemove`, onResizeMove)
-  document.removeEventListener(`mouseup`, onResizeEnd)
-}
+  function onUp() {
+    document.removeEventListener(`mousemove`, onMove)
+    document.removeEventListener(`mouseup`, onUp)
+    panelStore.setSize(w.value, h.value)
+  }
 
-onUnmounted(() => {
-  document.removeEventListener(`mousemove`, onResizeMove)
-  document.removeEventListener(`mouseup`, onResizeEnd)
-})
+  document.addEventListener(`mousemove`, onMove)
+  document.addEventListener(`mouseup`, onUp)
+}
 
 // ── Chat state ──
 const input = ref(``)
@@ -328,12 +351,11 @@ const quickCommands = computed(() => quickCmdStore.commands)
         v-if="panelStore.visible"
         ref="panelRef"
         class="ai-floating-panel fixed flex flex-col rounded-xl border shadow-2xl overflow-hidden select-none"
-        :class="{ 'pointer-events-none': isDragging }"
         :style="{
-          left: `${panelStore.position.x}px`,
-          top: `${panelStore.position.y}px`,
-          width: `${panelStore.size.width}px`,
-          height: `${panelStore.size.height}px`,
+          left: `${x}px`,
+          top: `${y}px`,
+          width: `${w}px`,
+          height: `${h}px`,
           zIndex: 100,
         }"
       >
@@ -341,6 +363,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
         <div
           ref="dragHandleRef"
           class="ai-panel-header flex items-center justify-between px-3 py-2 cursor-move border-b shrink-0"
+          @mousedown="onDragStart"
           @dblclick="panelStore.resetPosition()"
         >
           <div class="flex items-center gap-2 text-sm font-medium">
@@ -396,7 +419,6 @@ const quickCommands = computed(() => quickCmdStore.commands)
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted'"
               >
-                <!-- Reasoning block -->
                 <details v-if="msg.reasoning" class="mb-2 text-xs text-muted-foreground">
                   <summary class="cursor-pointer hover:underline">
                     {{ t('ai.chat.reasoning') || '思考过程' }}
@@ -404,12 +426,10 @@ const quickCommands = computed(() => quickCmdStore.commands)
                   <pre class="mt-1 whitespace-pre-wrap">{{ msg.reasoning }}</pre>
                 </details>
 
-                <!-- Content -->
                 <div class="whitespace-pre-wrap break-words">
                   {{ msg.content }}
                 </div>
 
-                <!-- Actions for assistant messages -->
                 <div v-if="msg.role === 'assistant' && msg.done" class="flex gap-1 mt-2 pt-1 border-t border-border/50">
                   <Button variant="ghost" size="icon" class="h-6 w-6" @click.stop="copyToClipboard(msg.content, index)">
                     <Check v-if="copiedIndex === index" class="w-3 h-3 text-green-500" />
@@ -439,7 +459,6 @@ const quickCommands = computed(() => quickCmdStore.commands)
 
           <!-- ============ Input Area ============ -->
           <div class="border-t p-3 shrink-0">
-            <!-- Selected text indicator -->
             <div v-if="panelStore.selectedText" class="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
               <span class="truncate max-w-[200px] bg-muted px-1.5 py-0.5 rounded">
                 {{ panelStore.selectedText.substring(0, 60) }}{{ panelStore.selectedText.length > 60 ? '...' : '' }}
@@ -478,7 +497,6 @@ const quickCommands = computed(() => quickCmdStore.commands)
               </div>
             </div>
 
-            <!-- Bottom toolbar -->
             <div class="flex items-center justify-between mt-2 text-xs text-muted-foreground">
               <label class="flex items-center gap-1 cursor-pointer">
                 <input v-model="isQuoteAllContent" type="checkbox" class="rounded">
@@ -537,7 +555,6 @@ const quickCommands = computed(() => quickCmdStore.commands)
   font-size: 0.75rem;
 }
 
-/* Transition */
 .ai-panel-enter-active,
 .ai-panel-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -549,7 +566,6 @@ const quickCommands = computed(() => quickCmdStore.commands)
   transform: scale(0.95) translateY(10px);
 }
 
-/* Scrollbar */
 .ai-chat-messages::-webkit-scrollbar {
   width: 5px;
 }
