@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Bot, Image as ImageIcon, Settings2, Wand2 } from '@lucide/vue'
+import { Bot, Image as ImageIcon, Wand2 } from '@lucide/vue'
 import { defineAsyncComponent } from 'vue'
 import { useAIPanelStore } from '@/stores/aiPanel'
 import { useEditorStore } from '@/stores/editor'
@@ -195,7 +195,7 @@ onMounted(() => {
       :title="t('ai.toolbar.expand')"
       @click="openAIChat"
     >
-      <Settings2 class="h-4 w-4 text-white drop-shadow-sm group-hover:scale-110 transition-transform duration-200" />
+      <Bot class="h-4 w-4 text-white drop-shadow-sm group-hover:scale-110 transition-transform duration-200" />
 
       <!-- 选中文本提示气泡 -->
       <Transition name="hint-fade">
