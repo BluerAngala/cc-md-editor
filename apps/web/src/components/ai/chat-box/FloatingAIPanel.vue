@@ -398,7 +398,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
         </Transition>
 
         <!-- ============ Chat Area ============ -->
-        <template>
+        <div class="flex flex-col flex-1 min-h-0">
           <!-- Quick Commands -->
           <div v-if="quickCommands.length > 0" class="flex gap-1.5 px-3 py-2 border-b overflow-x-auto shrink-0">
             <Button
@@ -518,7 +518,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
               </Button>
             </div>
           </div>
-        </template>
+        </div>
 
         <!-- ============ Resize Handle ============ -->
         <div
