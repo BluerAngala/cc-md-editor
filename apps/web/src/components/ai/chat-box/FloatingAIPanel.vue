@@ -120,6 +120,7 @@ const editingPresetId = ref<string | null>(null)
 const presetFormName = ref(``)
 const presetFormContent = ref(``)
 const presetFormType = ref<`always` | `ondemand`>(`always`)
+const showPresetForm = ref(false)
 
 interface ContextPreset {
   id: string
@@ -152,6 +153,14 @@ function togglePreset(id: string) {
   const p = presets.value.find(x => x.id === id)
   if (p)
     p.enabled = !p.enabled
+}
+
+function insertPresetToInput(preset: ContextPreset) {
+  input.value = input.value ? `${input.value}\n${preset.content}` : preset.content
+  nextTick(() => {
+    const textarea = chatContainerRef.value?.querySelector(`textarea`)
+    textarea?.focus()
+  })
 }
 
 function startEditPreset(preset: ContextPreset) {
@@ -577,67 +586,85 @@ const quickCommands = computed(() => quickCmdStore.commands)
             </template>
 
             <!-- Presets tab -->
-            <div v-else class="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-              <!-- Always-on presets -->
-              <div>
-                <div class="text-xs font-medium text-muted-foreground mb-2">
-                  🔄 {{ t('ai.chat.alwaysContext') || '自动上下文' }}
+            <div v-else class="flex-1 overflow-y-auto px-3 py-2 space-y-3 text-xs">
+              <!-- Context presets section -->
+              <div class="space-y-1.5">
+                <div class="font-medium text-muted-foreground flex items-center gap-1">
+                  <span>🔄</span>
+                  <span>{{ t('ai.chat.alwaysContext') || '自动上下文' }}</span>
+                  <span class="text-muted-foreground/50 ml-1">{{ t('ai.chat.alwaysHint') || '(每次请求附带)' }}</span>
                 </div>
-                <div v-for="p in alwaysPresets" :key="p.id" class="flex items-center gap-2 py-1.5 border-b border-border/30">
-                  <label class="flex items-center gap-2 text-xs cursor-pointer flex-1">
-                    <input :checked="p.enabled" type="checkbox" class="rounded" @change="togglePreset(p.id)" />
-                    <span>{{ p.name }}</span>
-                  </label>
-                  <Button v-if="!p.builtin" variant="ghost" size="icon" class="h-5 w-5" @click.stop="startEditPreset(p)">
+                <div v-for="p in alwaysPresets" :key="p.id" class="flex items-center gap-1.5 group">
+                  <input :checked="p.enabled" type="checkbox" class="rounded w-3.5 h-3.5" @change="togglePreset(p.id)" />
+                  <span class="flex-1 truncate" :class="p.enabled ? '' : 'text-muted-foreground/50'">{{ p.name }}</span>
+                  <Button v-if="!p.builtin" variant="ghost" size="icon" class="h-5 w-5 opacity-0 group-hover:opacity-100" @click.stop="startEditPreset(p)">
                     <Pencil class="w-2.5 h-2.5" />
                   </Button>
-                  <Button v-if="!p.builtin" variant="ghost" size="icon" class="h-5 w-5" @click.stop="deletePreset(p.id)">
+                  <Button v-if="!p.builtin" variant="ghost" size="icon" class="h-5 w-5 opacity-0 group-hover:opacity-100" @click.stop="deletePreset(p.id)">
                     <X class="w-2.5 h-2.5" />
                   </Button>
                 </div>
               </div>
 
               <!-- On-demand presets -->
-              <div>
-                <div class="text-xs font-medium text-muted-foreground mb-2">
-                  📌 {{ t('ai.chat.ondemandContext') || '手动引用' }}
+              <div class="space-y-1.5">
+                <div class="font-medium text-muted-foreground flex items-center gap-1">
+                  <span>📌</span>
+                  <span>{{ t('ai.chat.ondemandContext') || '手动引用' }}</span>
+                  <span class="text-muted-foreground/50 ml-1">{{ t('ai.chat.ondemandHint') || '(点击填入输入框)' }}</span>
                 </div>
-                <div v-if="ondemandPresets.length === 0" class="text-xs text-muted-foreground/50 py-1">
+                <div v-if="ondemandPresets.length === 0" class="text-muted-foreground/40 pl-5">
                   {{ t('ai.chat.noOndemandPresets') || '暂无' }}
                 </div>
-                <div v-for="p in ondemandPresets" :key="p.id" class="flex items-center gap-1 py-1.5 border-b border-border/30">
-                  <span class="text-xs flex-1 truncate">{{ p.name }}</span>
-                  <Button variant="ghost" size="icon" class="h-5 w-5" @click.stop="startEditPreset(p)">
+                <div v-for="p in ondemandPresets" :key="p.id" class="flex items-center gap-1.5 group pl-5">
+                  <span class="flex-1 truncate cursor-pointer hover:underline" @click.stop="insertPresetToInput(p)">{{ p.name }}</span>
+                  <Button variant="ghost" size="icon" class="h-5 w-5 opacity-0 group-hover:opacity-100" @click.stop="startEditPreset(p)">
                     <Pencil class="w-2.5 h-2.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" class="h-5 w-5" @click.stop="deletePreset(p.id)">
+                  <Button variant="ghost" size="icon" class="h-5 w-5 opacity-0 group-hover:opacity-100" @click.stop="deletePreset(p.id)">
                     <X class="w-2.5 h-2.5" />
                   </Button>
                 </div>
               </div>
 
-              <!-- Add / Edit form -->
-              <div class="border-t pt-3 space-y-1.5">
-                <div v-if="editingPresetId" class="text-xs font-medium">
-                  {{ t('ai.chat.editPreset') || '编辑预设' }}
-                </div>
-                <input v-model="presetFormName" :placeholder="t('ai.chat.presetNamePlaceholder') || '预设名称'" class="w-full text-xs border rounded px-2 py-1.5 bg-background" />
-                <textarea v-model="presetFormContent" :placeholder="t('ai.chat.presetContentPlaceholder') || '内容'" rows="2" class="w-full text-xs border rounded px-2 py-1.5 bg-background resize-none" />
-                <div class="flex items-center gap-2">
-                  <select v-model="presetFormType" class="text-xs border rounded px-1.5 py-1.5 bg-background flex-1">
+              <!-- Divider -->
+              <div class="border-t pt-2">
+                <!-- Inline add form -->
+                <div class="flex items-center gap-1.5">
+                  <input
+                    v-model="presetFormName"
+                    :placeholder="t('ai.chat.addPresetPlaceholder') || '+ 添加预设上下文...'"
+                    class="flex-1 text-xs border rounded px-2 py-1 bg-background"
+                    @keydown.enter="showPresetForm = !showPresetForm"
+                  />
+                  <select v-model="presetFormType" class="text-xs border rounded px-1 py-1 bg-background">
                     <option value="always">
-                      {{ t('ai.chat.alwaysType') || '自动上下文' }}
+                      {{ t('ai.chat.alwaysShort') || '自动' }}
                     </option>
                     <option value="ondemand">
-                      {{ t('ai.chat.ondemandType') || '手动引用' }}
+                      {{ t('ai.chat.ondemandShort') || '手动' }}
                     </option>
                   </select>
-                  <Button size="sm" class="h-7 text-xs" @click.stop="savePreset">
-                    {{ editingPresetId ? (t('common.save') || '保存') : (t('ai.chat.addPreset') || '添加') }}
-                  </Button>
-                  <Button v-if="editingPresetId" variant="ghost" size="sm" class="h-7 text-xs" @click.stop="cancelEditPreset">
-                    {{ t('common.cancel') || '取消' }}
-                  </Button>
+                </div>
+                <!-- Expandable content area -->
+                <div v-if="showPresetForm || editingPresetId" class="mt-1.5 space-y-1.5">
+                  <textarea
+                    v-model="presetFormContent"
+                    :placeholder="t('ai.chat.presetContentPlaceholder') || '上下文内容...'"
+                    rows="2"
+                    class="w-full text-xs border rounded px-2 py-1 bg-background resize-none"
+                  />
+                  <div class="flex items-center gap-1.5">
+                    <Button size="sm" class="h-6 text-xs px-2" @click.stop="savePreset">
+                      {{ editingPresetId ? (t('common.save') || '保存') : (t('ai.chat.addPreset') || '添加') }}
+                    </Button>
+                    <Button v-if="editingPresetId" variant="ghost" size="sm" class="h-6 text-xs px-2" @click.stop="cancelEditPreset">
+                      {{ t('common.cancel') || '取消' }}
+                    </Button>
+                    <span v-if="!editingPresetId" class="text-muted-foreground/40 text-[10px] ml-auto">
+                      {{ t('ai.chat.addPresetHint') || '输入名称后回车展开' }}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
