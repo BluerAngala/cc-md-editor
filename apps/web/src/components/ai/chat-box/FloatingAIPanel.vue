@@ -397,7 +397,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
               </Button>
               <span class="text-sm font-medium">{{ t('ai.chat.configParams') }}</span>
             </div>
-            <AIConfig class="flex-1 overflow-y-auto px-4 pt-2" @saved="handleConfigSaved" />
+            <AIConfig class="flex-1 overflow-y-auto px-4 pt-2 !max-h-none" @saved="handleConfigSaved" />
           </div>
         </Transition>
 
@@ -589,15 +589,6 @@ const quickCommands = computed(() => quickCmdStore.commands)
   background: hsl(var(--muted-foreground) / 0.2);
 }
 /* Config slide-over */
-.overlay-fade-enter-active,
-.overlay-fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.overlay-fade-enter-from,
-.overlay-fade-leave-to {
-  opacity: 0;
-}
-
 .config-slide-enter-active,
 .config-slide-leave-active {
   transition: transform 0.2s ease;
