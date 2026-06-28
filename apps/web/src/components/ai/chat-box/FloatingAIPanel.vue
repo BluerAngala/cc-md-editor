@@ -494,6 +494,18 @@ function handleConfigSaved() {
 }
 
 const quickCommands = computed(() => quickCmdStore.commands)
+
+function resetToAnchor() {
+  // Find the sidebar AI icon
+  const icon = document.querySelector('.editor-ai-toolbar .utools-sidebar-edge')
+  if (icon) {
+    const rect = icon.getBoundingClientRect()
+    panelStore.setPosition(Math.max(20, rect.left - panelStore.size.width - 8), Math.max(20, rect.top - panelStore.size.height / 3))
+  }
+  else {
+    panelStore.resetPosition()
+  }
+}
 </script>
 
 <template>
@@ -516,7 +528,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
           ref="dragHandleRef"
           class="ai-panel-header flex items-center justify-between px-3 py-2 cursor-move border-b shrink-0"
           @mousedown="onDragStart"
-          @dblclick="panelStore.resetPosition()"
+          @dblclick="resetToAnchor()"
         >
           <div class="flex items-center gap-1 text-sm font-medium">
             <MessageCircle class="w-4 h-4" />
@@ -791,7 +803,7 @@ const quickCommands = computed(() => quickCmdStore.commands)
                 <input v-model="isQuoteAllContent" type="checkbox" class="rounded">
                 {{ t('ai.chat.quoteFullText') }}
               </label>
-              <Button variant="ghost" size="sm" class="h-5 text-xs px-1.5" @click.stop="panelStore.resetPosition()">
+              <Button variant="ghost" size="sm" class="h-5 text-xs px-1.5" @click.stop="resetToAnchor()">
                 {{ t('ai.chat.resetPosition') }}
               </Button>
             </div>
