@@ -23,6 +23,7 @@ import {
 } from './postSliderMenu'
 
 const props = defineProps<PostItemProps>()
+const emit = defineEmits<{ editDone: [] }>()
 const { t, locale } = useI18n()
 const postStore = usePostStore()
 const templateStore = useTemplateStore()
@@ -101,6 +102,15 @@ function applyTemplate(postId: string) {
   toggleShowTemplateDialog(true)
 }
 
+// auto-edit: when parent sets autoEditId, enter inline rename
+watch(() => props.autoEditId, (id) => {
+  if (!id)
+    return
+  const post = posts.value.find(p => p.id === id)
+  if (post)
+    startInlineRename(post)
+}, { immediate: true })
+
 const inlineEditId = ref<string | null>(null)
 const inlineEditVal = ref(``)
 let inlineInputRef: HTMLInputElement | null = null
@@ -124,6 +134,7 @@ function commitInlineRename() {
   if (!trimmed) {
     toast.error(t('post.titleRequired'))
     inlineEditId.value = null
+    emit('editDone')
     return
   }
   const currentTitle = postStore.getPostById(id)?.title
@@ -132,10 +143,12 @@ function commitInlineRename() {
     toast.success(t('post.editSuccess'))
   }
   inlineEditId.value = null
+  emit('editDone')
 }
 
 function cancelInlineRename() {
   inlineEditId.value = null
+  emit('editDone')
 }
 </script>
 

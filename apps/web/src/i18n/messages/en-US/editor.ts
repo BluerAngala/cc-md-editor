@@ -15,6 +15,7 @@ export default {
     multiSelect: `Multi-select`,
     importMarkdownBatch: `Import Markdown (batch supported)`,
     sortBy: `Sort by`,
+    moreActions: `More`,
     sortNameAZ: `Filename (A-Z)`,
     sortNameZA: `Filename (Z-A)`,
     sortUpdateNewOld: `Modified (newest first)`,

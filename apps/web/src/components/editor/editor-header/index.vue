@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Copy, Loader2, Menu, Palette } from '@lucide/vue'
+import { Copy, FolderKanban, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
 import { defineAsyncComponent } from 'vue'
 import { useEditorRefresh } from '@/composables/useEditorRefresh'
 import { generatePureHTML, processClipboardContent } from '@/services/export'
+import { isShareUiEnabled } from '@/services/share/client'
 import { useEditorStore } from '@/stores/editor'
 import { useExportStore } from '@/stores/export'
 import { useRenderStore } from '@/stores/render'
@@ -31,13 +32,15 @@ const editorStore = useEditorStore()
 const themeStore = useThemeStore()
 const renderStore = useRenderStore()
 const uiStore = useUIStore()
+const showShareUi = isShareUiEnabled()
 const exportStore = useExportStore()
 const { editorRefresh } = useEditorRefresh()
 
 const { editor } = storeToRefs(editorStore)
 const { output } = storeToRefs(renderStore)
 const { primaryColor } = storeToRefs(themeStore)
-const { isOpenRightSlider, isShowSyncDialog, isShowAccountDialog, isShowShareDialog, isShowAboutDialog, isShowFundDialog, isShowEditorStateDialog, isShowPreferencesDialog, isShowMarkdownHelpDialog, isShowKeyboardShortcutsDialog, copyMode } = storeToRefs(uiStore)
+const { isOpenRightSlider, isOpenPostSlider, isShowSyncDialog, isShowAccountDialog, isShowShareDialog, isShowAboutDialog, isShowFundDialog, isShowEditorStateDialog, isShowPreferencesDialog, isShowMarkdownHelpDialog, isShowKeyboardShortcutsDialog, copyMode } = storeToRefs(uiStore)
+const { openShareDialog } = uiStore
 
 const isCopying = ref(false)
 
@@ -232,7 +235,16 @@ function copyToWeChat() {
     class="header-container h-15 flex flex-wrap items-center justify-between px-5 relative"
   >
     <!-- 桌面端左侧菜单 -->
-    <div class="space-x-1 hidden md:flex">
+    <div class="space-x-1 hidden md:flex items-center">
+      <Button
+        variant="ghost"
+        class="h-8 px-3 text-sm font-normal"
+        :class="{ 'bg-accent text-accent-foreground': isOpenPostSlider }"
+        @click="isOpenPostSlider = !isOpenPostSlider"
+      >
+        <FolderKanban class="mr-1.5 size-4" />
+        <span>草稿箱</span>
+      </Button>
       <Menubar class="menubar border-0">
         <FileDropdown />
         <EditDropdown @copy="handleCopy" />
@@ -266,6 +278,17 @@ function copyToWeChat() {
 
     <!-- 右侧操作区 -->
     <div class="flex flex-wrap items-center gap-2">
+      <!-- 分享按钮 -->
+      <Button
+        v-if="showShareUi"
+        variant="outline"
+        class="h-9"
+        @click="openShareDialog()"
+      >
+        <Share2 class="mr-2 h-4 w-4" />
+        <span>{{ t('menu.sharePreview') }}</span>
+      </Button>
+
       <!-- 复制按钮 -->
       <Button
         variant="outline"

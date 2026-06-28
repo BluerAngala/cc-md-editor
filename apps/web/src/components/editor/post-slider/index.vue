@@ -51,32 +51,20 @@ watch(isMobile, () => {
 })
 
 /* ============ 新增内容 ============ */
-const parentId = ref<string | null>(null)
-const isOpenAddDialog = ref(false)
-const addPostInputVal = ref(``)
-watch(isOpenAddDialog, (o) => {
-  if (o)
-    addPostInputVal.value = ``
-})
+const autoEditId = ref<string | null>(null)
 
-function openAddPostDialog(id: string) {
+function openAddPostDialog(parentId: string) {
   postSliderMenu.closeMenu()
-  parentId.value = id
-  isOpenAddDialog.value = true
-}
-
-function addPost() {
-  if (!addPostInputVal.value.trim())
-    return toast.error(t('post.titleRequired'))
-  postStore.addPost(addPostInputVal.value.trim(), parentId.value)
-  isOpenAddDialog.value = false
-  toast.success(t('post.addSuccess'))
+  postStore.addPost(t('common.unnamed'), parentId)
+  const newPost = posts.value[posts.value.length - 1]
+  autoEditId.value = newPost.id
 }
 
 function openCreatePostDialog() {
   postSliderMenu.closeMenu()
-  parentId.value = null
-  isOpenAddDialog.value = true
+  postStore.addPost(t('common.unnamed'), null)
+  const newPost = posts.value[posts.value.length - 1]
+  autoEditId.value = newPost.id
 }
 
 /* ============ 重命名 / 删除 / 历史 对象 ============ */
@@ -659,59 +647,42 @@ function handleDragEnd() {
         </span>
         <span class="flex-1 min-w-0" />
 
-        <div class="flex shrink-0 items-center gap-0.5">
+        <div class="flex shrink-0 items-center gap-1">
           <!-- 搜索 -->
           <button
-            class="inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
+            class="inline-flex items-center gap-1 rounded-md px-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
             :class="[
-              isMobile ? 'size-8' : 'size-7',
+              isMobile ? 'h-8' : 'h-7',
               { 'text-primary bg-primary/10': isSearching },
             ]"
             @click="toggleSearch"
           >
             <Search class="size-4" />
+            <span class="text-xs">{{ t('common.search') }}</span>
           </button>
 
           <!-- 多选 -->
           <button
-            class="inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
+            class="inline-flex items-center gap-1 rounded-md px-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
             :class="[
-              isMobile ? 'size-8' : 'size-7',
+              isMobile ? 'h-8' : 'h-7',
               { 'text-primary bg-primary/10': isSelectMode },
             ]"
-            :title="isSelectMode ? t('post.exitSelect') : t('post.multiSelect')"
             @click="toggleSelectMode"
           >
             <CheckSquare class="size-4" />
-          </button>
-
-          <!-- 批量导入（移动端快捷入口，桌面端在更多菜单中） -->
-          <button
-            v-if="isMobile"
-            class="inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150 size-8"
-            :title="t('post.importMarkdownBatch')"
-            @click="openImportDialog"
-          >
-            <Upload class="size-4" />
-          </button>
-
-          <!-- 新增 -->
-          <button
-            class="inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
-            :class="isMobile ? 'size-8' : 'size-7'"
-            @click="openCreatePostDialog"
-          >
-            <Plus class="size-4" />
+            <span class="text-xs">{{ t('post.multiSelect') }}</span>
           </button>
 
           <!-- 更多操作 -->
           <DropdownMenu :open="headerMenuOpen" @update:open="onHeaderMenuOpenChange">
             <DropdownMenuTrigger as-child>
               <button
-                class="inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
-                :class="isMobile ? 'size-8' : 'size-7'"
+                class="inline-flex items-center gap-1 rounded-md px-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
+                :class="isMobile ? 'h-8' : 'h-7'"
               >
                 <Ellipsis class="size-4" />
+                <span class="text-xs">{{ t('post.moreActions') }}</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -841,7 +812,7 @@ function handleDragEnd() {
       </div>
 
       <!-- 搜索结果 -->
-      <div v-if="isSearching && searchQuery.trim()" class="flex-1 overflow-y-auto px-1.5 py-0.5 thin-scrollbar">
+      <div v-if="isSearching && searchQuery.trim()" class="flex-1 overflow-y-auto px-1.5 pt-0.5 pb-12 thin-scrollbar">
         <!-- 匹配统计 -->
         <div v-if="totalMatches > 0" class="px-2 py-1 text-xs text-muted-foreground/60">
           {{ t('post.matchStats', { matches: totalMatches, posts: searchResults.length }) }}
@@ -887,7 +858,7 @@ function handleDragEnd() {
       </div>
 
       <!-- 内容列表 -->
-      <div v-else class="flex-1 overflow-y-auto px-1.5 py-0.5 thin-scrollbar">
+      <div v-else class="flex-1 overflow-y-auto px-1.5 pt-0.5 pb-12 thin-scrollbar">
         <PostItem
           v-if="sortedPosts.length"
           :parent-id="null"
@@ -907,6 +878,8 @@ function handleDragEnd() {
             handleDragEnd,
           }"
           :select="selectProps"
+          :auto-edit-id="autoEditId"
+          @edit-done="autoEditId = null"
         />
 
         <!-- 空状态 -->
@@ -923,6 +896,17 @@ function handleDragEnd() {
             </p>
           </div>
         </div>
+      </div>
+
+      <!-- 底部新增按钮 -->
+      <div v-if="!isSelectMode" class="shrink-0 border-t border-border bg-background px-3 py-2">
+        <button
+          class="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary/10 py-1.5 text-sm text-primary transition-colors hover:bg-primary/20"
+          @click="openCreatePostDialog"
+        >
+          <Plus class="size-4" />
+          <span>{{ t('post.addPost') }}</span>
+        </button>
       </div>
 
       <!-- 选择模式底部操作栏 -->
@@ -1007,22 +991,6 @@ function handleDragEnd() {
       </Transition>
     </nav>
   </div>
-
-  <!-- 新增弹窗 -->
-  <Dialog v-model:open="isOpenAddDialog">
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{{ t('post.addTitle') }}</DialogTitle>
-        <DialogDescription>{{ t('post.addDescription') }}</DialogDescription>
-      </DialogHeader>
-      <Input v-model="addPostInputVal" :placeholder="t('post.titlePlaceholder')" @keyup.enter="addPost" />
-      <DialogFooter>
-        <Button @click="addPost">
-          {{ t('common.confirm') }}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   <!-- 重命名弹窗 -->
   <Dialog v-model:open="isOpenEditDialog">

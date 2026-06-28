@@ -42,4 +42,5 @@ export interface PostItemProps {
   actions: PostItemActions
   drag: PostItemDragState
   select?: PostItemSelectState
+  autoEditId?: string | null
 }
