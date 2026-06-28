@@ -44,6 +44,7 @@ export default {
     editMessage: `编辑`,
     recallMessage: `撤回`,
     morePresets: `预设`,
+    advancedConfig: `高级配置`,
     presetContext: `预设上下文`,
     presetDate: `当前日期时间`,
     presetEditor: `编辑器全文内容`,

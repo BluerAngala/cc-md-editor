@@ -44,6 +44,7 @@ export default {
     editMessage: `Edit`,
     recallMessage: `Recall`,
     morePresets: `Presets`,
+    advancedConfig: `Advanced`,
     presetContext: `Preset context`,
     presetDate: `Current date & time`,
     presetEditor: `Editor full content`,
