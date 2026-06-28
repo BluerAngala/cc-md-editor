@@ -139,7 +139,7 @@ function getDefaultMessages(): ChatMessage[] {
   return [{ role: `assistant`, content: t(`ai.chat.greeting`), id: uuidv4() }]
 }
 
-// ── Auto-fill selected text ──
+// ── Auto-fill selected text on open ──
 watch(() => panelStore.visible, (val) => {
   if (val && panelStore.selectedText) {
     input.value = panelStore.selectedText
@@ -148,6 +148,13 @@ watch(() => panelStore.visible, (val) => {
       textarea?.focus()
       textarea?.setSelectionRange(textarea.value.length, textarea.value.length)
     })
+  }
+})
+
+// ── Auto-fill selected text while panel is already open ──
+watch(() => panelStore.selectedText, (text) => {
+  if (panelStore.visible && text) {
+    input.value = text
   }
 })
 

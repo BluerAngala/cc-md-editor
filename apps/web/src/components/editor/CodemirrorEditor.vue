@@ -93,6 +93,14 @@ function handleUploadImage(file: File, cb?: any, applyUrl?: boolean) {
   editorPanelCompRef.value?.uploadImage(file, cb, applyUrl)
 }
 
+// --- AI 浮动面板：选中文本自动同步 ---
+function handleSelectionChange() {
+  const selected = editorStore.getSelection()
+  if (selected && aiPanelStore.visible) {
+    aiPanelStore.selectedText = selected
+  }
+}
+
 // --- AI 浮动面板快捷键 (Cmd+J / Ctrl+J) ---
 function handleGlobalKeydown(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === `j`) {
@@ -104,10 +112,12 @@ function handleGlobalKeydown(e: KeyboardEvent) {
 
 onMounted(() => {
   document.addEventListener(`keydown`, handleGlobalKeydown)
+  document.addEventListener(`selectionchange`, handleSelectionChange)
 })
 
 onUnmounted(() => {
   document.removeEventListener(`keydown`, handleGlobalKeydown)
+  document.removeEventListener(`selectionchange`, handleSelectionChange)
 })
 
 // --- 面板尺寸配置 ---
