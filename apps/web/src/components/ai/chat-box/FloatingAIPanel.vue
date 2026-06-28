@@ -232,6 +232,7 @@ async function streamResponse(replyMessage: ChatMessage) {
   }
   const headers = buildAIHeaders(apiKey.value, type.value)
   const url = resolveEndpointUrl(endpoint.value, `chat`)
+  console.log(`[AI] Request:`, { url, model: model.value, type: type.value, endpoint: endpoint.value })
 
   try {
     await fetchSSE(url, headers, payload, {

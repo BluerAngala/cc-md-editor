@@ -67,6 +67,7 @@ export function useAIFetch() {
         signal: abortController.value.signal,
       })
 
+      console.log(`[AI] Response:`, { status: res.status, statusText: res.statusText, url })
       if (!res.ok || !res.body)
         throw new Error(`响应错误：${res.status} ${res.statusText}`)
 
