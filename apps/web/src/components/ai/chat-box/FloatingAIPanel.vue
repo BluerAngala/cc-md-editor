@@ -139,22 +139,13 @@ function getDefaultMessages(): ChatMessage[] {
   return [{ role: `assistant`, content: t(`ai.chat.greeting`), id: uuidv4() }]
 }
 
-// ── Auto-fill selected text on open ──
+// ── Focus input when panel opens ──
 watch(() => panelStore.visible, (val) => {
-  if (val && panelStore.selectedText) {
-    input.value = panelStore.selectedText
+  if (val) {
     nextTick(() => {
       const textarea = chatContainerRef.value?.querySelector(`textarea`)
       textarea?.focus()
-      textarea?.setSelectionRange(textarea.value.length, textarea.value.length)
     })
-  }
-})
-
-// ── Auto-fill selected text while panel is already open ──
-watch(() => panelStore.selectedText, (text) => {
-  if (panelStore.visible && text) {
-    input.value = text
   }
 })
 
@@ -176,8 +167,20 @@ async function sendMessage() {
   loading.value = true
 
   const userInput = input.value.trim()
+  const contextText = panelStore.selectedText.trim()
+
+  // Add selected text as context message if present
+  if (contextText) {
+    messages.value.push({
+      role: `system`,
+      content: `以下是用户选中的参考内容：\n\n${contextText}`,
+      id: uuidv4(),
+    })
+  }
+
   messages.value.push({ role: `user`, content: userInput, id: uuidv4() })
   input.value = ``
+  panelStore.selectedText = ``
 
   const replyMessage: ChatMessage = { role: `assistant`, content: ``, reasoning: ``, done: false, id: uuidv4() }
   messages.value.push(replyMessage)
@@ -496,9 +499,10 @@ const quickCommands = computed(() => quickCmdStore.commands)
 
           <!-- ============ Input Area ============ -->
           <div class="border-t p-3 shrink-0">
-            <div v-if="panelStore.selectedText" class="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <span class="truncate max-w-[200px] bg-muted px-1.5 py-0.5 rounded">
-                {{ panelStore.selectedText.substring(0, 60) }}{{ panelStore.selectedText.length > 60 ? '...' : '' }}
+            <div v-if="panelStore.selectedText" class="mb-2 flex items-center gap-2 text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 px-2 py-1.5 rounded-md border border-blue-200 dark:border-blue-800">
+              <span class="text-blue-600 dark:text-blue-400 font-medium">📎</span>
+              <span class="truncate flex-1">
+                {{ panelStore.selectedText.substring(0, 80) }}{{ panelStore.selectedText.length > 80 ? '...' : '' }}
               </span>
               <Button variant="ghost" size="icon" class="h-5 w-5" @click.stop="panelStore.selectedText = ''">
                 <X class="w-3 h-3" />
