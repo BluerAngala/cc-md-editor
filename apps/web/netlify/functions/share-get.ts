@@ -58,6 +58,10 @@ function renderSharePage(record: ShareRecord): string {
   .share-content ol {
     list-style: none;
   }
+  .share-content figcaption,
+  .share-content .md-figcaption {
+    text-align: center;
+  }
   .share-content {
     max-width: 677px;
     margin: 20px auto;

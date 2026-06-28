@@ -159,7 +159,7 @@ function formatShareExpiry(expiresAtValue: number | null, expired: boolean): str
 }
 
 async function loadShareList() {
-  if (!isLoggedIn.value)
+  if (!isLoggedIn.value && !isNetlifyMode())
     return
 
   isLoadingList.value = true
