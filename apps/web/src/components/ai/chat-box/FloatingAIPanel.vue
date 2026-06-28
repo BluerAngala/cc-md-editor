@@ -278,13 +278,6 @@ function insertToDocument(text: string, index: number) {
   toast.success(t(`ai.chat.insertedToDoc`))
 }
 
-function replaceSelection(text: string, index: number) {
-  editorStore.replaceSelection(text)
-  insertedIndex.value = index
-  setTimeout(() => (insertedIndex.value = null), FEEDBACK_INDICATOR_TIMEOUT_MS)
-  toast.success(t(`ai.chat.insertedToDoc`))
-}
-
 async function copyToClipboard(text: string, index: number) {
   copyPlain(text)
   copiedIndex.value = index
@@ -472,6 +465,15 @@ const quickCommands = computed(() => quickCmdStore.commands)
                   {{ msg.content }}
                 </div>
 
+                <!-- User message actions -->
+                <div v-if="msg.role === 'user'" class="flex gap-1 mt-2 pt-1 border-t border-border/50">
+                  <Button variant="ghost" size="icon" class="h-6 w-6" @click.stop="copyToClipboard(msg.content, index)">
+                    <Check v-if="copiedIndex === index" class="w-3 h-3 text-green-500" />
+                    <Copy v-else class="w-3 h-3" />
+                  </Button>
+                </div>
+
+                <!-- Assistant message actions -->
                 <div v-if="msg.role === 'assistant' && msg.done" class="flex gap-1 mt-2 pt-1 border-t border-border/50">
                   <Button variant="ghost" size="icon" class="h-6 w-6" @click.stop="copyToClipboard(msg.content, index)">
                     <Check v-if="copiedIndex === index" class="w-3 h-3 text-green-500" />
@@ -480,16 +482,6 @@ const quickCommands = computed(() => quickCmdStore.commands)
                   <Button variant="ghost" size="icon" class="h-6 w-6" :title="t('ai.chat.insertDoc')" @click.stop="insertToDocument(msg.content, index)">
                     <Check v-if="insertedIndex === index" class="w-3 h-3 text-green-500" />
                     <Pin v-else class="w-3 h-3" />
-                  </Button>
-                  <Button
-                    v-if="editorStore.getSelection()"
-                    variant="ghost"
-                    size="icon"
-                    class="h-6 w-6"
-                    :title="t('ai.chat.replaceSelection')"
-                    @click.stop="replaceSelection(msg.content, index)"
-                  >
-                    <RefreshCcw class="w-3 h-3" />
                   </Button>
                   <Button variant="ghost" size="icon" class="h-6 w-6" :title="t('ai.chat.regenerate')" @click.stop="regenerateLast">
                     <RefreshCcw class="w-3 h-3" />
