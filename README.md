@@ -54,13 +54,18 @@
 - **段落间距**：统一优化为 0.5em
 - **列表缩进**：padding-left 统一使用 0.5em，避免过大缩进
 
+### Netlify 分享预览
+
+- 基于 **Netlify Functions + Blobs** 实现匿名分享，**无需登录**任何第三方后端
+- 分享时生成短链接，访问者直接查看渲染后的微信图文
+- 非 Netlify 部署自动回退到 doocs 后端，保持向后兼容
+
 ### 交互优化
 
 - 菜单栏添加**内容管理**图标，一键开关内容管理面板
 - 图片上传按钮提升到菜单栏同级
 - 优化草稿箱与菜单栏的交互体验
 - 优化右侧滑块面板的初始化与样式
-
 ## 功能特性
 
 - 支持标准 Markdown 语法及数学公式（KaTeX）
@@ -89,8 +94,38 @@
 | 11  | [Telegram](https://core.telegram.org/api)              | 配置 `Bot Token`、`Chat ID` 参数                                           | [如何使用 Telegram 图床？](docs/telegram-usage.md)                                     |
 | 12  | [Cloudinary](https://cloudinary.com/)                  | 配置 `Cloud Name`、`API Key`、`API Secret` 参数                            | [如何使用 Cloudinary？](https://cloudinary.com/documentation/upload_images)            |
 | 13  | 自定义上传                                             | 是                                                                         | [如何自定义上传？](/docs/custom-upload.md)                                             |
+## 部署
 
-## 开发与部署
+### Netlify（推荐）
+
+项目已内置 Netlify 配置，支持一键部署：
+
+```sh
+# 安装 Netlify CLI
+npm i -g netlify-cli
+
+# 登录 Netlify
+netlify login
+
+# 构建并部署
+cd apps/web
+pnpm run build:h5-netlify
+netlify deploy --prod --dir=dist --no-build
+```
+
+部署后自动获得 `*.netlify.app` 域名，可在控制台绑定自定义域名。
+
+### 其他部署方式
+
+```sh
+# 构建，部署在 /md 路径下
+pnpm web build
+
+# 构建，部署在根路径下（Netlify / Cloudflare Pages 等）
+pnpm web build:h5-netlify
+```
+
+## 开发
 
 ```sh
 # 安装 Node 版本
@@ -102,24 +137,14 @@ pnpm i
 # 启动开发模式，访问 http://localhost:5173/md/
 pnpm web dev
 
-# 构建，部署在 /md 路径下
-pnpm web build
-
-# 构建，部署在根路径下
-pnpm web build:h5-netlify
-
 # Chrome 扩展开发模式
-# 启动后在 chrome://extensions/ 开启开发者模式，加载 apps/web/.output/chrome-mv3-dev 目录
 pnpm web ext:dev
 
 # 打包 Chrome 扩展
 pnpm web ext:zip
 
-# 打包 Firefox 扩展，输出至 apps/web/.output/md-{version}-firefox.zip
+# 打包 Firefox 扩展
 pnpm web firefox:zip
-
-# 打包 uTools 插件，输出至 apps/utools/release/md-utools-v{version}.zip
-pnpm utools:package
 
 # Cloudflare Workers 开发与部署
 pnpm web wrangler:dev

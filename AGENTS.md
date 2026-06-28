@@ -4,9 +4,10 @@
 
 ## 项目概览
 
-**doocs/md** — 一款微信 Markdown 编辑器，将 Markdown 渲染为微信公众号文章格式。支持自定义主题样式、多图床、AI 助手、浏览器扩展、**简体中文 / English 界面**等特性。
+**cc-md-editor** — 基于 [doocs/md](https://github.com/doocs/md) 二次开发的微信 Markdown 编辑器，将 Markdown 渲染为微信公众号文章格式。支持自定义主题样式、多图床、AI 助手、浏览器扩展、**简体中文 / English 界面**等特性。
 
-- **在线地址:** https://md.doocs.org
+- **在线地址:** https://cc-md-editor.netlify.app
+- **GitHub:** https://github.com/BluerAngala/cc-md-editor
 - **Node 版本:** >= 22.22.2（`.nvmrc`: v22.22.2）
 - **包管理器:** pnpm（monorepo）
 - **npm 镜像:** https://registry.npmmirror.com（`.npmrc`）
@@ -162,8 +163,9 @@ Web 主应用与部分浏览器扩展 UI 支持 **zh-CN**、**en-US**；VS Code 
 | `apps/web/.env` | 默认开发环境：本地 API `localhost:8787`，同步 UI 禁用 |
 | `apps/web/.env.production` | 生产环境：`md-api.doocs.org`，账户 + 同步 UI 启用 |
 | `apps/web/.env.utools` | uTools 环境：所有云功能禁用 |
+关键变量：`VITE_MD_API_URL`（API 地址）、`VITE_SYNC_API_URL`（同步 API）、`VITE_NETLIFY`（设为 `true` 可在本地模拟 Netlify 模式，启用匿名分享预览）、`VITE_VUE_DEVTOOLS`（开发工具）。
 
-关键变量：`VITE_MD_API_URL`（API 地址）、`VITE_SYNC_API_URL`（同步 API）、`VITE_VUE_DEVTOOLS`（开发工具）。
+**Netlify 部署**：使用 `pnpm web build:h5-netlify` 构建，然后 `netlify deploy --prod --dir=dist --no-build` 部署。分享预览功能通过 Netlify Functions + Blobs 实现，详见下方「Netlify 分享预览系统」章节。
 
 ## 代码约定与常见模式
 
@@ -256,6 +258,25 @@ export * from './utils'
 | `eslint.config.mjs` | 全项目 ESLint 配置 |
 | `.husky/pre-commit` | Git pre-commit 钩子（lint-staged） |
 | `apps/api/wrangler.toml` | Cloudflare Workers 配置（D1 数据库、自定义域名、CORS） |
+| `netlify.toml` | 根目录 Netlify 配置（functions 路径指向 `apps/web/netlify/functions`） |
+| `apps/web/netlify.toml` | Web 应用 Netlify 配置（build command、SPA 重定向） |
+
+### Netlify 分享预览系统
+
+部署到 Netlify 时，分享预览功能使用 Netlify Functions + Blobs 实现，无需依赖 doocs 后端：
+
+| 文件 | 用途 |
+| --- | --- |
+| `apps/web/netlify/functions/share-create.ts` | POST 端点：接收 HTML 快照，存入 Blobs，返回短 ID |
+| `apps/web/netlify/functions/share-get.ts` | GET 端点：根据 ID 读取 Blobs，渲染完整分享页面 |
+| `apps/web/src/services/share/client.ts` | 客户端：`isNetlifyMode()` 检测 + `NetlifyShareClient` 匿名调用 |
+| `apps/web/src/components/editor/editor-header/ShareDialog.vue` | 对话框：Netlify 模式跳过登录，直接调用 Function |
+
+**向后兼容**：非 Netlify 部署（有 `VITE_SYNC_API_URL`）仍走 doocs 后端的 `ShareClient`。`isNetlifyMode()` 通过 `location.hostname` 检测 `.netlify.app` 域名，本地开发可通过 `VITE_NETLIFY=true` 模拟。
+
+**路由**：根目录 `netlify.toml` 配置 `[[redirects]]` 将 `/s/:id` 路由到 `share-get` Function，访问者通过短链接查看分享内容。
+
+**存储**：Netlify Blobs 存储 HTML 快照（`bodyHtml` + `stylesHtml`），免费额度 5GB。
 
 ## Lint 与格式化
 

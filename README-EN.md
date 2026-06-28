@@ -54,6 +54,12 @@ Standard Markdown syntax is all you need to produce clean, well-styled WeChat ar
 - **Paragraph spacing**: Unified to `0.5em`
 - **List indentation**: `padding-left` standardized to `0.5em`
 
+### Netlify Share Preview
+
+- Anonymous sharing via **Netlify Functions + Blobs** — **no login** required
+- Generates short links; visitors see the rendered WeChat article directly
+- Falls back to doocs backend on non-Netlify deployments for backward compatibility
+
 ### Interaction Improvements
 
 - **Content management** icon in the menu bar for quick toggle
@@ -89,8 +95,38 @@ Standard Markdown syntax is all you need to produce clean, well-styled WeChat ar
 | 11  | [Telegram](https://core.telegram.org/api)               | `Bot Token`, `Chat ID`                                           | [Usage guide](docs/telegram-usage.md)                                                                                    |
 | 12  | [Cloudinary](https://cloudinary.com/)                   | `Cloud Name`, `API Key`, `API Secret`                            | [Docs](https://cloudinary.com/documentation/upload_images)                                                               |
 | 13  | Custom upload                                           | Yes                                                              | [How to configure](/docs/custom-upload.md)                                                                               |
+## Deploy
 
-## Development & Build
+### Netlify (Recommended)
+
+The project includes Netlify config for one-click deployment:
+
+```sh
+# Install Netlify CLI
+npm i -g netlify-cli
+
+# Login to Netlify
+netlify login
+
+# Build and deploy
+cd apps/web
+pnpm run build:h5-netlify
+netlify deploy --prod --dir=dist --no-build
+```
+
+After deployment, you'll get a `*.netlify.app` domain. Custom domains can be configured in the Netlify dashboard.
+
+### Other Deployments
+
+```sh
+# Production build, served under /md/
+pnpm web build
+
+# Production build, served at the root path (Netlify / Cloudflare Pages)
+pnpm web build:h5-netlify
+```
+
+## Development
 
 ```sh
 # Install the required Node version
@@ -102,30 +138,18 @@ pnpm i
 # Start the dev server, available at http://localhost:5173/md/
 pnpm web dev
 
-# Production build, served under /md/
-pnpm web build
-
-# Production build, served at the root path
-pnpm web build:h5-netlify
-
 # Chrome extension dev mode
-# After starting, open chrome://extensions/, enable Developer mode,
-# then load the unpacked extension from apps/web/.output/chrome-mv3-dev
 pnpm web ext:dev
 
 # Package the Chrome extension
 pnpm web ext:zip
 
-# Package the Firefox extension — output: apps/web/.output/md-{version}-firefox.zip
+# Package the Firefox extension
 pnpm web firefox:zip
-
-# Package the uTools plugin — output: apps/utools/release/md-utools-v{version}.zip
-pnpm utools:package
 
 # Cloudflare Workers development and deployment
 pnpm web wrangler:dev
 pnpm web wrangler:deploy
-```
 
 ## Acknowledgments
 
