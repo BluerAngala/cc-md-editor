@@ -359,6 +359,7 @@ async function streamResponse(replyMessage: ChatMessage) {
   }
   const headers = buildAIHeaders(apiKey.value, type.value)
   const url = resolveEndpointUrl(endpoint.value, `chat`)
+  console.log(`[AI] Payload:`, JSON.stringify(payloadMessages.map(m => ({ role: m.role, content: (m.content || ``).substring(0, 150) })), null, 2))
 
   try {
     await fetchSSE(url, headers, payload, {
