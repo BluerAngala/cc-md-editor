@@ -126,21 +126,17 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
   {
     id: `builtin-about-author`,
     name: `AboutAuthor`,
-    description: `笔者介绍卡片，居中展示的作者人物介绍卡片，带头像、姓名、职位和简介`,
+    description: `笔者介绍卡片，支持多种风格：简洁(simple)、蓝底(blue)、卡片(card)、徽章(badge)`,
     builtIn: true,
     props: [
       { name: `name`, description: `作者姓名`, required: true },
       { name: `avatar`, description: `头像图片 URL` },
-      { name: `title`, description: `职位或标签（如「前端工程师」「独立开发者」）` },
+      { name: `title`, description: `职位或标签` },
       { name: `bio`, description: `个人简介` },
+      { name: `style`, description: `风格：simple | blue | card | badge`, default: `simple` },
     ],
-    template: `<section style="text-align: center; margin: 24px 0; padding: 28px 20px; border: 1px solid #eee; border-radius: 12px; background: #fff;">
-  {{#if avatar}}<img src="{{avatar}}" alt="{{name}}" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin-bottom: 12px;" />{{/if}}
-  <p style="margin: 0 0 4px; font-size: 18px; font-weight: bold; color: {{_textPrimary_}};">{{name}}</p>
-  {{#if title}}<p style="margin: 0 0 12px; font-size: 13px; color: {{_textSecondary_}}; font-weight: 500;">{{title}}</p>{{/if}}
-  {{#if bio}}<p style="margin: 0; font-size: 14px; color: {{_textTertiary_}}; line-height: 1.8; max-width: 400px; margin-left: auto; margin-right: auto;">{{bio}}</p>{{/if}}
-</section>`,
-    example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界，也相信好的工具能让每个人受益。" />`,
+    template: ``,
+    example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界。" style="simple" />`,
   },
 ]
 
@@ -268,10 +264,65 @@ function renderInfoGrid(props: Record<string, string>): string {
   return html
 }
 
+function renderAboutAuthor(props: Record<string, string>): string {
+  const { name, avatar, title, bio, style: styleProp } = props
+  const style = styleProp || `simple`
+
+  if (style === `blue`) {
+    return `<section style="background: linear-gradient(135deg, #1a3a6b, #2a5298); border-radius: 12px; padding: 32px 28px; margin: 24px 0; color: #fff; position: relative; overflow: hidden;">
+  <p style="margin: 0; font-size: 12px; letter-spacing: 2px; opacity: 0.7;">互联网创业</p>
+  <p style="margin: 20px 0 4px; font-size: 28px; font-weight: bold; color: #fff;">${escapeHtml(name || ``)}</p>
+  ${title ? `<p style="margin: 0 0 20px; font-size: 14px; color: #5ed4f5;">${escapeHtml(title)}</p>` : ``}
+  ${bio ? `<p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.8; max-width: 60%;">${escapeHtml(bio)}</p>` : ``}
+  ${avatar ? `<img src="${escapeHtml(avatar)}" alt="${escapeHtml(name || ``)}" style="position: absolute; top: 20px; right: 20px; width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.3);" />` : ``}
+</section>`
+  }
+
+  if (style === `card`) {
+    return `<section style="border: 2px solid #f0a040; border-radius: 12px; margin: 24px 0; overflow: hidden; display: flex; min-height: 200px;">
+  <section style="flex: 1; padding: 28px 24px; background: #fff; display: flex; flex-direction: column; justify-content: center;">
+    <p style="margin: 0 0 4px; font-size: 11px; color: #2a6cb6; letter-spacing: 1px; text-transform: uppercase;">KNOW</p>
+    <p style="margin: 0 0 8px; font-size: 13px; color: #333;">企业家介绍</p>
+    <section style="width: 40px; height: 3px; background: #2a6cb6; margin-bottom: 12px;"></section>
+    <p style="margin: 0 0 6px; font-size: 24px; font-weight: bold; color: #2a6cb6;">${escapeHtml(name || ``)}</p>
+    ${title ? `<p style="margin: 0 0 16px; font-size: 14px; color: #333;">${escapeHtml(title)}</p>` : ``}
+    ${bio ? `<section style="background: #2a6cb6; border-radius: 6px; padding: 10px 14px;"><p style="margin: 0; font-size: 12px; color: #fff; line-height: 1.6;">${escapeHtml(bio)}</p></section>` : ``}
+  </section>
+  ${avatar ? `<section style="width: 200px; flex-shrink: 0; background: #f5f5f5; display: flex; align-items: center; justify-content: center;"><img src="${escapeHtml(avatar)}" alt="${escapeHtml(name || ``)}" style="width: 100%; height: 100%; object-fit: cover;" /></section>` : ``}
+</section>`
+  }
+
+  if (style === `badge`) {
+    return `<section style="margin: 24px 0; background: #f5f5f5; border-radius: 12px; padding: 24px;">
+  <section style="display: inline-block; background: #2a6cb6; color: #fff; padding: 6px 20px; transform: skewX(-10deg); margin-bottom: 12px;">
+    <p style="margin: 0; font-size: 16px; font-weight: bold; transform: skewX(10deg);">${escapeHtml(name || ``)}</p>
+  </section>
+  <section style="width: 100%; height: 3px; background: #2a6cb6; margin-bottom: 16px;"></section>
+  <section style="display: flex; align-items: center; gap: 24px;">
+    ${avatar ? `<img src="${escapeHtml(avatar)}" alt="${escapeHtml(name || ``)}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />` : ``}
+    <section style="flex: 1;">
+      ${title ? `<p style="margin: 0 0 8px; font-size: 20px; font-weight: bold; color: #2a6cb6;">${escapeHtml(title)}</p>` : ``}
+      <section style="width: 60px; height: 2px; background: #ddd; margin-bottom: 10px;"></section>
+      ${bio ? `<p style="margin: 0; font-size: 14px; color: #555; line-height: 1.7;">${escapeHtml(bio)}</p>` : ``}
+    </section>
+  </section>
+</section>`
+  }
+
+  // simple (default)
+  return `<section style="text-align: center; margin: 24px 0; padding: 28px 20px; border: 1px solid ${CV.borderL}; border-radius: 12px; background: ${CV.bg};">
+  ${avatar ? `<img src="${escapeHtml(avatar)}" alt="${escapeHtml(name || ``)}" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin-bottom: 12px;" />` : ``}
+  <p style="margin: 0 0 4px; font-size: 18px; font-weight: bold; color: ${CV.txtP};">${escapeHtml(name || ``)}</p>
+  ${title ? `<p style="margin: 0 0 12px; font-size: 13px; color: ${CV.txtS}; font-weight: 500;">${escapeHtml(title)}</p>` : ``}
+  ${bio ? `<p style="margin: 0; font-size: 14px; color: ${CV.txtT}; line-height: 1.8; max-width: 400px; margin-left: auto; margin-right: auto;">${escapeHtml(bio)}</p>` : ``}
+</section>`
+}
+
 /** 特殊渲染器注册表 */
 const SPECIAL_RENDERERS: Record<string, (props: Record<string, string>) => string> = {
   TableBlock: renderTableBlock,
   InfoGrid: renderInfoGrid,
+  AboutAuthor: renderAboutAuthor,
 }
 
 // ────────────────────────────────────────────────────────────────────────────
