@@ -126,7 +126,7 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
   {
     id: `builtin-about-author`,
     name: `AboutAuthor`,
-    description: `笔者介绍卡片，支持多种风格：简洁(simple)、蓝底(blue)、卡片(card)、徽章(badge)`,
+    description: `笔者介绍卡片，支持多种风格：简洁(simple)、蓝底(blue)、卡片(card)、徽章(badge)、律师(lawyer)、企业家(executive)`,
     builtIn: true,
     props: [
       { name: `name`, description: `作者姓名`, required: true },
@@ -135,7 +135,7 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
       { name: `bio`, description: `个人简介` },
       { name: `avatarShape`, description: `头像形状：round(圆形) | rect(圆角矩形)`, default: `rect` },
       { name: `avatarSize`, description: `头像大小：small(64px) | large(大图)`, default: `small` },
-      { name: `style`, description: `风格：simple | blue | card | badge`, default: `simple` },
+      { name: `style`, description: `风格：simple | blue | card | badge | lawyer | executive`, default: `simple` },
     ],
     template: ``,
     example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="simple" />`,
@@ -144,6 +144,8 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
       { label: `蓝底`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="blue" avatarSize="large" avatarShape="round" />` },
       { label: `卡片`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师" bio="热爱技术，专注于 Web 开发与开源社区。" style="card" />` },
       { label: `徽章`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="badge" avatarShape="round" />` },
+      { label: `律师`, example: `<AboutAuthor name="张伟" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="高级合伙人 / 知识产权律师" bio="执业十五年，专注知识产权与互联网法律领域，代理过多起具有行业影响力的案件。" style="lawyer" avatarSize="large" />` },
+      { label: `企业家`, example: `<AboutAuthor name="李明" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="未来智联创始人兼 CEO" bio="连续创业者，致力于用科技改变生活。曾获年度创新人物奖，带领团队从零做到行业领先。" style="executive" avatarSize="large" avatarShape="round" />` },
     ],
   },
 ]
@@ -320,6 +322,35 @@ function renderAboutAuthor(props: Record<string, string>): string {
     </section>
   </section>
   ${bio ? `<p style="margin: 0; font-size: 14px; color: #666; line-height: 1.7;">${esc(bio)}</p>` : ``}
+</section>`
+  }
+
+  if (style === `lawyer`) {
+    return `<section style="margin: 20px 0; border: 1px solid #d4a76a; border-radius: 4px; overflow: hidden;">
+  <section style="background: #1a1a2e; padding: 20px; display: table; width: 100%;">
+    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: ${avatarW + 8}px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR}; border: 2px solid #d4a76a;" /></section>` : ``}
+    <section style="display: table-cell; vertical-align: middle; padding-left: ${avatar ? '16' : '0'}px;">
+      <p style="margin: 0 0 6px; font-size: 22px; font-weight: bold; color: #fff; letter-spacing: 2px;">${esc(name)}</p>
+      ${title ? `<p style="margin: 0; font-size: 13px; color: #d4a76a; letter-spacing: 1px;">${esc(title)}</p>` : ``}
+    </section>
+  </section>
+  ${bio ? `<section style="background: #f9f6f0; padding: 16px 20px; border-top: 1px solid #d4a76a;"><p style="margin: 0; font-size: 14px; color: #555; line-height: 1.8; text-indent: 2em;">${esc(bio)}</p></section>` : ``}
+</section>`
+  }
+
+  if (style === `executive`) {
+    return `<section style="margin: 20px 0; position: relative;">
+  <section style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 32px 24px; color: #fff; display: table; width: 100%;">
+    <section style="display: table-cell; vertical-align: middle; width: ${avatarW + 8}px;">
+      ${avatar ? `<img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR}; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" />` : ``}
+    </section>
+    <section style="display: table-cell; vertical-align: middle; padding-left: ${avatar ? '20' : '0'}px;">
+      <p style="margin: 0 0 4px; font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 3px; text-transform: uppercase;">FOUNDER</p>
+      <p style="margin: 0 0 8px; font-size: 24px; font-weight: bold; color: #fff;">${esc(name)}</p>
+      ${title ? `<p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.85);">${esc(title)}</p>` : ``}
+    </section>
+  </section>
+  ${bio ? `<section style="background: #fff; border: 1px solid #e8e8e8; border-top: none; border-radius: 0 0 12px 12px; padding: 16px 24px;"><p style="margin: 0; font-size: 14px; color: #666; line-height: 1.8;">${esc(bio)}</p></section>` : ``}
 </section>`
   }
 
