@@ -784,7 +784,7 @@ watch(() => uiStore.isShowComponentDialog, (val) => {
                               <th class="text-left px-3 py-2 font-medium text-muted-foreground w-16">
                                 {{ t('component.typeCol') }}
                               </th>
-                              <th class="text-left px-3 py-2 font-medium text-muted-foreground w-14">
+                              <th class="text-left px-3 py-2 font-medium text-muted-foreground w-20">
                                 {{ t('component.statusCol') }}
                               </th>
                               <th class="text-left px-3 py-2 font-medium text-muted-foreground">
@@ -1063,7 +1063,7 @@ watch(() => uiStore.isShowComponentDialog, (val) => {
                                 <th class="text-left px-3 py-2 font-medium text-muted-foreground w-16">
                                   {{ t('component.typeCol') }}
                                 </th>
-                                <th class="text-left px-3 py-2 font-medium text-muted-foreground w-14">
+                                <th class="text-left px-3 py-2 font-medium text-muted-foreground w-20">
                                   {{ t('component.statusCol') }}
                                 </th>
                                 <th class="text-left px-3 py-2 font-medium text-muted-foreground">
