@@ -41,6 +41,8 @@ export interface CustomComponentDef {
   builtIn?: boolean
   /** 使用示例（用于 UI 展示，优先于自动生成的 snippet） */
   example?: string
+  /** 多示例（支持在 UI 中切换不同示例预览） */
+  examples?: Array<{ label: string, example: string }>
   /** 创建时间戳 */
   createdAt?: number
   /** 最后更新时间戳 */

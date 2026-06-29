@@ -137,6 +137,12 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
     ],
     template: ``,
     example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界。" style="simple" />`,
+    examples: [
+      { label: `简洁`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界。" style="simple" />` },
+      { label: `蓝底`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界。" style="blue" />` },
+      { label: `卡片`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师" bio="热爱技术，专注于 Web 开发与开源社区。" style="card" />` },
+      { label: `徽章`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="badge" />` },
+    ],
   },
 ]
 

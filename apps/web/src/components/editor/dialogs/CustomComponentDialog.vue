@@ -270,8 +270,18 @@ function onImportFile(event: Event) {
 // ──────────────────────────────────────────────
 // 列表操作
 // ──────────────────────────────────────────────
+/** 获取组件当前选中的示例（支持 examples 多示例切换） */
+const selectedExampleIdx = ref<Record<string, number>>({})
+
+function getCurrentExample(def: CustomComponentDef): string {
+  const idx = selectedExampleIdx.value[def.id] ?? 0
+  if (def.examples && def.examples.length > 0)
+    return def.examples[Math.min(idx, def.examples.length - 1)].example
+  return def.example || componentStore.buildSnippet(def)
+}
+
 function insertSnippet(def: CustomComponentDef) {
-  const snippet = def.example || componentStore.buildSnippet(def.builtIn ? findBuiltinDef(def.id) ?? def : def)
+  const snippet = getCurrentExample(def.builtIn ? findBuiltinDef(def.id) ?? def : def)
   editorStore.insertAtCursor(snippet)
   toast.success(t('component.insertSuccess', { name: def.name }))
   toggleShowComponentDialog(false)
@@ -295,7 +305,7 @@ function onUpdate(val: boolean) {
 const PREVIEW_FALLBACK_HTML = computed(() => `<span style="color:#aaa;font-size:12px;">${t('component.noContent')}</span>`)
 
 /** 用默认 prop 值渲染内置组件预览，required prop 无 default 时填示例值 */
-function getComponentPreviewHtml(def: CustomComponentDef): string {
+function getComponentPreviewHtml(def: CustomComponentDef, _exampleOverride?: string): string {
   const propExamples: Record<string, string> = {
     url: 'https://example.com',
     name: '示例作者',
@@ -329,6 +339,13 @@ function getComponentPreviewHtml(def: CustomComponentDef): string {
       propValues[p.name] = '0'
   }
   try {
+  // 从 exampleOverride 解析 prop 值（覆盖默认值，支持风格切换）
+    if (_exampleOverride) {
+      for (const m of _exampleOverride.matchAll(/[\w-]+="[^"]*"/g)) {
+        const [key, val] = m[0].split('=')
+        propValues[key] = val.slice(1, -1)
+      }
+    }
     const raw = previewComponent(def, propValues)
     return DOMPurify.sanitize(raw, { ADD_TAGS: [`mp-common-profile`] }) || ''
   }
@@ -346,7 +363,6 @@ function getPropDefaultPlaceholder(type: string): string {
 // ──────────────────────────────────────────────
 const activeComponentTab = ref<'builtin' | 'custom'>('builtin')
 const expandedId = ref<string | null>(null)
-
 watch(activeComponentTab, () => {
   expandedId.value = null
 })
@@ -365,7 +381,7 @@ function findBuiltinDef(id: string) {
 }
 
 async function copySnippet(def: CustomComponentDef) {
-  const text = def.example || componentStore.buildSnippet(def.builtIn ? findBuiltinDef(def.id) ?? def : def)
+  const text = getCurrentExample(def.builtIn ? findBuiltinDef(def.id) ?? def : def)
   try {
     await navigator.clipboard.writeText(text)
     copiedId.value = def.id
@@ -713,14 +729,28 @@ watch(() => uiStore.isShowComponentDialog, (val) => {
                   leave-to-class="opacity-0 -translate-y-1"
                 >
                   <div v-if="expandedId === def.id" class="border-t px-3 sm:px-4 py-3 space-y-3 bg-muted/20">
+                    <!-- 风格切换器 -->
+                    <div v-if="def.examples && def.examples.length > 0" class="flex gap-1.5 flex-wrap">
+                      <Button
+                        v-for="(ex, eIdx) in def.examples"
+                        :key="eIdx"
+                        variant="outline"
+                        size="sm"
+                        class="h-7 px-2.5 text-xs"
+                        :class="{ 'border-primary bg-primary/10 text-primary': (selectedExampleIdx[def.id] ?? 0) === eIdx }"
+                        @click="selectedExampleIdx[def.id] = eIdx"
+                      >
+                        {{ ex.label }}
+                      </Button>
+                    </div>
                     <!-- 组件预览 -->
-                    <div v-if="getComponentPreviewHtml(findBuiltinDef(def.id) ?? def)">
+                    <div v-if="getComponentPreviewHtml(findBuiltinDef(def.id) ?? def, getCurrentExample(findBuiltinDef(def.id) ?? def))">
                       <p class="text-xs font-medium text-muted-foreground mb-1.5">
                         {{ t('component.previewLabel') }}
                       </p>
                       <div
                         class="rounded-lg border bg-white dark:bg-card p-3 text-sm overflow-x-auto"
-                        v-html="getComponentPreviewHtml(findBuiltinDef(def.id) ?? def)"
+                        v-html="getComponentPreviewHtml(findBuiltinDef(def.id) ?? def, getCurrentExample(findBuiltinDef(def.id) ?? def))"
                       />
                     </div>
                     <div>
