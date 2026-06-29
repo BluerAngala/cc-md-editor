@@ -133,11 +133,11 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
       { name: `avatar`, description: `头像图片 URL` },
       { name: `title`, description: `职位或标签` },
       { name: `bio`, description: `个人简介` },
-      { name: `avatarShape`, description: `头像形状：round(圆形) | rect(圆角矩形)`, default: `rect` },
-      { name: `bgColor`, description: `背景色（如 #f9f6f0、#1a3a6b）` },
-      { name: `accentColor`, description: `强调色（如 #d4a76a、#764ba2）` },
-      { name: `avatarSize`, description: `头像大小：small(64) | large(120) | full(200) 或自定义数字（如 150）`, default: `small` },
-      { name: `avatarHeight`, description: `头像高度（px），不设则与宽度相同（正方形）` },
+      { name: `avatarShape`, description: `头像形状：round | rect`, default: `rect` },
+      { name: `bgColor`, description: `背景色（hex）` },
+      { name: `accentColor`, description: `强调色（hex）` },
+      { name: `avatarSize`, description: `头像大小：small | large | full 或数字`, default: `small` },
+      { name: `avatarHeight`, description: `头像高度 px，不设则为正方形` },
       { name: `style`, description: `风格：simple | blue | card | badge | lawyer | executive`, default: `simple` },
     ],
     template: ``,
@@ -335,7 +335,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
     const lawyerBg = bg || `#f9f6f0`
     const lawyerAccent = accent || `#d4a76a`
     return `<section style="margin: 20px 0; border: 1px solid ${lawyerAccent}; border-radius: 6px; overflow: hidden; background: #fff;">
-  ${avatar ? `<section style="text-align: center; padding: 24px 20px 16px; background: ${lawyerBg};"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarH}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
+  ${avatar ? `<section style="text-align: center; padding: 24px 20px 16px; background: ${lawyerBg};"><img src="${esc(avatar)}" alt="${esc(name)}" style="display: block; margin: 0 auto; width: ${avatarW}px; height: ${avatarH}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
   <section style="padding: 16px 24px 24px; text-align: center;">
     <p style="margin: 0 0 6px; font-size: 22px; font-weight: bold; color: #1a1a2e; letter-spacing: 2px;">${esc(name)}</p>
     ${title ? `<p style="margin: 0 0 4px; font-size: 13px; color: ${lawyerAccent}; letter-spacing: 1px;">${esc(title)}</p>` : ``}
@@ -349,7 +349,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
     const execBg = bg || `#667eea`
     const execAccent = accent || `#764ba2`
     return `<section style="margin: 20px 0; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
-  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, ${execBg} 0%, ${execAccent} 100%);"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
+  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, ${execBg} 0%, ${execAccent} 100%);"><img src="${esc(avatar)}" alt="${esc(name)}" style="display: block; margin: 0 auto; width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
   <section style="padding: 20px 24px 24px; text-align: center;">
     <p style="margin: 0 0 4px; font-size: 11px; color: #999; letter-spacing: 3px; text-transform: uppercase;">FOUNDER</p>
     <p style="margin: 0 0 8px; font-size: 22px; font-weight: bold; color: #333;">${esc(name)}</p>
