@@ -133,6 +133,8 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
       { name: `avatar`, description: `头像图片 URL` },
       { name: `title`, description: `职位或标签` },
       { name: `bio`, description: `个人简介` },
+      { name: `avatarShape`, description: `头像形状：round(圆形) | rect(圆角矩形)`, default: `rect` },
+      { name: `avatarSize`, description: `头像大小：small(64px) | large(大图)`, default: `small` },
       { name: `style`, description: `风格：simple | blue | card | badge`, default: `simple` },
     ],
     template: ``,
@@ -271,14 +273,18 @@ function renderInfoGrid(props: Record<string, string>): string {
 }
 
 function renderAboutAuthor(props: Record<string, string>): string {
-  const { name, avatar, title, bio, style: styleProp } = props
+  const { name, avatar, title, bio, style: styleProp, avatarSize: avatarSizeProp, avatarShape: avatarShapeProp } = props
   const style = styleProp || `simple`
+  const avatarSize = avatarSizeProp || `small`
+  const avatarShape = avatarShapeProp || `rect`
+  const avatarW = avatarSize === `large` ? 120 : 64
+  const avatarR = avatarShape === `round` ? `50%` : `8px`
   const esc = (s: string) => escapeHtml(s || ``)
 
   if (style === `blue`) {
     return `<section style="background: #1a3a6b; border-radius: 10px; padding: 24px 20px; margin: 20px 0; color: #fff;">
   <section style="display: table; width: 100%; margin-bottom: 16px;">
-    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: 72px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: 64px; height: 64px; object-fit: cover; border-radius: 50%; border: 2px solid rgba(255,255,255,0.4);" /></section>` : ``}
+    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: 72px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR}; border: 2px solid rgba(255,255,255,0.4);" /></section>` : ``}
     <section style="display: table-cell; vertical-align: middle; padding-left: ${avatar ? '16' : '0'}px;">
       <p style="margin: 0 0 4px; font-size: 20px; font-weight: bold; color: #fff;">${esc(name)}</p>
       ${title ? `<p style="margin: 0; font-size: 13px; color: #8ec5fc;">${esc(title)}</p>` : ``}
@@ -291,7 +297,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
   if (style === `card`) {
     return `<section style="border: 1px solid #e8e8e8; border-radius: 10px; margin: 20px 0; overflow: hidden; background: #fff;">
   <section style="display: table; width: 100%; padding: 20px; border-bottom: 1px solid #f0f0f0;">
-    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: 72px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px;" /></section>` : ``}
+    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: 72px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR};" /></section>` : ``}
     <section style="display: table-cell; vertical-align: middle; padding-left: ${avatar ? '16' : '0'}px;">
       <p style="margin: 0 0 4px; font-size: 11px; color: #999; letter-spacing: 1px;">ABOUT THE AUTHOR</p>
       <p style="margin: 0; font-size: 18px; font-weight: bold; color: #333;">${esc(name)}</p>
@@ -307,7 +313,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
   if (style === `badge`) {
     return `<section style="margin: 20px 0; border-left: 3px solid #2a6cb6; padding: 0 0 0 16px;">
   <section style="display: table; width: 100%; margin-bottom: 12px;">
-    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: 72px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px;" /></section>` : ``}
+    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: 72px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR};" /></section>` : ``}
     <section style="display: table-cell; vertical-align: middle; padding-left: ${avatar ? '12' : '0'}px;">
       <p style="margin: 0 0 2px; font-size: 18px; font-weight: bold; color: #333;">${esc(name)}</p>
       ${title ? `<p style="margin: 0; font-size: 13px; color: #2a6cb6;">${esc(title)}</p>` : ``}
@@ -319,7 +325,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
 
   // simple (default)
   return `<section style="text-align: center; margin: 20px 0; padding: 24px 16px; border: 1px solid ${CV.borderL}; border-radius: 10px; background: ${CV.bg};">
-  ${avatar ? `<img src="${esc(avatar)}" alt="${esc(name)}" style="width: 64px; height: 64px; object-fit: cover; border-radius: 50%; margin-bottom: 12px;" />` : ``}
+  ${avatar ? `<img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR}; margin-bottom: 12px;" />` : ``}
   <p style="margin: 0 0 4px; font-size: 18px; font-weight: bold; color: ${CV.txtP};">${esc(name)}</p>
   ${title ? `<p style="margin: 0 0 10px; font-size: 13px; color: ${CV.txtS};">${esc(title)}</p>` : ``}
   ${bio ? `<p style="margin: 0; font-size: 14px; color: ${CV.txtT}; line-height: 1.8; max-width: 360px; margin-left: auto; margin-right: auto;">${esc(bio)}</p>` : ``}
