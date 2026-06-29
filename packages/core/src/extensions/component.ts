@@ -327,7 +327,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
 
   if (style === `lawyer`) {
     return `<section style="margin: 20px 0; border: 1px solid #d4a76a; border-radius: 6px; overflow: hidden; background: #fff;">
-  ${avatar ? `<section style="text-align: center; padding: 24px 20px 16px; background: #f9f6f0;"><img src="${esc(avatar)}" alt="${esc(name)}" width="${avatarW}" height="${avatarW}" style="object-fit: cover; border-radius: ${avatarR};" /></section>` : ``}
+  ${avatar ? `<section style="text-align: center; padding: 24px 20px 16px; background: #f9f6f0;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
   <section style="padding: 16px 24px 24px; text-align: center;">
     <p style="margin: 0 0 6px; font-size: 22px; font-weight: bold; color: #1a1a2e; letter-spacing: 2px;">${esc(name)}</p>
     ${title ? `<p style="margin: 0 0 4px; font-size: 13px; color: #d4a76a; letter-spacing: 1px;">${esc(title)}</p>` : ``}
@@ -339,7 +339,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
 
   if (style === `executive`) {
     return `<section style="margin: 20px 0; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
-  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"><img src="${esc(avatar)}" alt="${esc(name)}" width="${avatarW}" height="${avatarW}" style="object-fit: cover; border-radius: ${avatarR};" /></section>` : ``}
+  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
   <section style="padding: 20px 24px 24px; text-align: center;">
     <p style="margin: 0 0 4px; font-size: 11px; color: #999; letter-spacing: 3px; text-transform: uppercase;">FOUNDER</p>
     <p style="margin: 0 0 8px; font-size: 22px; font-weight: bold; color: #333;">${esc(name)}</p>
