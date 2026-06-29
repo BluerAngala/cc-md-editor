@@ -340,7 +340,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
     <p style="margin: 0 0 6px; font-size: 22px; font-weight: bold; color: #1a1a2e; letter-spacing: 2px;">${esc(name)}</p>
     ${title ? `<p style="margin: 0 0 4px; font-size: 13px; color: ${lawyerAccent}; letter-spacing: 1px;">${esc(title)}</p>` : ``}
     <section style="width: 40px; height: 2px; background: ${lawyerAccent}; margin: 12px auto;"></section>
-    ${bio ? `<p style="margin: 0; font-size: 14px; color: #555; line-height: 1.8; text-indent: 2em; text-align: left;">${esc(bio)}</p>` : ``}
+    ${bio ? `<p style="margin: 0; font-size: 14px; color: #555; line-height: 1.8; text-align: justify;">${esc(bio)}</p>` : ``}
   </section>
 </section>`
   }
