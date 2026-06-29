@@ -126,7 +126,7 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
   {
     id: `builtin-about-author`,
     name: `AboutAuthor`,
-    description: `笔者介绍卡片，支持多种风格：简洁(simple)、蓝底(blue)、卡片(card)、徽章(badge)、律师(lawyer)、企业家(executive)`,
+    description: `笔者介绍卡片，支持多种风格：card | blue | badge | lawyer | executive`,
     builtIn: true,
     props: [
       { name: `name`, description: `作者姓名`, required: true },
@@ -138,12 +138,11 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
       { name: `accentColor`, description: `强调色（hex）` },
       { name: `avatarSize`, description: `头像大小：small | large | full 或数字`, default: `small` },
       { name: `avatarHeight`, description: `头像高度 px，不设则为正方形` },
-      { name: `style`, description: `风格：simple | blue | card | badge | lawyer | executive`, default: `simple` },
+      { name: `style`, description: `风格：card | blue | badge | lawyer | executive`, default: `card` },
     ],
     template: ``,
-    example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="simple" />`,
+    example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="card" />`,
     examples: [
-      { label: `简洁`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="simple" />` },
       { label: `蓝底`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="blue" avatarSize="large" avatarShape="round" />` },
       { label: `卡片`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师" bio="热爱技术，专注于 Web 开发与开源社区。" style="card" />` },
       { label: `徽章`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="badge" avatarShape="round" />` },
@@ -279,7 +278,7 @@ function renderInfoGrid(props: Record<string, string>): string {
 
 function renderAboutAuthor(props: Record<string, string>): string {
   const { name, avatar, title, bio, style: styleProp, avatarSize: avatarSizeProp, avatarShape: avatarShapeProp } = props
-  const style = styleProp || `simple`
+  const style = styleProp || `card`
   const avatarSize = avatarSizeProp || `small`
   const avatarShape = avatarShapeProp || `rect`
   const avatarW = /^\d+$/.test(avatarSize) ? Number(avatarSize) : avatarSize === `full` ? 200 : avatarSize === `large` ? 120 : 64
@@ -359,16 +358,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
   </section>
 </section>`
   }
-
-  // simple (default)
-  return `<section style="text-align: center; margin: 20px 0; padding: 24px 16px; border: 1px solid ${CV.borderL}; border-radius: 10px; background: ${CV.bg};">
-  ${avatar ? `<img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR}; margin-bottom: 12px;" />` : ``}
-  <p style="margin: 0 0 4px; font-size: 18px; font-weight: bold; color: ${CV.txtP};">${esc(name)}</p>
-  ${title ? `<p style="margin: 0 0 10px; font-size: 13px; color: ${CV.txtS};">${esc(title)}</p>` : ``}
-  ${bio ? `<p style="margin: 0; font-size: 14px; color: ${CV.txtT}; line-height: 1.8; max-width: 360px; margin-left: auto; margin-right: auto;">${esc(bio)}</p>` : ``}
-</section>`
 }
-
 /** 特殊渲染器注册表 */
 const SPECIAL_RENDERERS: Record<string, (props: Record<string, string>) => string> = {
   TableBlock: renderTableBlock,
