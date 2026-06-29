@@ -134,7 +134,9 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
       { name: `title`, description: `职位或标签` },
       { name: `bio`, description: `个人简介` },
       { name: `avatarShape`, description: `头像形状：round(圆形) | rect(圆角矩形)`, default: `rect` },
-      { name: `avatarSize`, description: `头像大小：small(64px) | large(120px) | full(大图展示)`, default: `small` },
+      { name: `bgColor`, description: `背景色（如 #f9f6f0、#1a3a6b）` },
+      { name: `accentColor`, description: `强调色（如 #d4a76a、#764ba2）` },
+      { name: `avatarSize`, description: `头像大小：small(64) | large(120) | full(200) 或自定义数字（如 150）`, default: `small` },
       { name: `style`, description: `风格：simple | blue | card | badge | lawyer | executive`, default: `simple` },
     ],
     template: ``,
@@ -279,9 +281,11 @@ function renderAboutAuthor(props: Record<string, string>): string {
   const style = styleProp || `simple`
   const avatarSize = avatarSizeProp || `small`
   const avatarShape = avatarShapeProp || `rect`
-  const avatarW = avatarSize === `full` ? 200 : avatarSize === `large` ? 120 : 64
+  const avatarW = /^\d+$/.test(avatarSize) ? Number(avatarSize) : avatarSize === `full` ? 200 : avatarSize === `large` ? 120 : 64
   const avatarR = avatarShape === `round` ? `50%` : `8px`
   const esc = (s: string) => escapeHtml(s || ``)
+  const bg = props.bgColor || ``
+  const accent = props.accentColor || ``
 
   if (style === `blue`) {
     return `<section style="background: #1a3a6b; border-radius: 10px; padding: 24px 20px; margin: 20px 0; color: #fff;">
@@ -326,25 +330,29 @@ function renderAboutAuthor(props: Record<string, string>): string {
   }
 
   if (style === `lawyer`) {
-    return `<section style="margin: 20px 0; border: 1px solid #d4a76a; border-radius: 6px; overflow: hidden; background: #fff;">
-  ${avatar ? `<section style="text-align: center; padding: 24px 20px 16px; background: #f9f6f0;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
+    const lawyerBg = bg || `#f9f6f0`
+    const lawyerAccent = accent || `#d4a76a`
+    return `<section style="margin: 20px 0; border: 1px solid ${lawyerAccent}; border-radius: 6px; overflow: hidden; background: #fff;">
+  ${avatar ? `<section style="text-align: center; padding: 24px 20px 16px; background: ${lawyerBg};"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
   <section style="padding: 16px 24px 24px; text-align: center;">
     <p style="margin: 0 0 6px; font-size: 22px; font-weight: bold; color: #1a1a2e; letter-spacing: 2px;">${esc(name)}</p>
-    ${title ? `<p style="margin: 0 0 4px; font-size: 13px; color: #d4a76a; letter-spacing: 1px;">${esc(title)}</p>` : ``}
-    <section style="width: 40px; height: 2px; background: #d4a76a; margin: 12px auto;"></section>
+    ${title ? `<p style="margin: 0 0 4px; font-size: 13px; color: ${lawyerAccent}; letter-spacing: 1px;">${esc(title)}</p>` : ``}
+    <section style="width: 40px; height: 2px; background: ${lawyerAccent}; margin: 12px auto;"></section>
     ${bio ? `<p style="margin: 0; font-size: 14px; color: #555; line-height: 1.8; text-indent: 2em; text-align: left;">${esc(bio)}</p>` : ``}
   </section>
 </section>`
   }
 
   if (style === `executive`) {
+    const execBg = bg || `#667eea`
+    const execAccent = accent || `#764ba2`
     return `<section style="margin: 20px 0; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
-  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
+  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, ${execBg} 0%, ${execAccent} 100%);"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
   <section style="padding: 20px 24px 24px; text-align: center;">
     <p style="margin: 0 0 4px; font-size: 11px; color: #999; letter-spacing: 3px; text-transform: uppercase;">FOUNDER</p>
     <p style="margin: 0 0 8px; font-size: 22px; font-weight: bold; color: #333;">${esc(name)}</p>
-    ${title ? `<p style="margin: 0; font-size: 14px; color: #764ba2;">${esc(title)}</p>` : ``}
-    <section style="width: 40px; height: 2px; background: #764ba2; margin: 12px auto;"></section>
+    ${title ? `<p style="margin: 0; font-size: 14px; color: ${execAccent};">${esc(title)}</p>` : ``}
+    <section style="width: 40px; height: 2px; background: ${execAccent}; margin: 12px auto;"></section>
     ${bio ? `<p style="margin: 0; font-size: 14px; color: #666; line-height: 1.8;">${esc(bio)}</p>` : ``}
   </section>
 </section>`
