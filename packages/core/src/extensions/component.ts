@@ -138,12 +138,12 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
       { name: `style`, description: `风格：simple | blue | card | badge`, default: `simple` },
     ],
     template: ``,
-    example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界。" style="simple" />`,
+    example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="simple" />`,
     examples: [
-      { label: `简洁`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界。" style="simple" />` },
-      { label: `蓝底`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界。" style="blue" />` },
+      { label: `简洁`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="simple" />` },
+      { label: `蓝底`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="blue" avatarSize="large" avatarShape="round" />` },
       { label: `卡片`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师" bio="热爱技术，专注于 Web 开发与开源社区。" style="card" />` },
-      { label: `徽章`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="badge" />` },
+      { label: `徽章`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="badge" avatarShape="round" />` },
     ],
   },
 ]
