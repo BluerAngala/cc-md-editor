@@ -126,30 +126,21 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
   {
     id: `builtin-about-author`,
     name: `AboutAuthor`,
-    description: `笔者介绍卡片，文章末尾的作者信息卡片，带头像、简介和可选二维码`,
+    description: `笔者介绍卡片，居中展示的作者人物介绍卡片，带头像、姓名、职位和简介`,
     builtIn: true,
     props: [
       { name: `name`, description: `作者姓名`, required: true },
       { name: `avatar`, description: `头像图片 URL` },
-      { name: `label`, description: `标题文字`, default: `关于笔者` },
+      { name: `title`, description: `职位或标签（如「前端工程师」「独立开发者」）` },
       { name: `bio`, description: `个人简介` },
-      { name: `qrcode`, description: `公众号二维码图片 URL（可选）` },
     ],
-    template: `<section style="margin: 24px 0; border: 1px solid #e5e5e5; border-radius: 8px; padding: 24px; background: #fafafa;">
-  <p style="margin: 0 0 16px; font-size: 14px; font-weight: bold; color: {{_textPrimary_}}; border-bottom: 1px solid #eee; padding-bottom: 12px;">{{label}}</p>
-  <section style="display: flex; align-items: flex-start; gap: 16px;">
-    {{#if avatar}}<img src="{{avatar}}" alt="{{name}}" style="width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0; object-fit: cover;" />{{/if}}
-    <section style="flex: 1; min-width: 0;">
-      <p style="margin: 0 0 6px; font-size: 15px; font-weight: bold; color: {{_textPrimary_}};">{{name}}</p>
-      {{#if bio}}<p style="margin: 0; font-size: 13px; color: {{_textTertiary_}}; line-height: 1.7;">{{bio}}</p>{{/if}}
-    </section>
-    {{#if qrcode}}<section style="flex-shrink: 0; text-align: center;">
-      <img src="{{qrcode}}" alt="二维码" style="width: 80px; height: 80px; border-radius: 4px;" />
-      <p style="margin: 4px 0 0; font-size: 11px; color: {{_textTertiary_}};">长按识别</p>
-    </section>{{/if}}
-  </section>
+    template: `<section style="text-align: center; margin: 24px 0; padding: 28px 20px; border: 1px solid #eee; border-radius: 12px; background: #fff;">
+  {{#if avatar}}<img src="{{avatar}}" alt="{{name}}" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin-bottom: 12px;" />{{/if}}
+  <p style="margin: 0 0 4px; font-size: 18px; font-weight: bold; color: {{_textPrimary_}};">{{name}}</p>
+  {{#if title}}<p style="margin: 0 0 12px; font-size: 13px; color: {{_primary_}}; font-weight: 500;">{{title}}</p>{{/if}}
+  {{#if bio}}<p style="margin: 0; font-size: 14px; color: {{_textTertiary_}}; line-height: 1.8; max-width: 400px; margin-left: auto; margin-right: auto;">{{bio}}</p>{{/if}}
 </section>`,
-    example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" label="关于笔者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界。" qrcode="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com" />`,
+    example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界，也相信好的工具能让每个人受益。" />`,
   },
 ]
 
