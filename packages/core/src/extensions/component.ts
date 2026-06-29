@@ -274,8 +274,6 @@ function renderAboutAuthor(props: Record<string, string>): string {
   const { name, avatar, title, bio, style: styleProp } = props
   const style = styleProp || `simple`
   const esc = (s: string) => escapeHtml(s || ``)
-    ? `<img src="${esc(avatar)}" alt="${esc(name)}" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px;" />`
-    : ``
 
   if (style === `blue`) {
     return `<section style="background: #1a3a6b; border-radius: 10px; padding: 24px 20px; margin: 20px 0; color: #fff;">
