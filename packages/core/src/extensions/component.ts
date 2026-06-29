@@ -137,7 +137,7 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
     template: `<section style="text-align: center; margin: 24px 0; padding: 28px 20px; border: 1px solid #eee; border-radius: 12px; background: #fff;">
   {{#if avatar}}<img src="{{avatar}}" alt="{{name}}" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin-bottom: 12px;" />{{/if}}
   <p style="margin: 0 0 4px; font-size: 18px; font-weight: bold; color: {{_textPrimary_}};">{{name}}</p>
-  {{#if title}}<p style="margin: 0 0 12px; font-size: 13px; color: {{_primary_}}; font-weight: 500;">{{title}}</p>{{/if}}
+  {{#if title}}<p style="margin: 0 0 12px; font-size: 13px; color: {{_textSecondary_}}; font-weight: 500;">{{title}}</p>{{/if}}
   {{#if bio}}<p style="margin: 0; font-size: 14px; color: {{_textTertiary_}}; line-height: 1.8; max-width: 400px; margin-left: auto; margin-right: auto;">{{bio}}</p>{{/if}}
 </section>`,
     example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。相信代码可以改变世界，也相信好的工具能让每个人受益。" />`,
