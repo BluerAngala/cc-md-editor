@@ -4,7 +4,6 @@ import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
-import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import ExcalidrawWrapper from './ExcalidrawWrapper.vue'
 
@@ -71,6 +70,13 @@ const editingField = ref<'title' | 'desc' | null>(null)
 const activeGroup = ref<string | null>(null)
 const searchQuery = ref('')
 
+function highlightText(text: string, query: string): string {
+  if (!query.trim())
+    return text
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="bg-yellow-200 rounded px-0.5">$1</mark>')
+}
+
 // 拖拽状态
 const dragState = ref<{ id: string, startX: number, startY: number, noteX: number, noteY: number } | null>(null)
 // 缩放状态
@@ -124,11 +130,6 @@ function deleteScene(id: string) {
 
 function setSceneColor(scene: Scene, colorIdx: number) {
   scene.color = colorIdx
-  saveScenes(scenes.value)
-}
-
-function setSceneGroup(scene: Scene, group: string) {
-  scene.group = group
   saveScenes(scenes.value)
 }
 
@@ -315,8 +316,8 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
         想法库
       </h1>
 
-      <!-- 分组过滤 -->
-      <div class="ml-4 flex items-center gap-1">
+      <!-- 有分组时才显示过滤 -->
+      <div v-if="groups.length" class="ml-4 flex items-center gap-1">
         <button
           class="rounded-full px-2 py-0.5 text-xs transition-colors"
           :class="activeGroup === null ? 'bg-gray-800 text-white' : 'bg-muted hover:bg-muted/80'"
@@ -333,16 +334,6 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
         >
           {{ g }}
         </button>
-      </div>
-
-      <!-- 搜索 -->
-      <div class="relative ml-2 w-48">
-        <Search class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          v-model="searchQuery"
-          placeholder="搜索想法..."
-          class="h-7 pl-7 text-xs"
-        />
       </div>
 
       <div class="flex-1" />
@@ -378,7 +369,15 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
           <!-- 顶部按钮栏 -->
           <div class="flex items-center justify-between border-b px-3 py-2">
             <span class="text-sm font-medium">📌 便签墙</span>
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-2">
+              <div class="relative w-36">
+                <Search class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  v-model="searchQuery"
+                  placeholder="搜索..."
+                  class="flex h-7 w-full rounded-md border border-input bg-background pl-7 pr-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+              </div>
               <Button variant="ghost" size="sm" class="h-7 gap-1 px-2 text-xs" @click="organizeNotes">
                 <LayoutGrid class="h-3.5 w-3.5" />
                 整理
@@ -446,46 +445,23 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
                   @keydown.enter="finishEdit"
                   @keydown.escape="editingId = null"
                 />
-                <div v-else class="truncate text-sm font-semibold text-gray-800">
-                  {{ scene.title }}
-                </div>
+                <div v-else class="truncate text-sm font-semibold text-gray-800" v-html="highlightText(scene.title, searchQuery)" />
 
                 <!-- 描述 -->
                 <div class="mt-1 min-h-0 flex-1" @dblclick.stop="startEdit(scene, 'desc')">
-                  <Textarea
+                  <textarea
                     v-if="editingId === scene.id && editingField === 'desc'"
                     v-model="scene.desc"
-                    class="h-full resize-none border-0 bg-transparent p-0 text-xs text-gray-600 shadow-none focus-visible:ring-0"
+                    class="h-full w-full resize-none bg-transparent p-0 text-xs text-gray-600 outline-none"
                     @blur="finishEdit"
                     @keydown.escape="editingId = null"
                   />
-                  <p v-else class="line-clamp-3 text-xs text-gray-500">
-                    {{ scene.desc || '双击添加描述...' }}
-                  </p>
+                  <p v-else class="line-clamp-3 text-xs text-gray-500" v-html="scene.desc ? highlightText(scene.desc, searchQuery) : '<span class=\'text-gray-300\'>双击添加描述...</span>'" />
                 </div>
 
-                <!-- 分组标签 -->
-                <div class="mt-1 flex items-center gap-1">
-                  <Input
-                    v-if="editingId === scene.id && editingField === (null as any)"
-                    v-model="scene.group"
-                    class="h-5 w-16 border-0 bg-black/5 px-1 text-xs shadow-none focus-visible:ring-0"
-                    placeholder="分组"
-                    @blur="finishEdit"
-                  />
-                  <span
-                    v-else-if="scene.group"
-                    class="cursor-pointer rounded-full bg-black/5 px-1.5 py-0.5 text-xs text-gray-500"
-                    @click.stop="startEdit(scene, 'desc')"
-                  >
-                    {{ scene.group }}
-                  </span>
-                  <input
-                    v-else
-                    class="w-12 bg-transparent text-xs text-gray-400 outline-none placeholder:text-gray-300"
-                    placeholder="+标签"
-                    @change="setSceneGroup(scene, ($event.target as HTMLInputElement).value)"
-                  >
+                <!-- 创建时间 -->
+                <div class="mt-auto pt-1 text-xs text-gray-400">
+                  {{ new Date(scene.createdAt).toLocaleString() }}
                 </div>
               </div>
 

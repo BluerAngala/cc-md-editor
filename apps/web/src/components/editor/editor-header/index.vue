@@ -237,7 +237,15 @@ function copyToWeChat() {
     <!-- 桌面端左侧菜单 -->
     <div class="space-x-1 hidden md:flex items-center">
       <Button
-        variant="ghost"
+        variant="outline"
+        class="h-8 px-3 text-sm font-normal"
+        @click="uiStore.setCurrentView('landing')"
+      >
+        <Home class="mr-1.5 size-4" />
+        <span>首页</span>
+      </Button>
+      <Button
+        variant="outline"
         class="h-8 px-3 text-sm font-normal"
         @click="uiStore.setCurrentView('ideaBoard')"
       >
@@ -245,7 +253,7 @@ function copyToWeChat() {
         <span>想法库</span>
       </Button>
       <Button
-        variant="ghost"
+        variant="outline"
         class="h-8 px-3 text-sm font-normal"
         :class="{ 'bg-accent text-accent-foreground': isOpenPostSlider }"
         @click="isOpenPostSlider = !isOpenPostSlider"
@@ -294,16 +302,6 @@ function copyToWeChat() {
 
     <!-- 右侧操作区 -->
     <div class="flex flex-wrap items-center gap-2">
-      <!-- 首页 -->
-      <Button
-        variant="ghost"
-        class="h-9"
-        @click="uiStore.setCurrentView('landing')"
-      >
-        <Home class="mr-2 h-4 w-4" />
-        <span>首页</span>
-      </Button>
-
       <!-- 分享按钮 -->
       <Button
         v-if="showShareUi"
