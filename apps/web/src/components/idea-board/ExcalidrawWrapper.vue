@@ -134,6 +134,35 @@ interface ExcalidrawElement {
 defineExpose({
   getRef: () => excalidrawRef,
 
+  /** 将 Mermaid 代码转换为 Excalidraw 元素并插入画布 */
+  addMermaidElements: async (mermaidCode: string): Promise<boolean> => {
+    if (!excalidrawRef)
+      return false
+    try {
+      const { parseMermaidToExcalidraw } = await import('@excalidraw/mermaid-to-excalidraw')
+      const { convertToExcalidrawElements } = await import('@excalidraw/excalidraw')
+      const { elements: skeletons } = await parseMermaidToExcalidraw(mermaidCode, {
+        flowchart: { curve: 'basis' },
+        themeVariables: { fontSize: '18px' },
+      })
+      if (!skeletons?.length)
+        return false
+      const elements = convertToExcalidrawElements(skeletons, { fontSize: 18 })
+      // 居中插入到当前视口
+      const currentElements = excalidrawRef.getSceneElements() || []
+      excalidrawRef.updateScene({
+        elements: [...currentElements, ...elements],
+      })
+      // 滚动到新元素
+      excalidrawRef.scrollToContent(elements, { animate: true, fitToContent: true })
+      return true
+    }
+    catch (e) {
+      console.error('[ExcalidrawWrapper] addMermaidElements failed:', e)
+      return false
+    }
+  },
+
   getElements: (): ExcalidrawElement[] => {
     if (!excalidrawRef)
       return []

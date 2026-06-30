@@ -169,6 +169,9 @@ importers:
       '@excalidraw/excalidraw':
         specifier: ^0.18.1
         version: 0.18.1(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@excalidraw/mermaid-to-excalidraw':
+        specifier: ^2.2.2
+        version: 2.2.2
       '@lucide/vue':
         specifier: ^1.21.0
         version: 1.21.0(vue@3.5.39(typescript@6.0.3))

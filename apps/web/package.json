@@ -32,6 +32,7 @@
     "@aws-sdk/client-s3": "^3.1075.0",
     "@aws-sdk/s3-request-presigner": "^3.1075.0",
     "@excalidraw/excalidraw": "^0.18.1",
+    "@excalidraw/mermaid-to-excalidraw": "^2.2.2",
     "@lucide/vue": "^1.21.0",
     "@md/core": "workspace:*",
     "@md/shared": "workspace:*",

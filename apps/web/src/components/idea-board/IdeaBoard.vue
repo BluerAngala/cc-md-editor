@@ -7,6 +7,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import AIDraftDialog from './AIDraftDialog.vue'
 import ExcalidrawWrapper from './ExcalidrawWrapper.vue'
+import MermaidAIDialog from './MermaidAIDialog.vue'
 
 const emit = defineEmits<{
   goToEditor: []
@@ -77,6 +78,9 @@ const showAIDialog = ref(false)
 const aiScreenshotFile = ref<File | null>(null)
 const aiError = ref('')
 
+// Mermaid AI 对话框
+const showMermaidDialog = ref(false)
+
 /** 右键菜单触发：截图 → 打开 AI 对话框 */
 async function openAIDraft() {
   aiError.value = ''
@@ -99,6 +103,20 @@ async function openAIDraft() {
     aiError.value = e instanceof Error ? e.message : '截图失败'
     setTimeout(() => { aiError.value = '' }, 3000)
   }
+}
+
+/** 打开 Mermaid AI 对话框 */
+function openMermaidDialog() {
+  showMermaidDialog.value = true
+}
+
+/** 将 AI 生成的 Mermaid 代码插入画布 */
+async function handleMermaidInsert(mermaidCode: string) {
+  if (!excalidrawRef.value)
+    return
+  const ok = await excalidrawRef.value.addMermaidElements(mermaidCode)
+  if (ok)
+    showMermaidDialog.value = false
 }
 
 function highlightText(text: string, query: string): string {
@@ -395,7 +413,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
     </header>
 
     <!-- 主体 -->
-    <ResizablePanelGroup direction="horizontal" class="flex-1">
+    <ResizablePanelGroup direction="horizontal" auto-save-id="idea-board-layout" class="flex-1">
       <!-- 左侧便签墙 -->
       <ResizablePanel :default-size="35" :min-size="20" :max-size="50">
         <div class="flex h-full flex-col">
@@ -542,23 +560,41 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
             {{ aiError }}
           </div>
 
-          <!-- 浮动 AI 按钮 -->
-          <TooltipProvider v-if="activeScene" :delay-duration="300">
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="absolute bottom-4 right-4 z-10 gap-1.5 border-amber-300 bg-background/80 text-amber-700 shadow-md backdrop-blur hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950"
-                  @click="openAIDraft"
-                >
-                  <Sparkles class="h-3.5 w-3.5" />
-                  生成草稿
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>截图画布内容，发给 AI 生成文章草稿</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <!-- 浮动按钮 -->
+          <div v-if="activeScene" class="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+            <TooltipProvider :delay-duration="300">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="gap-1.5 border-purple-300 bg-background/80 text-purple-700 shadow-md backdrop-blur hover:bg-purple-50 dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-950"
+                    @click="openMermaidDialog"
+                  >
+                    <Sparkles class="h-3.5 w-3.5" />
+                    生成想法
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>打开 Mermaid 画布，将流程图转换为思维导图</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider :delay-duration="300">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="gap-1.5 border-amber-300 bg-background/80 text-amber-700 shadow-md backdrop-blur hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950"
+                    @click="openAIDraft"
+                  >
+                    <Sparkles class="h-3.5 w-3.5" />
+                    生成草稿
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>截图画布内容，发给 AI 生成文章草稿</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>
@@ -571,6 +607,13 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
       :idea-desc="activeScene.desc"
       @close="showAIDialog = false"
       @inserted="showAIDialog = false"
+    />
+
+    <!-- Mermaid AI 对话框 -->
+    <MermaidAIDialog
+      v-if="showMermaidDialog"
+      @close="showMermaidDialog = false"
+      @insert="handleMermaidInsert"
     />
   </div>
 </template>
