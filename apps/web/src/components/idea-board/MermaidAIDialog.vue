@@ -144,6 +144,20 @@ const PLACEHOLDER = `例如：
 - 画一个电商订单状态流转图
 - 画一个系统架构图，包含前端、后端、数据库`
 
+// ── 法律专用模板 ─────────────────────────────────────────
+const LEGAL_TEMPLATES = [
+  { label: '诉讼流程图', prompt: '画一个民事诉讼一审流程图，从立案、送达、举证、开庭、判决到执行' },
+  { label: '法律关系图', prompt: '分析以下主体之间的法律关系：' },
+  { label: '案件时间轴', prompt: '用时间轴展示以下案件事件：' },
+  { label: '合同审查流程', prompt: '画一个合同审查流程图，包含主体审查、条款审查、违约责任、争议解决等节点' },
+  { label: '利害关系人', prompt: '画一个公司股权纠纷中各方当事人关系图，包含原告、被告、第三人' },
+  { label: '仲裁流程图', prompt: '画一个商事仲裁流程图，从申请仲裁到裁决执行' },
+]
+
+function applyTemplate(tmpl: typeof LEGAL_TEMPLATES[number]) {
+  prompt.value = tmpl.prompt
+}
+
 const OPTIMIZE_SYSTEM_PROMPT = `整理用户粗糙的想法为清晰的图表描述。去掉口语和重复，补充逻辑关系。只输出整理后的描述，不要输出代码。`
 
 const MERMAID_SYSTEM_PROMPT = `将用户描述转换为 Mermaid 流程图代码。只输出代码，不要解释。
@@ -279,6 +293,17 @@ function handleInsert() {
         <div class="flex w-1/2 flex-col border-r">
           <div class="flex h-10 items-center border-b px-4 text-xs font-medium text-muted-foreground">
             描述你的想法
+          </div>
+          <!-- 法律模板标签 -->
+          <div class="flex flex-wrap gap-1.5 border-b px-4 py-2">
+            <button
+              v-for="tmpl in LEGAL_TEMPLATES"
+              :key="tmpl.label"
+              class="rounded-full border px-2.5 py-0.5 text-[10px] transition-colors hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-950 dark:hover:border-purple-700 dark:hover:text-purple-300"
+              @click="applyTemplate(tmpl)"
+            >
+              {{ tmpl.label }}
+            </button>
           </div>
           <div class="flex flex-1 flex-col p-4">
             <Textarea
