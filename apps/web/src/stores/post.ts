@@ -185,6 +185,7 @@ export const usePostStore = defineStore(`post`, () => {
     }
     posts.value.push(newPost)
     currentPostId.value = newPost.id
+    return newPost
   }
 
   const renamePost = (id: string, title: string) => {

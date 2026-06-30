@@ -10,9 +10,10 @@ const CodemirrorEditor = defineAsyncComponent(() => import('@/components/editor/
 const IdeaBoard = defineAsyncComponent(() => import('@/components/idea-board/IdeaBoard.vue'))
 const CommandPalette = defineAsyncComponent(() => import('@/components/editor/dialogs/CommandPalette.vue'))
 const ConfirmDialog = defineAsyncComponent(() => import('@/components/shared/confirm-dialog/ConfirmDialog.vue'))
+const PreferencesDialog = defineAsyncComponent(() => import('@/components/editor/dialogs/PreferencesDialog.vue'))
 
 const uiStore = useUIStore()
-const { isDark, currentView } = storeToRefs(uiStore)
+const { isDark, currentView, isShowPreferencesDialog } = storeToRefs(uiStore)
 
 usePlatformEnv()
 useAccountSyncBootstrap()
@@ -33,6 +34,8 @@ usePreferencesHotkey()
   <CommandPalette />
 
   <ConfirmDialog />
+
+  <PreferencesDialog v-model:open="isShowPreferencesDialog" />
 
   <Toaster
     rich-colors

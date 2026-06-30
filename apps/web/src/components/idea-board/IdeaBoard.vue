@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { FileText, Home, LayoutGrid, Lightbulb, Plus, Search, Trash2 } from '@lucide/vue'
+import { FileText, Home, LayoutGrid, Lightbulb, Plus, Search, Sparkles, Trash2 } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useAIConfigStore } from '@/stores/aiConfig'
+import AIDraftDialog from './AIDraftDialog.vue'
 import ExcalidrawWrapper from './ExcalidrawWrapper.vue'
 
 const emit = defineEmits<{
   goToEditor: []
   goToLanding: []
 }>()
+
+const aiConfig = useAIConfigStore()
 
 const STORAGE_KEY = 'idea-board-scenes'
 
@@ -30,17 +34,17 @@ interface Scene {
 }
 
 const COLORS = [
-  { bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-400', ring: 'ring-amber-400', label: '黄' },
-  { bg: 'bg-sky-50', border: 'border-sky-200', dot: 'bg-sky-400', ring: 'ring-sky-400', label: '蓝' },
-  { bg: 'bg-emerald-50', border: 'border-emerald-200', dot: 'bg-emerald-400', ring: 'ring-emerald-400', label: '绿' },
-  { bg: 'bg-pink-50', border: 'border-pink-200', dot: 'bg-pink-400', ring: 'ring-pink-400', label: '粉' },
-  { bg: 'bg-violet-50', border: 'border-violet-200', dot: 'bg-violet-400', ring: 'ring-violet-400', label: '紫' },
-  { bg: 'bg-orange-50', border: 'border-orange-200', dot: 'bg-orange-400', ring: 'ring-orange-400', label: '橙' },
+  { bg: 'bg-amber-50 dark:bg-amber-950', border: 'border-amber-200 dark:border-amber-800', dot: 'bg-amber-400', ring: 'ring-amber-400', label: '黄' },
+  { bg: 'bg-sky-50 dark:bg-sky-950', border: 'border-sky-200 dark:border-sky-800', dot: 'bg-sky-400', ring: 'ring-sky-400', label: '蓝' },
+  { bg: 'bg-emerald-50 dark:bg-emerald-950', border: 'border-emerald-200 dark:border-emerald-800', dot: 'bg-emerald-400', ring: 'ring-emerald-400', label: '绿' },
+  { bg: 'bg-pink-50 dark:bg-pink-950', border: 'border-pink-200 dark:border-pink-800', dot: 'bg-pink-400', ring: 'ring-pink-400', label: '粉' },
+  { bg: 'bg-violet-50 dark:bg-violet-950', border: 'border-violet-200 dark:border-violet-800', dot: 'bg-violet-400', ring: 'ring-violet-400', label: '紫' },
+  { bg: 'bg-orange-50 dark:bg-orange-950', border: 'border-orange-200 dark:border-orange-800', dot: 'bg-orange-400', ring: 'ring-orange-400', label: '橙' },
 ]
 
 const DEFAULTS = { title: '新想法', desc: '', color: 0, group: '', x: 20, y: 20, w: 200, h: 120, elements: [] }
 
-function normalizeScene(raw: any): Scene {
+function normalizeScene(raw: Record<string, unknown>): Scene {
   return { ...DEFAULTS, ...raw, createdAt: raw.createdAt || Date.now(), updatedAt: raw.updatedAt || Date.now() }
 }
 
@@ -65,10 +69,36 @@ const activeSceneId = ref<string | null>(scenes.value[0]?.id ?? null)
 const activeScene = computed(() => scenes.value.find(s => s.id === activeSceneId.value))
 
 const boardRef = ref<HTMLDivElement | null>(null)
+const excalidrawRef = ref<InstanceType<typeof ExcalidrawWrapper> | null>(null)
 const editingId = ref<string | null>(null)
 const editingField = ref<'title' | 'desc' | null>(null)
 const activeGroup = ref<string | null>(null)
 const searchQuery = ref('')
+
+// AI 初稿对话框
+const showAIDialog = ref(false)
+const aiScreenshot = ref('')
+const aiError = ref('')
+
+async function openAIDraft() {
+  aiError.value = ''
+  // 检查 AI 配置
+  if (!aiConfig.apiKey || aiConfig.apiKey === '') {
+    aiError.value = '请先在设置中配置 AI 的 API Key'
+    setTimeout(() => { aiError.value = '' }, 3000)
+    return
+  }
+  if (!excalidrawRef.value)
+    return
+  const dataUrl = await excalidrawRef.value.exportToDataUrl()
+  if (!dataUrl) {
+    aiError.value = '画布为空，请先添加内容'
+    setTimeout(() => { aiError.value = '' }, 3000)
+    return
+  }
+  aiScreenshot.value = dataUrl
+  showAIDialog.value = true
+}
 
 function highlightText(text: string, query: string): string {
   if (!query.trim())
@@ -259,7 +289,7 @@ function onResizeEnd() {
   window.removeEventListener('mouseup', onResizeEnd)
 }
 
-function handleSceneChange(elements: readonly any[], _appState: any, _files: any) {
+function handleSceneChange(elements: readonly unknown[], _appState: Record<string, unknown>, _files: Record<string, unknown>) {
   if (!activeScene.value)
     return
   activeScene.value.elements = [...elements]
@@ -311,7 +341,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
   <div class="flex h-screen flex-col select-none">
     <!-- Header -->
     <header class="flex items-center gap-3 border-b px-4 py-2">
-      <Lightbulb class="text-lg text-gray-700" />
+      <Lightbulb class="text-lg text-gray-700 dark:text-gray-300" />
       <h1 class="text-base font-semibold">
         想法库
       </h1>
@@ -320,7 +350,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
       <div v-if="groups.length" class="ml-4 flex items-center gap-1">
         <button
           class="rounded-full px-2 py-0.5 text-xs transition-colors"
-          :class="activeGroup === null ? 'bg-gray-800 text-white' : 'bg-muted hover:bg-muted/80'"
+          :class="activeGroup === null ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900' : 'bg-muted hover:bg-muted/80'"
           @click="activeGroup = null"
         >
           全部
@@ -329,7 +359,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
           v-for="g in groups"
           :key="g"
           class="rounded-full px-2 py-0.5 text-xs transition-colors"
-          :class="activeGroup === g ? 'bg-gray-800 text-white' : 'bg-muted hover:bg-muted/80'"
+          :class="activeGroup === g ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900' : 'bg-muted hover:bg-muted/80'"
           @click="activeGroup = g"
         >
           {{ g }}
@@ -338,7 +368,20 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
 
       <div class="flex-1" />
 
+      <!-- AI 配置提示 -->
+      <span v-if="aiError" class="text-xs text-red-500">{{ aiError }}</span>
+
       <TooltipProvider :delay-duration="300">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="outline" size="sm" class="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950" @click="openAIDraft">
+              <Sparkles class="mr-1 h-4 w-4" />
+              生成初稿
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>截图发给 AI 生成文章初稿</TooltipContent>
+        </Tooltip>
+
         <Tooltip>
           <TooltipTrigger as-child>
             <Button variant="outline" size="sm" @click="emit('goToLanding')">
@@ -420,7 +463,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
                   <button
                     v-for="(c, i) in COLORS"
                     :key="i"
-                    class="h-3 w-3 rounded-full border border-gray-300 transition-transform hover:scale-125"
+                    class="h-3 w-3 rounded-full border border-gray-300 dark:border-gray-600 transition-transform hover:scale-125"
                     :class="c.dot"
                     @click.stop="setSceneColor(scene, i)"
                   />
@@ -429,7 +472,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
                 <div class="flex-1" />
 
                 <!-- 删除 -->
-                <button class="text-gray-400 hover:text-red-400" @click.stop="deleteScene(scene.id)">
+                <button class="text-gray-400 hover:text-red-400 dark:text-gray-500 dark:hover:text-red-400" @click.stop="deleteScene(scene.id)">
                   <Trash2 class="h-3 w-3" />
                 </button>
               </div>
@@ -445,22 +488,22 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
                   @keydown.enter="finishEdit"
                   @keydown.escape="editingId = null"
                 />
-                <div v-else class="truncate text-sm font-semibold text-gray-800" v-html="highlightText(scene.title, searchQuery)" />
+                <div v-else class="truncate text-sm font-semibold text-gray-800 dark:text-gray-200" v-html="highlightText(scene.title, searchQuery)" />
 
                 <!-- 描述 -->
                 <div class="mt-1 min-h-0 flex-1" @dblclick.stop="startEdit(scene, 'desc')">
                   <textarea
                     v-if="editingId === scene.id && editingField === 'desc'"
                     v-model="scene.desc"
-                    class="h-full w-full resize-none bg-transparent p-0 text-xs text-gray-600 outline-none"
+                    class="h-full w-full resize-none bg-transparent p-0 text-xs text-gray-600 dark:text-gray-400 outline-none"
                     @blur="finishEdit"
                     @keydown.escape="editingId = null"
                   />
-                  <p v-else class="line-clamp-3 text-xs text-gray-500" v-html="scene.desc ? highlightText(scene.desc, searchQuery) : '<span class=\'text-gray-300\'>双击添加描述...</span>'" />
+                  <p v-else class="line-clamp-3 text-xs text-gray-500 dark:text-gray-400" v-html="scene.desc ? highlightText(scene.desc, searchQuery) : '<span class=\'text-gray-300 dark:text-gray-600\'>双击添加描述...</span>'" />
                 </div>
 
                 <!-- 创建时间 -->
-                <div class="mt-auto pt-1 text-xs text-gray-400">
+                <div class="mt-auto pt-1 text-xs text-gray-400 dark:text-gray-500">
                   {{ new Date(scene.createdAt).toLocaleString() }}
                 </div>
               </div>
@@ -470,7 +513,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
                 class="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize"
                 @mousedown.left="onResizeStart($event, scene)"
               >
-                <svg class="h-4 w-4 text-gray-300" viewBox="0 0 16 16">
+                <svg class="h-4 w-4 text-gray-300 dark:text-gray-600" viewBox="0 0 16 16">
                   <path d="M14 16L16 14M10 16L16 10M6 16L16 6" stroke="currentColor" stroke-width="1.5" fill="none" />
                 </svg>
               </div>
@@ -480,12 +523,13 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
       </ResizablePanel>
 
       <!-- 可拖拽分割线 -->
-      <ResizableHandle class="w-1.5 bg-gray-200 hover:bg-gray-400 transition-colors" />
+      <ResizableHandle class="w-1.5 bg-gray-200 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-500 transition-colors" />
 
       <!-- 右侧画布 -->
       <ResizablePanel :default-size="65" :min-size="40">
         <ExcalidrawWrapper
           v-if="activeScene"
+          ref="excalidrawRef"
           :key="activeScene.id"
           :initial-data="{ elements: activeScene.elements }"
           @change="handleSceneChange"
@@ -500,5 +544,15 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>
+
+    <!-- AI 初稿对话框 -->
+    <AIDraftDialog
+      v-if="showAIDialog && activeScene"
+      :screenshot="aiScreenshot"
+      :idea-title="activeScene.title"
+      :idea-desc="activeScene.desc"
+      @close="showAIDialog = false"
+      @inserted="showAIDialog = false"
+    />
   </div>
 </template>

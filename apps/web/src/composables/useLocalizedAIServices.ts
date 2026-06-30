@@ -1,5 +1,6 @@
 import type { ImageServiceOption, ServiceOption } from '@md/shared/types'
 import { imageServiceOptions, serviceOptions } from '@md/shared/configs'
+import { withSiliconflowFetcher } from '@/services/ai/siliconflow'
 
 type Translate = (key: string) => string
 
@@ -16,17 +17,27 @@ export function getAIImageServiceLabel(t: Translate, value: string): string {
 }
 
 function localizeServiceOptions(t: Translate): ServiceOption[] {
-  return serviceOptions.map(option => ({
-    ...option,
-    label: getAIServiceLabel(t, option.value),
-  }))
+  return serviceOptions.map((option) => {
+    const localized: ServiceOption = {
+      ...option,
+      label: getAIServiceLabel(t, option.value),
+    }
+    if (option.value === `siliconflow`)
+      return withSiliconflowFetcher(localized, option.endpoint)
+    return localized
+  })
 }
 
 function localizeImageServiceOptions(t: Translate): ImageServiceOption[] {
-  return imageServiceOptions.map(option => ({
-    ...option,
-    label: getAIImageServiceLabel(t, option.value),
-  }))
+  return imageServiceOptions.map((option) => {
+    const localized: ImageServiceOption = {
+      ...option,
+      label: getAIImageServiceLabel(t, option.value),
+    }
+    if (option.value === `siliconflow`)
+      return withSiliconflowFetcher(localized, option.endpoint)
+    return localized
+  })
 }
 
 export function createLocalizedAIServiceOptions(t: Translate) {

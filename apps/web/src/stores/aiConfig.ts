@@ -1,4 +1,5 @@
-import { serviceOptions } from '@md/shared/configs'
+import type { ImageServiceOption, ServiceOption } from '@md/shared/types'
+import { imageServiceOptions, serviceOptions } from '@md/shared/configs'
 import {
   DEFAULT_SERVICE_KEY,
   DEFAULT_SERVICE_MAX_TOKEN,
@@ -8,112 +9,143 @@ import {
 import { store } from '@/storage'
 
 /**
+ * 各模型在硅基流动 (SiliconFlow) 上的默认模型。
+ * 仅作为「首次配置」时的初始选择；用户切换供应商或模型后会被持久化值覆盖。
+ */
+const SILICONFLOW_DEFAULT_TEXT_MODEL = `deepseek-ai/DeepSeek-V4-Flash`
+const SILICONFLOW_DEFAULT_VISION_MODEL = `Qwen/Qwen3-VL-32B-Instruct`
+const SILICONFLOW_DEFAULT_IMAGE_MODEL = `Qwen/Qwen-Image`
+const SILICONFLOW_TYPE = `siliconflow`
+
+/**
  * AI 配置 Store
- * 负责管理 AI 服务的配置，包括服务类型、模型、温度等参数
+ * 展平结构，每个模型类型独立配置供应商
  */
 export const useAIConfigStore = defineStore(`AIConfig`, () => {
-  // ==================== 全局配置 ====================
-
-  // 服务类型
-  const type = store.reactive<string>(`openai_type`, DEFAULT_SERVICE_TYPE)
-
-  // 温度参数（0-2，控制随机性）
+  // ==================== 文本模型 ====================
+  const textType = store.reactive<string>(`ai_text_type`, SILICONFLOW_TYPE)
+  const textEndpoint = ref<string>(``)
+  const textModel = ref<string>(``)
+  const textApiKey = ref<string>(DEFAULT_SERVICE_KEY)
   const temperature = store.reactive<number>(`openai_temperature`, DEFAULT_SERVICE_TEMPERATURE)
-
-  // 最大 token 数
   const maxToken = store.reactive<number>(`openai_max_token`, DEFAULT_SERVICE_MAX_TOKEN)
 
-  // ==================== 服务相关字段 ====================
+  // ==================== 视觉模型 ====================
+  const visionType = store.reactive<string>(`ai_vision_type`, SILICONFLOW_TYPE)
+  const visionEndpoint = ref<string>(``)
+  const visionModel = ref<string>(``)
+  const visionApiKey = ref<string>(DEFAULT_SERVICE_KEY)
 
-  // 服务端点（由 watch(type) 自动初始化）
-  const endpoint = ref<string>(``)
+  // ==================== 图片生成模型 ====================
+  const imageType = store.reactive<string>(`ai_image_type`, SILICONFLOW_TYPE)
+  const imageEndpoint = ref<string>(``)
+  const imageModel = ref<string>(``)
+  const imageApiKey = ref<string>(DEFAULT_SERVICE_KEY)
 
-  // 模型名称（由 watch(type) 自动初始化）
-  const model = ref<string>(``)
+  // ==================== 通用初始化逻辑 ====================
+  type ServiceOptionLike = ServiceOption | ImageServiceOption
 
-  // ==================== API Key 管理 ====================
+  function initServiceWatch(
+    typeRef: Ref<string>,
+    endpointRef: Ref<string>,
+    modelRef: Ref<string>,
+    apiKeyRef: Ref<string>,
+    svcOptions: ServiceOptionLike[],
+    prefix: string,
+    defaultModel?: string,
+  ) {
+    // 异步加载 API Key
+    Promise.resolve().then(async () => {
+      const capturedType = typeRef.value
+      const value = await store.get(`${prefix}_key_${capturedType}`)
+      if (typeRef.value === capturedType)
+        apiKeyRef.value = value || DEFAULT_SERVICE_KEY
+    })
 
-  // API Key（按服务类型分别持久化）
-  const apiKey = ref<string>(DEFAULT_SERVICE_KEY)
+    watch(typeRef, async (newType: string) => {
+      const svc = svcOptions.find(s => s.value === newType) ?? svcOptions[0]
+      endpointRef.value = svc.endpoint
 
-  // 异步加载初始值（捕获 type 防止竞态覆盖）
-  Promise.resolve().then(async () => {
-    const capturedType = type.value
-    const value = await store.get(`openai_key_${capturedType}`)
-    if (type.value === capturedType) {
-      apiKey.value = value || DEFAULT_SERVICE_KEY
-    }
-  })
+      const saved = await store.get(`${prefix}_model_${newType}`) || ``
+      const preferred = defaultModel && svc.models.includes(defaultModel)
+        ? defaultModel
+        : svc.models[0]
+      modelRef.value = svc.models.includes(saved) ? saved : preferred
+      await store.set(`${prefix}_model_${newType}`, modelRef.value)
 
-  // ==================== 响应式逻辑 ====================
+      const keyValue = await store.get(`${prefix}_key_${newType}`)
+      apiKeyRef.value = keyValue || DEFAULT_SERVICE_KEY
+    }, { immediate: true })
 
-  // 监听服务类型变化，自动同步端点、模型和 API Key
-  watch(
-    type,
-    async (newType) => {
-      const svc = serviceOptions.find(s => s.value === newType) ?? serviceOptions[0]
+    watch(apiKeyRef, async (val: string) => {
+      if (typeRef.value !== DEFAULT_SERVICE_TYPE)
+        await store.set(`${prefix}_key_${typeRef.value}`, val)
+    })
 
-      // 更新服务端点
-      endpoint.value = svc.endpoint
+    watch(modelRef, async (val: string) => {
+      await store.set(`${prefix}_model_${typeRef.value}`, val)
+    })
+  }
 
-      // 读取已保存的模型，如果不存在或不在列表中，则使用默认模型
-      const saved = await store.get(`openai_model_${newType}`) || ``
-      model.value = svc.models.includes(saved) ? saved : svc.models[0]
+  initServiceWatch(textType, textEndpoint, textModel, textApiKey, serviceOptions, `ai_text`, SILICONFLOW_DEFAULT_TEXT_MODEL)
+  initServiceWatch(visionType, visionEndpoint, visionModel, visionApiKey, serviceOptions, `ai_vision`, SILICONFLOW_DEFAULT_VISION_MODEL)
+  initServiceWatch(imageType, imageEndpoint, imageModel, imageApiKey, imageServiceOptions, `ai_image`, SILICONFLOW_DEFAULT_IMAGE_MODEL)
 
-      // 保存当前模型
-      await store.set(`openai_model_${newType}`, model.value)
-
-      // 加载对应服务的 API Key
-      const keyValue = await store.get(`openai_key_${newType}`)
-      apiKey.value = keyValue || DEFAULT_SERVICE_KEY
-    },
-    { immediate: true }, // 首次加载时也执行
-  )
-
-  // 监听 API Key 变化，持久化存储（仅非默认服务类型）
-  watch(apiKey, async (val) => {
-    if (type.value !== DEFAULT_SERVICE_TYPE) {
-      await store.set(`openai_key_${type.value}`, val)
-    }
-  })
-
-  // 监听模型变化，持久化存储
-  watch(model, async (val) => {
-    await store.set(`openai_model_${type.value}`, val)
-  })
+  // ==================== 向后兼容 ====================
+  const type = textType
+  const endpoint = textEndpoint
+  const model = textModel
+  const apiKey = textApiKey
 
   // ==================== Actions ====================
-
-  /**
-   * 重置所有配置到默认值
-   */
   const reset = async () => {
-    type.value = DEFAULT_SERVICE_TYPE
+    // 清理文本和视觉模型的服务数据
+    for (const prefix of [`ai_text`, `ai_vision`]) {
+      for (const svc of serviceOptions) {
+        await store.remove(`${prefix}_key_${svc.value}`)
+        await store.remove(`${prefix}_model_${svc.value}`)
+      }
+    }
+    // 清理图片生成模型的服务数据
+    for (const svc of imageServiceOptions) {
+      await store.remove(`ai_image_key_${svc.value}`)
+      await store.remove(`ai_image_model_${svc.value}`)
+    }
+    textType.value = DEFAULT_SERVICE_TYPE
+    visionType.value = DEFAULT_SERVICE_TYPE
+    imageType.value = DEFAULT_SERVICE_TYPE
     temperature.value = DEFAULT_SERVICE_TEMPERATURE
     maxToken.value = DEFAULT_SERVICE_MAX_TOKEN
-
-    // 清理所有服务相关的持久化数据
-    await Promise.all(
-      serviceOptions.map(async ({ value }) => {
-        await store.remove(`openai_key_${value}`)
-        await store.remove(`openai_model_${value}`)
-      }),
-    )
   }
 
   return {
-    // State
+    // 文本模型
+    textType,
+    textEndpoint,
+    textModel,
+    textApiKey,
     type,
     endpoint,
     model,
+    apiKey, // 向后兼容
     temperature,
     maxToken,
-    apiKey,
+
+    // 视觉模型
+    visionType,
+    visionEndpoint,
+    visionModel,
+    visionApiKey,
+
+    // 图片生成模型
+    imageType,
+    imageEndpoint,
+    imageModel,
+    imageApiKey,
 
     // Actions
     reset,
   }
 })
 
-// 默认导出（向后兼容）
 export default useAIConfigStore

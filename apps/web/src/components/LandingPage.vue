@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileText, Lightbulb } from '@lucide/vue'
+import { FileText, Lightbulb, Settings } from '@lucide/vue'
 import { onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
 
@@ -14,10 +14,19 @@ onMounted(() => {
 
 <template>
   <div class="flex h-screen items-center justify-center bg-background">
+    <!-- 设置按钮 -->
+    <button
+      class="absolute right-6 top-6 flex h-9 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+      @click="uiStore.toggleShowPreferencesDialog()"
+    >
+      <Settings class="h-4 w-4" />
+      设置
+    </button>
+
     <div class="flex flex-col items-center gap-8">
       <div class="text-center">
         <h1 class="text-3xl font-bold tracking-tight">
-          CC Markdown Editor
+          CC 写作工具箱
         </h1>
         <p class="mt-2 text-muted-foreground">
           选择你要进入的工作区
