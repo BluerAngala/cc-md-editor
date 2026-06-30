@@ -74,7 +74,7 @@ const searchQuery = ref('')
 
 // AI 初稿对话框
 const showAIDialog = ref(false)
-const aiScreenshot = ref('')
+const aiScreenshotFile = ref<File | null>(null)
 const aiError = ref('')
 
 /** 右键菜单触发：截图 → 打开 AI 对话框 */
@@ -86,13 +86,13 @@ async function openAIDraft() {
     return
   }
   try {
-    const dataUrl = await excalidrawRef.value.exportToDataUrl()
-    if (!dataUrl) {
+    const file = await excalidrawRef.value.exportToFile()
+    if (!file) {
       aiError.value = '画布为空，请先添加内容'
       setTimeout(() => { aiError.value = '' }, 3000)
       return
     }
-    aiScreenshot.value = dataUrl
+    aiScreenshotFile.value = file
     showAIDialog.value = true
   }
   catch (e) {
@@ -565,8 +565,8 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
 
     <!-- AI 初稿对话框 -->
     <AIDraftDialog
-      v-if="showAIDialog && activeScene"
-      :screenshot="aiScreenshot"
+      v-if="showAIDialog && activeScene && aiScreenshotFile"
+      :screenshot-file="aiScreenshotFile"
       :idea-title="activeScene.title"
       :idea-desc="activeScene.desc"
       @close="showAIDialog = false"

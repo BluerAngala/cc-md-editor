@@ -144,6 +144,29 @@ defineExpose({
     return allElements
   },
 
+  /** 导出为 File 对象（避免 blob→base64→blob 往返） */
+  exportToFile: async (): Promise<File | null> => {
+    if (!excalidrawRef)
+      return null
+    try {
+      const { exportToBlob } = await import('@excalidraw/excalidraw')
+      const elements = excalidrawRef.getSceneElements() || []
+      if (!elements.length)
+        return null
+      const appState = excalidrawRef.getAppState() || {}
+      const blob = await exportToBlob({
+        elements,
+        appState: { ...appState, exportWithDarkMode: uiStore.isDark },
+        files: excalidrawRef.getFiles(),
+      })
+      return new File([blob], `whiteboard-${Date.now()}.png`, { type: blob.type })
+    }
+    catch (e) {
+      console.error('[ExcalidrawWrapper] exportToFile failed:', e)
+      return null
+    }
+  },
+
   exportToDataUrl: async (): Promise<string | null> => {
     if (!excalidrawRef)
       return null

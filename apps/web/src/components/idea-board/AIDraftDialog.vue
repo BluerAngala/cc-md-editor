@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { Loader2, Send, Settings, X } from '@lucide/vue'
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import AIConfig from '@/components/ai/chat-box/AIConfig.vue'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { buildAIHeaders, resolveEndpointUrl, useAIFetch } from '@/composables/useAIFetch'
+import { useImageUploader } from '@/composables/useImageUploader'
 import { useAIConfigStore } from '@/stores/aiConfig'
 import { usePostStore } from '@/stores/post'
 
 const props = defineProps<{
-  screenshot: string // data URL
+  screenshotFile: File
   ideaTitle: string
   ideaDesc: string
 }>()
@@ -21,7 +22,16 @@ const emit = defineEmits<{
 
 const aiConfig = useAIConfigStore()
 const postStore = usePostStore()
+const { upload } = useImageUploader()
 const { loading, fetchSSE, abort } = useAIFetch()
+
+// File → data URL（供 AI 视觉模型和预览使用）
+const screenshotDataUrl = ref('')
+onMounted(() => {
+  const reader = new FileReader()
+  reader.onloadend = () => { screenshotDataUrl.value = reader.result as string }
+  reader.readAsDataURL(props.screenshotFile)
+})
 
 const PROMPT_TEMPLATE = `请根据以下想法和白板截图，帮我写一篇完整的文章初稿。
 
@@ -45,6 +55,7 @@ const done = ref(false)
 const error = ref('')
 const step = ref<'idle' | 'vision' | 'ocr' | 'writing' | 'done'>('idle')
 const stepText = ref('')
+const inserting = ref(false)
 
 // ── 用视觉模型一步到位 ─────────────────────────────────
 async function tryVisionModel(): Promise<boolean> {
@@ -69,7 +80,7 @@ async function tryVisionModel(): Promise<boolean> {
           role: 'user',
           content: [
             { type: 'text', text: prompt.value },
-            { type: 'image_url', image_url: { url: props.screenshot } },
+            { type: 'image_url', image_url: { url: screenshotDataUrl.value } },
           ],
         },
       ],
@@ -124,7 +135,7 @@ async function fallbackOcrAndWrite() {
             role: 'user',
             content: [
               { type: 'text', text: '请仔细阅读这张白板/思维导图截图，将其中所有文字内容、结构关系、层级关系完整提取出来。输出为结构化的纯文本，保留层级缩进和箭头/连线所表达的逻辑关系。不要添加额外分析，只提取截图中的原始内容。' },
-              { type: 'image_url', image_url: { url: props.screenshot } },
+              { type: 'image_url', image_url: { url: screenshotDataUrl.value } },
             ],
           },
         ],
@@ -235,14 +246,26 @@ async function generate() {
   await fallbackOcrAndWrite()
 }
 
-function insertToDraft() {
-  if (!result.value)
+async function insertToDraft() {
+  if (!result.value || inserting.value)
     return
+  inserting.value = true
   const post = postStore.addPost(props.ideaTitle || 'AI 生成初稿')
-  // 将截图作为首图 + AI 生成的内容
-  const content = `![想法白板](${props.screenshot})\n\n${result.value}`
-  postStore.updatePostContent(post.id, content)
-  emit('inserted')
+  try {
+    const imageUrl = await upload(props.screenshotFile)
+    postStore.updatePostContent(post.id, `![想法白板](${imageUrl})\n\n${result.value}`)
+  }
+  catch (e: unknown) {
+    // 上传失败，仍保留已创建的文章（含 base64 首图兜底）
+    postStore.updatePostContent(post.id, `![想法白板](${screenshotDataUrl.value})\n\n${result.value}`)
+    error.value = e instanceof Error ? e.message : '图片上传失败，已使用本地图片兜底'
+  }
+  finally {
+    // 立即落盘，不依赖 500ms debounce，避免刷新丢稿
+    await postStore.persistImmediately()
+    inserting.value = false
+    emit('inserted')
+  }
 }
 </script>
 
@@ -267,7 +290,7 @@ function insertToDraft() {
             白板截图
           </div>
           <div class="flex-1 overflow-y-auto p-4">
-            <img :src="screenshot" class="w-full rounded border" alt="白板截图">
+            <img :src="screenshotDataUrl" class="w-full rounded border" alt="白板截图">
             <p class="mt-3 text-xs text-muted-foreground">
               💡 在画布上选中内容再右键「生成文章草稿」，可只发送选中部分
             </p>
@@ -326,8 +349,9 @@ function insertToDraft() {
             <span class="text-xs font-medium text-muted-foreground">
               生成结果
             </span>
-            <Button :disabled="!done || !result" size="sm" @click="insertToDraft">
-              插入草稿箱
+            <Button :disabled="!done || !result || inserting" size="sm" @click="insertToDraft">
+              <Loader2 v-if="inserting" class="mr-1 h-3.5 w-3.5 animate-spin" />
+              {{ inserting ? '插入中...' : '插入草稿箱' }}
             </Button>
           </div>
           <!-- 结果预览 -->
