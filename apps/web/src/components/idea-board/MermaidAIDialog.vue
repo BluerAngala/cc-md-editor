@@ -248,19 +248,60 @@ function applyTemplate(tmpl: typeof LEGAL_TEMPLATES[number]) {
 const OPTIMIZE_SYSTEM_PROMPT = `你是一个图表规划师。将用户的想法整理为结构化的图表大纲。
 
 输出格式：
-1. 图表类型：flowchart / sequenceDiagram / ...
-2. 核心节点：列出关键节点，每个节点用 2-6 个字概括
+1. 图表类型：flowchart / sequenceDiagram / classDiagram / stateDiagram / erDiagram / gantt / pie
+2. 核心元素：列出关键节点/参与者/类/状态，每个用 2-6 个字概括
 3. 连接关系：用 "A --> B" 或 "A -->|条件| B" 描述
-4. 总节点数控制在 6-10 个
+4. 总元素数控制在 6-10 个
 
 不要输出 Mermaid 代码，只输出结构化大纲。`
 
-const MERMAID_SYSTEM_PROMPT = `将用户描述转换为 Mermaid 图表代码。只输出代码。
-- 节点 ID 用英文(A,B,C)，中文放方括号: A["登录"]
-- 判断用菱形: C{"是否成功"}
+// ── 按图表类型生成 Mermaid system prompt ──────────────────
+function buildMermaidPrompt(diagramId: string, direction: string): string {
+  const base = '将用户描述转换为 Mermaid 图表代码。只输出代码，不要解释。'
+  const typePrompts: Record<string, string> = {
+    flowchart: `图表类型: flowchart ${direction}
+- 节点 ID 用英文(A,B,C)，中文标签放方括号: A["立案"]
+- 判断节点用菱形: C{"是否成功"}
 - 边标签: A -->|是| B
-- 严格按用户指定的图表类型和方向生成
-- 严格按大纲的节点和连接，不要增删`
+- 合理使用子图(subgraph)分组`,
+
+    sequence: `图表类型: sequenceDiagram
+- 参与者用中文: participant 原告 as 原告
+- 消息用中文: 原告->>法院: 提交起诉状
+- 支持 note、alt、loop 等控制块
+- 合理使用 autonumber`,
+
+    class: `图表类型: classDiagram
+- 类名用中文: class 原告 {\n  +姓名 string\n  +起诉()\n}
+- 关系: 原告 --> 被告 : 起诉
+- 支持继承、实现、聚合、组合关系`,
+
+    state: `图表类型: stateDiagram-v2 ${direction}
+- 状态用中文: [*] --> 立案
+- 转换条件: 立案 --> 送达 : 审查通过
+- 支持并发状态和历史状态`,
+
+    er: `图表类型: erDiagram
+- 实体用英文大写: CASE {
+  string 案号
+  date 立案日期\n}
+- 关系: CASE ||--o{ PARTY : 涉及
+- 支持一对一、一对多、多对多`,
+
+    gantt: `图表类型: gantt
+- 标题用中文: title 案件进度
+- 用 section 分阶段: section 立案阶段
+- 任务: 提交起诉状 :a1, 2024-01-01, 7d
+- 支持 done、active、crit 标记`,
+
+    pie: `图表类型: pie
+- 标题用中文: title 案件类型分布
+- 数据: "民事" : 60\n"刑事" : 25
+- 数值为合理比例`,
+  }
+  return `${base}
+${typePrompts[diagramId] || typePrompts.flowchart}`
+}
 
 const JSON_SYSTEM_PROMPT = `将用户描述转换为 Excalidraw 元素 JSON 数组。只输出 JSON 数组，不要解释。
 
@@ -333,10 +374,7 @@ async function generate() {
   mermaidCode.value = ''
   step.value = 'generating'
 
-  const diagramType = DIAGRAM_TYPES.find(d => d.id === selectedDiagram.value)
-  const directionHint = diagramType?.hasDirection ? `\n- 使用 flowchart ${flowDirection.value}` : ''
-  const typeHint = `\n- 图表类型: ${diagramType?.label || '流程图'} (${selectedDiagram.value})`
-  const systemPrompt = renderMode.value === 'json' ? JSON_SYSTEM_PROMPT : `${MERMAID_SYSTEM_PROMPT}${typeHint}${directionHint}`
+  const systemPrompt = renderMode.value === 'json' ? JSON_SYSTEM_PROMPT : buildMermaidPrompt(selectedDiagram.value, flowDirection.value)
 
   try {
     await callAI(systemPrompt, prompt.value.trim(), (delta) => {
