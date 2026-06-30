@@ -158,16 +158,22 @@ function applyTemplate(tmpl: typeof LEGAL_TEMPLATES[number]) {
   prompt.value = tmpl.prompt
 }
 
-const OPTIMIZE_SYSTEM_PROMPT = `整理用户粗糙的想法为清晰的图表描述。去掉口语和重复，补充逻辑关系。只输出整理后的描述，不要输出代码。`
+const OPTIMIZE_SYSTEM_PROMPT = `你是一个图表规划师。将用户的想法整理为结构化的图表大纲。
 
-const MERMAID_SYSTEM_PROMPT = `将用户描述转换为 Mermaid 流程图代码。只输出代码，不要解释。
+输出格式：
+1. 图表类型：flowchart / sequenceDiagram / ...
+2. 核心节点：列出关键节点，每个节点用 2-6 个字概括
+3. 连接关系：用 "A --> B" 或 "A -->|条件| B" 描述
+4. 总节点数控制在 6-10 个
+
+不要输出 Mermaid 代码，只输出结构化大纲。`
+
+const MERMAID_SYSTEM_PROMPT = `将以下结构化大纲转换为 Mermaid 流程图代码。只输出代码。
 - 节点 ID 用英文(A,B,C)，中文放方括号: A["登录"]
 - 判断用菱形: C{"是否成功"}
 - 边标签: A -->|是| B
 - 用 flowchart TD
-- 保持简洁：最多 8 个节点，避免复杂分支
-- 每个节点文字不超过 6 个字
-- 线性流程优先，减少交叉连线`
+- 严格按大纲的节点和连接，不要增删`
 
 async function callAI(systemPrompt: string, userContent: string, onDelta: (s: string) => void): Promise<void> {
   const url = resolveEndpointUrl(aiConfig.textEndpoint || aiConfig.endpoint, 'chat')
