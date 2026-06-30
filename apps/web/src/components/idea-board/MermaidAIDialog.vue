@@ -483,7 +483,7 @@ function handleInsert() {
                 :class="renderMode === 'json' ? 'bg-purple-500 text-white' : 'text-muted-foreground hover:bg-muted'"
                 @click="renderMode = 'json'"
               >
-                JSON
+                JSON <span class="opacity-50">测试</span>
               </button>
             </div>
           </div>
