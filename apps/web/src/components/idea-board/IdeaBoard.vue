@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types'
-import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types/types'
 import { onMounted, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -14,11 +12,11 @@ const emit = defineEmits<{
 const STORAGE_KEY = 'idea-board-scene'
 
 interface SceneData {
-  elements: ExcalidrawElement[]
-  appState?: Record<string, unknown>
+  elements: any[]
+  appState?: Record<string, any>
 }
 
-const initialData = ref<{ elements: ExcalidrawElement[] }>({ elements: [] })
+const initialData = ref<{ elements: any[] }>({ elements: [] })
 const isDirty = ref(false)
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -35,14 +33,14 @@ onMounted(() => {
   }
 })
 
-function handleChange(elements: ExcalidrawElement[], appState: AppState, _files: BinaryFiles | null) {
+function handleChange(elements: readonly any[], appState: any, _files: any) {
   isDirty.value = true
 
   if (saveTimer)
     clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
     const data: SceneData = {
-      elements,
+      elements: [...elements],
       appState: {
         viewBackgroundColor: appState.viewBackgroundColor,
       },

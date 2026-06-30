@@ -358,6 +358,15 @@ function renderAboutAuthor(props: Record<string, string>): string {
   </section>
 </section>`
   }
+
+  // fallback: card style
+  return `<section style="border: 1px solid #e8e8e8; border-radius: 10px; margin: 20px 0; overflow: hidden; background: #fff;">
+  <section style="padding: 20px;">
+    <p style="margin: 0; font-size: 18px; font-weight: bold; color: #333;">${esc(name)}</p>
+    ${title ? `<p style="margin: 4px 0 0; font-size: 14px; color: #666;">${esc(title)}</p>` : ``}
+    ${bio ? `<p style="margin: 8px 0 0; font-size: 14px; color: #999; line-height: 1.7;">${esc(bio)}</p>` : ``}
+  </section>
+</section>`
 }
 /** 特殊渲染器注册表 */
 const SPECIAL_RENDERERS: Record<string, (props: Record<string, string>) => string> = {
