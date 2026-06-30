@@ -23,6 +23,26 @@ const mermaidCode = ref('')
 const error = ref('')
 const step = ref<'idle' | 'optimizing' | 'generating' | 'done'>('idle')
 const renderMode = ref<'mermaid' | 'json'>('mermaid')
+const flowDirection = ref<'TD' | 'LR'>('TD')
+
+// ── 图表类型 ─────────────────────────────────────────────
+interface DiagramType {
+  id: string
+  label: string
+  icon: string
+  hasDirection?: boolean
+}
+
+const DIAGRAM_TYPES: DiagramType[] = [
+  { id: 'flowchart', label: '流程图', icon: '◇', hasDirection: true },
+  { id: 'sequence', label: '时序图', icon: '⏵' },
+  { id: 'class', label: '类图', icon: '☐' },
+  { id: 'state', label: '状态图', icon: '◎', hasDirection: true },
+  { id: 'er', label: 'ER 图', icon: '⊞' },
+  { id: 'gantt', label: '甘特图', icon: '▦' },
+  { id: 'pie', label: '饼图', icon: '◕' },
+]
+const selectedDiagram = ref<string>('flowchart')
 
 // ── JSON 预览解析 ─────────────────────────────────────────
 interface JsonPreviewNode {
@@ -43,7 +63,7 @@ interface JsonPreviewEdge {
 }
 
 const jsonPreview = computed(() => {
-  if (renderMode.value !== 'json' || !mermaidCode.value.trim())
+  if (renderMode.value !== 'json' || !mermaidCode.value.trim() || step.value !== 'done')
     return null
   try {
     const arr = JSON.parse(mermaidCode.value)
@@ -235,11 +255,11 @@ const OPTIMIZE_SYSTEM_PROMPT = `你是一个图表规划师。将用户的想法
 
 不要输出 Mermaid 代码，只输出结构化大纲。`
 
-const MERMAID_SYSTEM_PROMPT = `将以下结构化大纲转换为 Mermaid 流程图代码。只输出代码。
+const MERMAID_SYSTEM_PROMPT = `将用户描述转换为 Mermaid 图表代码。只输出代码。
 - 节点 ID 用英文(A,B,C)，中文放方括号: A["登录"]
 - 判断用菱形: C{"是否成功"}
 - 边标签: A -->|是| B
-- 用 flowchart TD
+- 严格按用户指定的图表类型和方向生成
 - 严格按大纲的节点和连接，不要增删`
 
 const JSON_SYSTEM_PROMPT = `将用户描述转换为 Excalidraw 元素 JSON 数组。只输出 JSON 数组，不要解释。
@@ -313,7 +333,10 @@ async function generate() {
   mermaidCode.value = ''
   step.value = 'generating'
 
-  const systemPrompt = renderMode.value === 'json' ? JSON_SYSTEM_PROMPT : MERMAID_SYSTEM_PROMPT
+  const diagramType = DIAGRAM_TYPES.find(d => d.id === selectedDiagram.value)
+  const directionHint = diagramType?.hasDirection ? `\n- 使用 flowchart ${flowDirection.value}` : ''
+  const typeHint = `\n- 图表类型: ${diagramType?.label || '流程图'} (${selectedDiagram.value})`
+  const systemPrompt = renderMode.value === 'json' ? JSON_SYSTEM_PROMPT : `${MERMAID_SYSTEM_PROMPT}${typeHint}${directionHint}`
 
   try {
     await callAI(systemPrompt, prompt.value.trim(), (delta) => {
@@ -357,42 +380,71 @@ function handleInsert() {
             生成想法
           </h2>
         </div>
-        <div class="flex items-center gap-1.5">
-          <!-- 模式切换 -->
-          <div class="flex rounded-md border overflow-hidden">
-            <button
-              class="px-2 py-0.5 text-[10px] transition-colors"
-              :class="renderMode === 'mermaid' ? 'bg-purple-500 text-white' : 'text-muted-foreground hover:bg-muted'"
-              @click="renderMode = 'mermaid'"
-            >
-              Mermaid
-            </button>
-            <button
-              class="px-2 py-0.5 text-[10px] transition-colors"
-              :class="renderMode === 'json' ? 'bg-purple-500 text-white' : 'text-muted-foreground hover:bg-muted'"
-              @click="renderMode = 'json'"
-            >
-              JSON
-            </button>
+        <div class="flex items-center gap-3">
+          <!-- 图表类型 -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-muted-foreground">类型</span>
+            <div class="flex gap-0.5">
+              <button
+                v-for="dt in DIAGRAM_TYPES"
+                :key="dt.id"
+                class="rounded px-1.5 py-0.5 text-[10px] transition-colors"
+                :class="selectedDiagram === dt.id ? 'bg-purple-500 text-white' : 'text-muted-foreground hover:bg-muted'"
+                :title="dt.label"
+                @click="selectedDiagram = dt.id"
+              >
+                {{ dt.icon }} {{ dt.label }}
+              </button>
+            </div>
           </div>
-          <Popover>
-            <PopoverTrigger as-child>
-              <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs">
-                <Settings class="h-3.5 w-3.5" />
-                AI 配置
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent class="w-[420px] max-h-[70vh] overflow-y-auto" align="end">
-              <AIConfig />
-            </PopoverContent>
-          </Popover>
-          <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" :class="{ 'text-purple-500': showHistory }" @click="showHistory = !showHistory">
-            <Clock class="h-3.5 w-3.5" />
-            历史记录
-          </Button>
-          <Button variant="ghost" size="icon" class="h-7 w-7" @click="emit('close')">
-            <X class="h-4 w-4" />
-          </Button>
+
+          <!-- 方向（仅流程图/状态图） -->
+          <template v-if="DIAGRAM_TYPES.find(d => d.id === selectedDiagram)?.hasDirection">
+            <div class="h-4 w-px bg-border" />
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] text-muted-foreground">方向</span>
+              <div class="flex rounded-md border overflow-hidden">
+                <button
+                  class="px-2 py-0.5 text-[10px] transition-colors"
+                  :class="flowDirection === 'TD' ? 'bg-blue-500 text-white' : 'text-muted-foreground hover:bg-muted'"
+                  @click="flowDirection = 'TD'"
+                >
+                  ↓ 竖向
+                </button>
+                <button
+                  class="px-2 py-0.5 text-[10px] transition-colors"
+                  :class="flowDirection === 'LR' ? 'bg-blue-500 text-white' : 'text-muted-foreground hover:bg-muted'"
+                  @click="flowDirection = 'LR'"
+                >
+                  → 横向
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <div class="flex-1" />
+
+          <!-- 设置 -->
+          <div class="flex items-center gap-1">
+            <Popover>
+              <PopoverTrigger as-child>
+                <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs">
+                  <Settings class="h-3.5 w-3.5" />
+                  AI 配置
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent class="w-[420px] max-h-[70vh] overflow-y-auto" align="end">
+                <AIConfig />
+              </PopoverContent>
+            </Popover>
+            <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" :class="{ 'text-purple-500': showHistory }" @click="showHistory = !showHistory">
+              <Clock class="h-3.5 w-3.5" />
+              历史记录
+            </Button>
+            <Button variant="ghost" size="icon" class="h-7 w-7" @click="emit('close')">
+              <X class="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -549,9 +601,10 @@ function handleInsert() {
                   <div v-if="jsonPreview" class="mb-3 overflow-auto rounded-md bg-white p-4 dark:bg-gray-900">
                     <svg
                       :viewBox="`${jsonPreview.minX} ${jsonPreview.minY} ${jsonPreview.width} ${jsonPreview.height}`"
-                      :width="jsonPreview.width"
-                      :height="jsonPreview.height"
+                      width="100%"
+                      :style="{ maxHeight: '50vh' }"
                       class="mx-auto"
+                      preserveAspectRatio="xMidYMid meet"
                     >
                       <!-- 箭头连线 -->
                       <line
