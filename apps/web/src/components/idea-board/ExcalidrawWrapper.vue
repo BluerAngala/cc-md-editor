@@ -20,34 +20,33 @@ const containerRef = ref<HTMLDivElement>()
 const loading = ref(true)
 const error = ref<string | null>(null)
 let root: ReturnType<typeof import('react-dom/client').createRoot> | null = null
-let excalidrawRef: { updateScene: (scene: Record<string, unknown>) => void } | null = null
+let excalidrawRef: {
+  updateScene: (scene: Record<string, unknown>) => void
+  getAppState: () => Record<string, unknown>
+  getSceneElements: () => readonly Record<string, unknown>[]
+  getFiles: () => Record<string, unknown>
+} | null = null
 
-/** 移除 Excalidraw 菜单中不需要的项目 */
+// ── 移除不需要的菜单项 ─────────────────────────────────────
 function hideUnwantedMenuItems() {
+  const container = containerRef.value
+  if (!container)
+    return
+
   const observer = new MutationObserver(() => {
-    const container = containerRef.value
-    if (!container)
-      return
-
-    // 移除所有 <a> 标签的下拉菜单项（GitHub、Follow us、Discord）
     container.querySelectorAll('a.dropdown-menu-item').forEach(el => el.remove())
-
-    // 移除 "Find on canvas" 菜单项
     container.querySelectorAll('button.dropdown-menu-item').forEach((item) => {
       const text = item.querySelector('.dropdown-menu-item__text')?.textContent || ''
-      if (text.includes('Find') || text.includes('搜索') || text.includes('查找')) {
+      if (text.includes('Find') || text.includes('搜索') || text.includes('查找'))
         item.remove()
-      }
     })
-
-    // 移除素材库按钮
     container.querySelectorAll('.sidebar-trigger').forEach(el => el.remove())
   })
 
-  observer.observe(containerRef.value!, { childList: true, subtree: true })
-  setTimeout(() => observer.disconnect(), 30_000)
+  observer.observe(container, { childList: true, subtree: true })
 }
 
+// ── Excalidraw 挂载 ───────────────────────────────────────
 async function mountExcalidraw() {
   if (!containerRef.value)
     return
@@ -61,7 +60,6 @@ async function mountExcalidraw() {
 
     const { Excalidraw } = excalidraw
 
-    // CSS 已通过 index.html 预加载，这里确保注入
     await import('@excalidraw/excalidraw/index.css')
 
     loading.value = false
@@ -72,7 +70,7 @@ async function mountExcalidraw() {
         langCode: `zh-CN`,
         initialData: props.initialData || { elements: [] },
         theme: uiStore.isDark ? 'dark' : 'light',
-        onChange: (elements: readonly unknown[], appState: Record<string, unknown>, files: Record<string, unknown>) => {
+        onChange: (elements: any, appState: any, files: any) => {
           emit('change', elements, appState, files)
         },
         UIOptions: {
@@ -95,22 +93,19 @@ async function mountExcalidraw() {
         { style: { height: '100%', width: '100%' } },
         React.createElement(Excalidraw, {
           ...excalidrawProps,
-          ref: (ref: { updateScene: (scene: Record<string, unknown>) => void } | null) => { excalidrawRef = ref },
-        }),
+          excalidrawAPI: (api: typeof excalidrawRef) => { excalidrawRef = api },
+        } as any),
       )
     }
 
     root = ReactDOM.createRoot(containerRef.value)
     root.render(React.createElement(App))
 
-    // 移除不需要的菜单项
     hideUnwantedMenuItems()
 
-    // 监听 dark mode 变化，同步 Excalidraw 主题
     watch(() => uiStore.isDark, (isDark) => {
-      if (excalidrawRef) {
+      if (excalidrawRef)
         excalidrawRef.updateScene({ appState: { theme: isDark ? 'dark' : 'light' } })
-      }
     })
   }
   catch (e) {
@@ -127,14 +122,10 @@ function unmountExcalidraw() {
   }
 }
 
-onMounted(() => {
-  mountExcalidraw()
-})
+onMounted(() => mountExcalidraw())
+onBeforeUnmount(() => unmountExcalidraw())
 
-onBeforeUnmount(() => {
-  unmountExcalidraw()
-})
-
+// ── 导出接口 ─────────────────────────────────────────────
 interface ExcalidrawElement {
   id: string
   [key: string]: unknown
@@ -143,70 +134,39 @@ interface ExcalidrawElement {
 defineExpose({
   getRef: () => excalidrawRef,
 
-  /** 获取选中元素（无选中则返回全部元素） */
   getElements: (): ExcalidrawElement[] => {
     if (!excalidrawRef)
       return []
     const selected = excalidrawRef.getAppState()?.selectedElementIds as Record<string, boolean> | undefined
-    const allElements = excalidrawRef.getSceneElements() || []
+    const allElements = excalidrawRef.getSceneElements() as any[]
     if (selected && Object.keys(selected).length > 0)
       return allElements.filter((el: ExcalidrawElement) => selected[el.id])
     return allElements
   },
 
-  /** 导出选中元素为 PNG Blob */
-  exportToBlob: async (): Promise<Blob | null> => {
-    if (!excalidrawRef)
-      return null
-    try {
-      const { exportToBlob } = await import('@excalidraw/excalidraw')
-      const elements = excalidrawRef.getSceneElements() || []
-      const appState = excalidrawRef.getAppState() || {}
-      const selected = appState.selectedElementIds as Record<string, boolean> | undefined
-      const hasSelection = selected && Object.keys(selected).length > 0
-      const targetElements = hasSelection
-        ? elements.filter((el: ExcalidrawElement) => selected[el.id])
-        : elements
-      if (!targetElements.length)
-        return null
-      return await exportToBlob({
-        elements: targetElements,
-        appState: { ...appState, exportWithDarkMode: uiStore.isDark },
-        files: excalidrawRef.getFiles(),
-      })
-    }
-    catch {
-      return null
-    }
-  },
-
-  /** 导出为 base64 data URL */
   exportToDataUrl: async (): Promise<string | null> => {
     if (!excalidrawRef)
       return null
     try {
       const { exportToBlob } = await import('@excalidraw/excalidraw')
       const elements = excalidrawRef.getSceneElements() || []
-      const appState = excalidrawRef.getAppState() || {}
-      const selected = appState.selectedElementIds as Record<string, boolean> | undefined
-      const hasSelection = selected && Object.keys(selected).length > 0
-      const targetElements = hasSelection
-        ? elements.filter((el: ExcalidrawElement) => selected[el.id])
-        : elements
-      if (!targetElements.length)
+      if (!elements.length)
         return null
+      const appState = excalidrawRef.getAppState() || {}
       const blob = await exportToBlob({
-        elements: targetElements,
+        elements,
         appState: { ...appState, exportWithDarkMode: uiStore.isDark },
         files: excalidrawRef.getFiles(),
       })
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
         reader.readAsDataURL(blob)
       })
     }
-    catch {
+    catch (e) {
+      console.error('[ExcalidrawWrapper] exportToDataUrl failed:', e)
       return null
     }
   },
@@ -217,7 +177,6 @@ defineExpose({
   <div class="relative h-full w-full excalidraw-wrapper">
     <div ref="containerRef" class="h-full w-full" />
 
-    <!-- Loading skeleton -->
     <div
       v-if="loading"
       class="absolute inset-0 flex flex-col items-center justify-center bg-background"
@@ -230,7 +189,6 @@ defineExpose({
       </div>
     </div>
 
-    <!-- Error state -->
     <div
       v-if="error"
       class="absolute inset-0 flex flex-col items-center justify-center bg-background"
@@ -243,7 +201,6 @@ defineExpose({
 </template>
 
 <style>
-/* 隐藏素材库按钮和侧边栏 */
 .excalidraw-wrapper .layer-ui__library {
   display: none !important;
 }
@@ -252,19 +209,13 @@ defineExpose({
 .excalidraw-wrapper .sidebar-trigger__label {
   display: none !important;
 }
-
-/* 隐藏 Excalidraw 外部链接（GitHub、Follow us、Discord）*/
 .excalidraw-wrapper a.dropdown-menu-item[href],
 .excalidraw-wrapper a.dropdown-menu-item {
   display: none !important;
 }
-
-/* 隐藏 Excalidraw links 标题 */
 .excalidraw-wrapper .dropdown-menu-group-title {
   display: none !important;
 }
-
-/* 菜单项文本统一左对齐 */
 .excalidraw-wrapper .dropdown-menu-item__text {
   text-align: left !important;
 }

@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useAIConfigStore } from '@/stores/aiConfig'
 import AIDraftDialog from './AIDraftDialog.vue'
 import ExcalidrawWrapper from './ExcalidrawWrapper.vue'
 
@@ -13,8 +12,6 @@ const emit = defineEmits<{
   goToEditor: []
   goToLanding: []
 }>()
-
-const aiConfig = useAIConfigStore()
 
 const STORAGE_KEY = 'idea-board-scenes'
 
@@ -80,24 +77,28 @@ const showAIDialog = ref(false)
 const aiScreenshot = ref('')
 const aiError = ref('')
 
+/** 右键菜单触发：截图 → 打开 AI 对话框 */
 async function openAIDraft() {
   aiError.value = ''
-  // 检查 AI 配置
-  if (!aiConfig.apiKey || aiConfig.apiKey === '') {
-    aiError.value = '请先在设置中配置 AI 的 API Key'
+  if (!excalidrawRef.value) {
+    aiError.value = '画布未就绪'
     setTimeout(() => { aiError.value = '' }, 3000)
     return
   }
-  if (!excalidrawRef.value)
-    return
-  const dataUrl = await excalidrawRef.value.exportToDataUrl()
-  if (!dataUrl) {
-    aiError.value = '画布为空，请先添加内容'
-    setTimeout(() => { aiError.value = '' }, 3000)
-    return
+  try {
+    const dataUrl = await excalidrawRef.value.exportToDataUrl()
+    if (!dataUrl) {
+      aiError.value = '画布为空，请先添加内容'
+      setTimeout(() => { aiError.value = '' }, 3000)
+      return
+    }
+    aiScreenshot.value = dataUrl
+    showAIDialog.value = true
   }
-  aiScreenshot.value = dataUrl
-  showAIDialog.value = true
+  catch (e) {
+    aiError.value = e instanceof Error ? e.message : '截图失败'
+    setTimeout(() => { aiError.value = '' }, 3000)
+  }
 }
 
 function highlightText(text: string, query: string): string {
@@ -369,19 +370,8 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
       <div class="flex-1" />
 
       <!-- AI 配置提示 -->
-      <span v-if="aiError" class="text-xs text-red-500">{{ aiError }}</span>
 
       <TooltipProvider :delay-duration="300">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="outline" size="sm" class="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950" @click="openAIDraft">
-              <Sparkles class="mr-1 h-4 w-4" />
-              生成初稿
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>截图发给 AI 生成文章初稿</TooltipContent>
-        </Tooltip>
-
         <Tooltip>
           <TooltipTrigger as-child>
             <Button variant="outline" size="sm" @click="emit('goToLanding')">
@@ -527,20 +517,48 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
 
       <!-- 右侧画布 -->
       <ResizablePanel :default-size="65" :min-size="40">
-        <ExcalidrawWrapper
-          v-if="activeScene"
-          ref="excalidrawRef"
-          :key="activeScene.id"
-          :initial-data="{ elements: activeScene.elements }"
-          @change="handleSceneChange"
-        />
-        <div v-else class="flex h-full items-center justify-center text-muted-foreground">
-          <div class="text-center">
-            <Lightbulb class="mx-auto mb-4 h-12 w-12 opacity-30" />
-            <p class="text-lg">
-              点击左侧便签打开画布
-            </p>
+        <div class="relative h-full">
+          <ExcalidrawWrapper
+            v-if="activeScene"
+            ref="excalidrawRef"
+            :key="activeScene.id"
+            :initial-data="{ elements: activeScene.elements }"
+            @change="handleSceneChange"
+          />
+          <div v-else class="flex h-full items-center justify-center text-muted-foreground">
+            <div class="text-center">
+              <Lightbulb class="mx-auto mb-4 h-12 w-12 opacity-30" />
+              <p class="text-lg">
+                点击左侧便签打开画布
+              </p>
+            </div>
           </div>
+
+          <!-- AI 错误提示 -->
+          <div
+            v-if="aiError"
+            class="absolute bottom-14 right-4 z-10 rounded-md bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-600 shadow-md dark:bg-red-950 dark:border-red-800 dark:text-red-400"
+          >
+            {{ aiError }}
+          </div>
+
+          <!-- 浮动 AI 按钮 -->
+          <TooltipProvider v-if="activeScene" :delay-duration="300">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="absolute bottom-4 right-4 z-10 gap-1.5 border-amber-300 bg-background/80 text-amber-700 shadow-md backdrop-blur hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950"
+                  @click="openAIDraft"
+                >
+                  <Sparkles class="h-3.5 w-3.5" />
+                  生成草稿
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>截图画布内容，发给 AI 生成文章草稿</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>
