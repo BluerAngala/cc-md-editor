@@ -132,6 +132,29 @@ interface ExcalidrawElement {
 }
 
 defineExpose({
+  /** 将 AI 生成的 JSON 元素插入画布 */
+  addJsonElements: async (json: string): Promise<boolean> => {
+    if (!excalidrawRef)
+      return false
+    try {
+      const { convertToExcalidrawElements } = await import('@excalidraw/excalidraw')
+      const skeletons = JSON.parse(json)
+      if (!Array.isArray(skeletons) || !skeletons.length)
+        return false
+      const elements = convertToExcalidrawElements(skeletons, { fontSize: 18 })
+      const currentElements = excalidrawRef.getSceneElements() || []
+      excalidrawRef.updateScene({
+        elements: [...currentElements, ...elements],
+      })
+      excalidrawRef.scrollToContent(elements, { animate: true, fitToContent: true })
+      return true
+    }
+    catch (e) {
+      console.error('[ExcalidrawWrapper] addJsonElements failed:', e)
+      return false
+    }
+  },
+
   getRef: () => excalidrawRef,
 
   /** 将 Mermaid 代码转换为 Excalidraw 元素并插入画布 */

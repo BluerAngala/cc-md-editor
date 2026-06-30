@@ -12,6 +12,7 @@ import useAIConfigStore from '@/stores/aiConfig'
 const emit = defineEmits<{
   close: []
   insert: [mermaidCode: string]
+  insertJson: [json: string]
 }>()
 
 const aiConfig = useAIConfigStore()
@@ -21,6 +22,7 @@ const prompt = ref('')
 const mermaidCode = ref('')
 const error = ref('')
 const step = ref<'idle' | 'optimizing' | 'generating' | 'done'>('idle')
+const renderMode = ref<'mermaid' | 'json'>('mermaid')
 
 // ── 历史记录 ─────────────────────────────────────────────
 interface HistoryItem {
@@ -175,6 +177,19 @@ const MERMAID_SYSTEM_PROMPT = `将以下结构化大纲转换为 Mermaid 流程�
 - 用 flowchart TD
 - 严格按大纲的节点和连接，不要增删`
 
+const JSON_SYSTEM_PROMPT = `将用户描述转换为 Excalidraw 元素 JSON 数组。只输出 JSON 数组，不要解释。
+
+支持的 type：
+1. 矩形/便签：{ "type": "rectangle", "id": "a", "x": 100, "y": 100, "width": 180, "height": 60, "strokeColor": "#1e1e1e", "backgroundColor": "#a5d8ff", "fillStyle": "solid", "roundness": { "type": 3 }, "label": { "text": "内容" } }
+2. 菱形：{ "type": "diamond", "id": "c", "x": 100, "y": 200, "width": 160, "height": 80, "strokeColor": "#1e1e1e", "backgroundColor": "#ffec99", "fillStyle": "solid", "label": { "text": "判断" } }
+3. 箭头：{ "type": "arrow", "id": "e1", "x": 190, "y": 160, "width": 0, "height": 40, "points": [[0,0],[0,40]], "startBinding": { "elementId": "a", "focus": 0, "gap": 1 }, "endBinding": { "elementId": "b", "focus": 0, "gap": 1 } }
+
+规则：
+- 垂直布局间距 y+100，水平间距 x+220
+- 背景色用浅色：#a5d8ff(蓝) #b2f2bb(绿) #ffec99(黄) #ffc9c9(红) #d0bfff(紫)
+- roundness: { "type": 3 } 圆角
+- 箭头 points 是相对偏移，宽高为 0`
+
 async function callAI(systemPrompt: string, userContent: string, onDelta: (s: string) => void): Promise<void> {
   const url = resolveEndpointUrl(aiConfig.textEndpoint || aiConfig.endpoint, 'chat')
   const headers = buildAIHeaders(aiConfig.textApiKey || aiConfig.apiKey, aiConfig.textType || aiConfig.type)
@@ -233,19 +248,22 @@ async function generate() {
   mermaidCode.value = ''
   step.value = 'generating'
 
+  const systemPrompt = renderMode.value === 'json' ? JSON_SYSTEM_PROMPT : MERMAID_SYSTEM_PROMPT
+
   try {
-    await callAI(MERMAID_SYSTEM_PROMPT, prompt.value.trim(), (delta) => {
+    await callAI(systemPrompt, prompt.value.trim(), (delta) => {
       mermaidCode.value += delta
     })
     mermaidCode.value = mermaidCode.value
-      .replace(/^```mermaid\s*/i, '')
+      .replace(/^```(?:json|mermaid)?\s*/i, '')
       .replace(/\n?```\s*$/, '')
       .trim()
     step.value = 'done'
     addToHistory(prompt.value.trim(), mermaidCode.value)
     // 生成完成后立即渲染最终结果
     await nextTick()
-    await renderPreview(mermaidCode.value)
+    if (renderMode.value === 'mermaid')
+      await renderPreview(mermaidCode.value)
   }
   catch (e) {
     error.value = e instanceof Error ? e.message : '生成失败'
@@ -256,7 +274,10 @@ async function generate() {
 function handleInsert() {
   if (!mermaidCode.value.trim())
     return
-  emit('insert', mermaidCode.value.trim())
+  if (renderMode.value === 'json')
+    emit('insertJson', mermaidCode.value.trim())
+  else
+    emit('insert', mermaidCode.value.trim())
 }
 </script>
 
@@ -272,6 +293,23 @@ function handleInsert() {
           </h2>
         </div>
         <div class="flex items-center gap-1.5">
+          <!-- 模式切换 -->
+          <div class="flex rounded-md border overflow-hidden">
+            <button
+              class="px-2 py-0.5 text-[10px] transition-colors"
+              :class="renderMode === 'mermaid' ? 'bg-purple-500 text-white' : 'text-muted-foreground hover:bg-muted'"
+              @click="renderMode = 'mermaid'"
+            >
+              Mermaid
+            </button>
+            <button
+              class="px-2 py-0.5 text-[10px] transition-colors"
+              :class="renderMode === 'json' ? 'bg-purple-500 text-white' : 'text-muted-foreground hover:bg-muted'"
+              @click="renderMode = 'json'"
+            >
+              JSON
+            </button>
+          </div>
           <Popover>
             <PopoverTrigger as-child>
               <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs">
@@ -425,19 +463,29 @@ function handleInsert() {
                 {{ error }}
               </div>
               <div v-else-if="mermaidCode">
-                <div
-                  v-if="previewError"
-                  class="mb-2 rounded-md bg-yellow-50 border border-yellow-200 p-2 text-xs text-yellow-700 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-400"
-                >
-                  {{ previewError }}
-                </div>
-                <div ref="previewRef" class="flex justify-center overflow-auto rounded-md bg-white p-4 dark:bg-gray-900" />
-                <details open class="mt-3">
-                  <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                    查看 Mermaid 源码
-                  </summary>
-                  <pre class="mt-2 whitespace-pre-wrap break-all rounded-md bg-muted p-3 text-xs leading-relaxed">{{ mermaidCode }}</pre>
-                </details>
+                <!-- Mermaid 模式：SVG 预览 -->
+                <template v-if="renderMode === 'mermaid'">
+                  <div
+                    v-if="previewError"
+                    class="mb-2 rounded-md bg-yellow-50 border border-yellow-200 p-2 text-xs text-yellow-700 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-400"
+                  >
+                    {{ previewError }}
+                  </div>
+                  <div ref="previewRef" class="flex justify-center overflow-auto rounded-md bg-white p-4 dark:bg-gray-900" />
+                  <details open class="mt-3">
+                    <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                      查看 Mermaid 源码
+                    </summary>
+                    <pre class="mt-2 whitespace-pre-wrap break-all rounded-md bg-muted p-3 text-xs leading-relaxed">{{ mermaidCode }}</pre>
+                  </details>
+                </template>
+                <!-- JSON 模式：直接显示 JSON -->
+                <template v-else>
+                  <p class="mb-2 text-xs text-muted-foreground">
+                    AI 生成的 Excalidraw 元素 JSON（点击"插入画布"渲染）
+                  </p>
+                  <pre class="whitespace-pre-wrap break-all rounded-md bg-muted p-3 text-xs leading-relaxed max-h-[60vh] overflow-auto">{{ mermaidCode }}</pre>
+                </template>
               </div>
               <div v-else-if="step === 'generating'" class="flex items-center gap-2 text-xs text-muted-foreground">
                 <div class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />

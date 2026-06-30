@@ -119,6 +119,15 @@ async function handleMermaidInsert(mermaidCode: string) {
     showMermaidDialog.value = false
 }
 
+/** 将 AI 生成的 JSON 元素插入画布 */
+async function handleJsonInsert(json: string) {
+  if (!excalidrawRef.value)
+    return
+  const ok = await excalidrawRef.value.addJsonElements(json)
+  if (ok)
+    showMermaidDialog.value = false
+}
+
 function highlightText(text: string, query: string): string {
   if (!query.trim())
     return text
@@ -614,6 +623,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
       v-if="showMermaidDialog"
       @close="showMermaidDialog = false"
       @insert="handleMermaidInsert"
+      @insert-json="handleJsonInsert"
     />
   </div>
 </template>
