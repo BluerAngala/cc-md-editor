@@ -559,6 +559,21 @@ const showDeviceToggle = computed(() => viewMode.value !== `edit` && !isMobile.v
 
       <!-- 右侧：统计信息 -->
       <div class="ml-auto flex shrink-0 items-center gap-2.5 sm:gap-3.5">
+        <!-- 想法便签墙 -->
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button
+              class="flex cursor-pointer items-center rounded-sm px-1.5 py-0.5 text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground"
+              @click="uiStore.setCurrentView('ideaBoard')"
+            >
+              <span class="i-lucide-lightbulb size-3" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" :side-offset="6" class="text-xs text-muted-foreground">
+            <p>想法便签墙</p>
+          </TooltipContent>
+        </Tooltip>
+
         <!-- 视图模式切换 -->
         <div class="flex items-center gap-0.5 rounded-md border border-border/60 p-0.5">
           <Tooltip v-for="mode in viewModes" :key="mode.key">

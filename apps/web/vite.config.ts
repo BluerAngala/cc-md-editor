@@ -61,6 +61,27 @@ export default defineConfig(({ mode }) => {
       alias: { '@': path.resolve(__dirname, `./src`) },
       dedupe: [`@codemirror/state`, `@codemirror/view`],
     },
+    optimizeDeps: {
+      include: [
+        `vue`,
+        `pinia`,
+        `vue-i18n`,
+        `@vueuse/core`,
+        `marked`,
+        `juice`,
+        `isomorphic-dompurify`,
+        `crypto-js`,
+        `jszip`,
+        `spark-md5`,
+        `es-toolkit`,
+        `html-to-image`,
+        `diff-match-patch`,
+        `uuid`,
+      ],
+    },
+    define: {
+      'process.env': JSON.stringify({ NODE_ENV: mode }),
+    },
     css: { devSourcemap: true },
     build: {
       rolldownOptions: {

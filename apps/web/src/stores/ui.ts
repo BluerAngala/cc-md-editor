@@ -37,6 +37,13 @@ export const useUIStore = defineStore(`ui`, () => {
     viewMode.value = mode
   }
 
+  // 主视图：editor（编辑器）| ideaBoard（想法便签墙）
+  const currentView = store.reactive<'landing' | 'editor' | 'ideaBoard'>(`currentView`, 'landing')
+
+  function setCurrentView(view: 'landing' | 'editor' | 'ideaBoard') {
+    currentView.value = view
+  }
+
   // 预览设备：desktop（电脑端）| mobile（移动端模拟）
   const previewDevice = store.reactive<'desktop' | 'mobile'>(`previewDevice`, `mobile`)
 
@@ -310,5 +317,7 @@ export const useUIStore = defineStore(`ui`, () => {
     setViewMode,
     setPreviewDevice,
     togglePreviewDevice,
+    currentView,
+    setCurrentView,
   }
 })

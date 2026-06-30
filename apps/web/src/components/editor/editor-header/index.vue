@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Copy, FolderKanban, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
+import { Copy, FolderKanban, Home, Lightbulb, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
 import { defineAsyncComponent } from 'vue'
 import { useEditorRefresh } from '@/composables/useEditorRefresh'
 import { generatePureHTML, processClipboardContent } from '@/services/export'
@@ -239,6 +239,14 @@ function copyToWeChat() {
       <Button
         variant="ghost"
         class="h-8 px-3 text-sm font-normal"
+        @click="uiStore.setCurrentView('ideaBoard')"
+      >
+        <Lightbulb class="mr-1.5 size-4 text-amber-500" />
+        <span>想法库</span>
+      </Button>
+      <Button
+        variant="ghost"
+        class="h-8 px-3 text-sm font-normal"
         :class="{ 'bg-accent text-accent-foreground': isOpenPostSlider }"
         @click="isOpenPostSlider = !isOpenPostSlider"
       >
@@ -286,6 +294,16 @@ function copyToWeChat() {
 
     <!-- 右侧操作区 -->
     <div class="flex flex-wrap items-center gap-2">
+      <!-- 首页 -->
+      <Button
+        variant="ghost"
+        class="h-9"
+        @click="uiStore.setCurrentView('landing')"
+      >
+        <Home class="mr-2 h-4 w-4" />
+        <span>首页</span>
+      </Button>
+
       <!-- 分享按钮 -->
       <Button
         v-if="showShareUi"
