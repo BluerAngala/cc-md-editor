@@ -5,6 +5,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import AIConfig from '@/components/ai/chat-box/AIConfig.vue'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { buildAIHeaders, resolveEndpointUrl, useAIFetch } from '@/composables/useAIFetch'
 import useAIConfigStore from '@/stores/aiConfig'
@@ -419,26 +420,23 @@ function handleInsert() {
           </h2>
         </div>
         <div class="flex items-center gap-3">
-          <!-- 图表类型 -->
+          <!-- 图表类型下拉 -->
           <div class="flex items-center gap-1.5">
             <span class="text-[10px] text-muted-foreground">类型</span>
-            <div class="flex gap-0.5">
-              <button
-                v-for="dt in DIAGRAM_TYPES"
-                :key="dt.id"
-                class="rounded px-1.5 py-0.5 text-[10px] transition-colors"
-                :class="selectedDiagram === dt.id ? 'bg-purple-500 text-white' : 'text-muted-foreground hover:bg-muted'"
-                :title="dt.label"
-                @click="selectedDiagram = dt.id"
-              >
-                {{ dt.icon }} {{ dt.label }}
-              </button>
-            </div>
+            <Select v-model="selectedDiagram">
+              <SelectTrigger class="h-7 w-[110px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="dt in DIAGRAM_TYPES" :key="dt.id" :value="dt.id" class="text-xs">
+                  {{ dt.icon }} {{ dt.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <!-- 方向（仅流程图/状态图） -->
           <template v-if="DIAGRAM_TYPES.find(d => d.id === selectedDiagram)?.hasDirection">
-            <div class="h-4 w-px bg-border" />
             <div class="flex items-center gap-1.5">
               <span class="text-[10px] text-muted-foreground">方向</span>
               <div class="flex rounded-md border overflow-hidden">
@@ -459,6 +457,29 @@ function handleInsert() {
               </div>
             </div>
           </template>
+
+          <div class="h-4 w-px bg-border" />
+
+          <!-- 渲染模式 -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-muted-foreground">渲染</span>
+            <div class="flex rounded-md border overflow-hidden">
+              <button
+                class="px-2 py-0.5 text-[10px] transition-colors"
+                :class="renderMode === 'mermaid' ? 'bg-purple-500 text-white' : 'text-muted-foreground hover:bg-muted'"
+                @click="renderMode = 'mermaid'"
+              >
+                Mermaid
+              </button>
+              <button
+                class="px-2 py-0.5 text-[10px] transition-colors"
+                :class="renderMode === 'json' ? 'bg-purple-500 text-white' : 'text-muted-foreground hover:bg-muted'"
+                @click="renderMode = 'json'"
+              >
+                JSON
+              </button>
+            </div>
+          </div>
 
           <div class="flex-1" />
 
