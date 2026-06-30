@@ -186,6 +186,7 @@ export const serviceOptions: ServiceOption[] = [
     label: `硅基流动`,
     endpoint: `https://api.siliconflow.cn/v1`,
     models: [
+      `deepseek-ai/DeepSeek-V4-Flash`,
       `deepseek-ai/DeepSeek-V3.2`,
       `deepseek-ai/DeepSeek-R1`,
       `deepseek-ai/DeepSeek-V3`,
@@ -208,6 +209,7 @@ export const serviceOptions: ServiceOption[] = [
       `Pro/deepseek-ai/DeepSeek-V3`,
       `internlm/internlm2_5-20b-chat`,
       `internlm/internlm2_5-7b-chat`,
+      `Qwen/Qwen3-VL-32B-Instruct`,
     ],
   },
   {
@@ -372,9 +374,9 @@ export const imageServiceOptions: ImageServiceOption[] = [
     label: `硅基流动`,
     endpoint: `https://api.siliconflow.cn/v1`,
     models: [
-      `Kwai-Kolors/Kolors`,
       `Qwen/Qwen-Image`,
       `Qwen/Qwen-Image-Plus`,
+      `Kwai-Kolors/Kolors`,
     ],
   },
   {

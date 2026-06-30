@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Settings } from '@lucide/vue'
+import AIConfig from '@/components/ai/chat-box/AIConfig.vue'
 import PanelDialog from '@/components/shared/panel-dialog/PanelDialog.vue'
 import PanelSelect from '@/components/shared/panel-dialog/PanelSelect.vue'
 import { Label } from '@/components/ui/label'
@@ -81,7 +82,7 @@ function setCountStatus(value: boolean) {
     size="lg"
   >
     <Tabs v-model="activeTab" activation-mode="manual" class="px-4 py-4 sm:px-6">
-      <TabsList class="grid w-full grid-cols-3">
+      <TabsList class="grid w-full grid-cols-4">
         <TabsTrigger value="general">
           {{ t('preferences.tab.general') }}
         </TabsTrigger>
@@ -91,9 +92,13 @@ function setCountStatus(value: boolean) {
         <TabsTrigger value="preview">
           {{ t('preferences.tab.preview') }}
         </TabsTrigger>
+        <TabsTrigger value="ai">
+          AI
+        </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="general" class="mt-4 space-y-1">
+      <!-- 通用 -->
+      <TabsContent value="general" class="mt-4 min-h-[400px] space-y-1">
         <div class="flex items-center justify-between gap-4 border-b py-3">
           <div class="min-w-0 space-y-0.5">
             <Label>{{ t('preferences.language.label') }}</Label>
@@ -121,7 +126,8 @@ function setCountStatus(value: boolean) {
         </div>
       </TabsContent>
 
-      <TabsContent value="editor" class="mt-4 space-y-1">
+      <!-- 编辑 -->
+      <TabsContent value="editor" class="mt-4 min-h-[400px] space-y-1">
         <div class="flex items-center justify-between gap-4 border-b py-3">
           <div class="min-w-0 space-y-0.5">
             <Label>{{ t('preferences.viewMode.label') }}</Label>
@@ -179,7 +185,8 @@ function setCountStatus(value: boolean) {
         </div>
       </TabsContent>
 
-      <TabsContent value="preview" class="mt-4 space-y-1">
+      <!-- 预览 -->
+      <TabsContent value="preview" class="mt-4 min-h-[400px] space-y-1">
         <div class="flex items-center justify-between gap-4 border-b py-3">
           <div class="min-w-0 space-y-0.5">
             <Label>{{ t('preferences.previewDevice.label') }}</Label>
@@ -205,6 +212,11 @@ function setCountStatus(value: boolean) {
             @update:model-value="setCountStatus($event)"
           />
         </div>
+      </TabsContent>
+
+      <!-- AI -->
+      <TabsContent value="ai" class="mt-4 flex min-h-[400px] max-h-[60vh] flex-col overflow-y-auto pr-1">
+        <AIConfig />
       </TabsContent>
     </Tabs>
   </PanelDialog>

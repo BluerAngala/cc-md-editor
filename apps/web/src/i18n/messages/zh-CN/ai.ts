@@ -198,6 +198,10 @@ export default {
     modelNotActivated: `⚠️ 测试成功，但当前模型未开通：{model}`,
     testFailed: `❌ 测试失败：{status} {statusText}，{errorText}`,
     testFailedMessage: `❌ 测试失败：{message}`,
+    refreshModels: `刷新模型列表`,
+    refreshModelsLoading: `加载中…`,
+    refreshModelsHint: `从供应商 API 拉取最新模型`,
+    fetchModelsFailed: `⚠️ 获取最新模型失败：{message}`,
   },
   imageConfig: {
     title: `AI 图像生成配置`,

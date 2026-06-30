@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import CodemirrorEditor from '@/components/editor/CodemirrorEditor.vue'
-import CommandPalette from '@/components/editor/dialogs/CommandPalette.vue'
-import ConfirmDialog from '@/components/shared/confirm-dialog/ConfirmDialog.vue'
+import { defineAsyncComponent } from 'vue'
+import LandingPage from '@/components/LandingPage.vue'
 import { Toaster } from '@/components/ui/sonner'
 import { useCommandPaletteHotkey } from '@/composables/useCommandPaletteHotkey'
 import { usePreferencesHotkey } from '@/composables/usePreferencesHotkey'
 import { useUIStore } from '@/stores/ui'
 
+const CodemirrorEditor = defineAsyncComponent(() => import('@/components/editor/CodemirrorEditor.vue'))
+const IdeaBoard = defineAsyncComponent(() => import('@/components/idea-board/IdeaBoard.vue'))
+const CommandPalette = defineAsyncComponent(() => import('@/components/editor/dialogs/CommandPalette.vue'))
+const ConfirmDialog = defineAsyncComponent(() => import('@/components/shared/confirm-dialog/ConfirmDialog.vue'))
+const PreferencesDialog = defineAsyncComponent(() => import('@/components/editor/dialogs/PreferencesDialog.vue'))
+
 const uiStore = useUIStore()
-const { isDark } = storeToRefs(uiStore)
+const { isDark, currentView, isShowPreferencesDialog } = storeToRefs(uiStore)
 
 usePlatformEnv()
 useAccountSyncBootstrap()
@@ -18,11 +23,19 @@ usePreferencesHotkey()
 </script>
 
 <template>
-  <CodemirrorEditor />
+  <LandingPage v-if="currentView === 'landing'" />
+  <CodemirrorEditor v-else-if="currentView === 'editor'" />
+  <IdeaBoard
+    v-else-if="currentView === 'ideaBoard'"
+    @go-to-editor="uiStore.setCurrentView('editor')"
+    @go-to-landing="uiStore.setCurrentView('landing')"
+  />
 
   <CommandPalette />
 
   <ConfirmDialog />
+
+  <PreferencesDialog v-model:open="isShowPreferencesDialog" />
 
   <Toaster
     rich-colors

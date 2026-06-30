@@ -198,6 +198,10 @@ export default {
     modelNotActivated: `⚠️ Test passed, but model not activated: {model}`,
     testFailed: `❌ Test failed: {status} {statusText}, {errorText}`,
     testFailedMessage: `❌ Test failed: {message}`,
+    refreshModels: `Refresh models`,
+    refreshModelsLoading: `Loading…`,
+    refreshModelsHint: `Fetch latest models from the provider API`,
+    fetchModelsFailed: `⚠️ Failed to fetch latest models: {message}`,
   },
   imageConfig: {
     title: `AI Image Settings`,

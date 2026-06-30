@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Copy, FolderKanban, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
+import { Copy, FolderKanban, Home, Lightbulb, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
 import { defineAsyncComponent } from 'vue'
 import { useEditorRefresh } from '@/composables/useEditorRefresh'
 import { generatePureHTML, processClipboardContent } from '@/services/export'
@@ -21,7 +21,6 @@ const { t } = useI18n()
 const AboutDialog = defineAsyncComponent(() => import('./AboutDialog.vue'))
 const FundDialog = defineAsyncComponent(() => import('./FundDialog.vue'))
 const EditorStateDialog = defineAsyncComponent(() => import('@/components/editor/dialogs/EditorStateDialog.vue'))
-const PreferencesDialog = defineAsyncComponent(() => import('@/components/editor/dialogs/PreferencesDialog.vue'))
 const MarkdownHelpDialog = defineAsyncComponent(() => import('./MarkdownHelpDialog.vue'))
 const KeyboardShortcutsDialog = defineAsyncComponent(() => import('./KeyboardShortcutsDialog.vue'))
 const AccountDialog = defineAsyncComponent(() => import('./AccountDialog.vue'))
@@ -39,7 +38,7 @@ const { editorRefresh } = useEditorRefresh()
 const { editor } = storeToRefs(editorStore)
 const { output } = storeToRefs(renderStore)
 const { primaryColor } = storeToRefs(themeStore)
-const { isOpenRightSlider, isOpenPostSlider, isShowSyncDialog, isShowAccountDialog, isShowShareDialog, isShowAboutDialog, isShowFundDialog, isShowEditorStateDialog, isShowPreferencesDialog, isShowMarkdownHelpDialog, isShowKeyboardShortcutsDialog, copyMode } = storeToRefs(uiStore)
+const { isOpenRightSlider, isOpenPostSlider, isShowSyncDialog, isShowAccountDialog, isShowShareDialog, isShowAboutDialog, isShowFundDialog, isShowEditorStateDialog, isShowMarkdownHelpDialog, isShowKeyboardShortcutsDialog, copyMode } = storeToRefs(uiStore)
 const { openShareDialog, toggleShowUploadImgDialog } = uiStore
 
 const isCopying = ref(false)
@@ -237,7 +236,23 @@ function copyToWeChat() {
     <!-- 桌面端左侧菜单 -->
     <div class="space-x-1 hidden md:flex items-center">
       <Button
-        variant="ghost"
+        variant="outline"
+        class="h-8 px-3 text-sm font-normal"
+        @click="uiStore.setCurrentView('landing')"
+      >
+        <Home class="mr-1.5 size-4" />
+        <span>首页</span>
+      </Button>
+      <Button
+        variant="outline"
+        class="h-8 px-3 text-sm font-normal"
+        @click="uiStore.setCurrentView('ideaBoard')"
+      >
+        <Lightbulb class="mr-1.5 size-4 text-amber-500" />
+        <span>想法库</span>
+      </Button>
+      <Button
+        variant="outline"
         class="h-8 px-3 text-sm font-normal"
         :class="{ 'bg-accent text-accent-foreground': isOpenPostSlider }"
         @click="isOpenPostSlider = !isOpenPostSlider"
@@ -329,7 +344,6 @@ function copyToWeChat() {
   <AboutDialog v-if="isShowAboutDialog" v-model:open="isShowAboutDialog" />
   <FundDialog v-if="isShowFundDialog" v-model:open="isShowFundDialog" />
   <EditorStateDialog v-if="isShowEditorStateDialog" v-model:open="isShowEditorStateDialog" />
-  <PreferencesDialog v-model:open="isShowPreferencesDialog" />
   <MarkdownHelpDialog v-if="isShowMarkdownHelpDialog" v-model:open="isShowMarkdownHelpDialog" />
   <KeyboardShortcutsDialog v-if="isShowKeyboardShortcutsDialog" v-model:open="isShowKeyboardShortcutsDialog" />
   <AccountDialog v-if="isShowAccountDialog" v-model:open="isShowAccountDialog" />

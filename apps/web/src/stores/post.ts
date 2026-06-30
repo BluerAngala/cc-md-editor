@@ -3,7 +3,7 @@ import { debounce } from 'es-toolkit'
 import { v4 as uuidv4 } from 'uuid'
 import DEFAULT_CONTENT from '@/assets/example/markdown.md?raw'
 import { formatLocalDateTime, t } from '@/i18n/translate'
-import { documentRepo, getLoadedDocuments, store } from '@/storage'
+import { documentRepo, getLoadedDocuments, storageReady, store } from '@/storage'
 import { addPrefix } from '@/storage/prefix'
 import { useEditorStore } from '@/stores/editor'
 
@@ -51,6 +51,18 @@ export const usePostStore = defineStore(`post`, () => {
 
   const currentPostId = store.reactive(addPrefix(`current_post_id`), ``)
   const sortMode = store.reactive(addPrefix(`sort_mode`), `create-old-new`)
+
+  // Storage 后台初始化完成后，重新加载文档
+  if (!loaded?.length) {
+    storageReady().then(() => {
+      const docs = getLoadedDocuments()
+      if (docs?.length) {
+        posts.value = normalizePosts(docs)
+        if (!currentPostId.value || !posts.value.some(p => p.id === currentPostId.value))
+          currentPostId.value = posts.value[0]?.id ?? ``
+      }
+    })
+  }
 
   let persistReady = false
 
@@ -173,6 +185,7 @@ export const usePostStore = defineStore(`post`, () => {
     }
     posts.value.push(newPost)
     currentPostId.value = newPost.id
+    return newPost
   }
 
   const renamePost = (id: string, title: string) => {

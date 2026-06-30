@@ -16,9 +16,9 @@ export interface CSSVariableConfig {
 }
 
 /**
- * 生成 CSS 变量样式
- * @param config - 配置对象
- * @returns CSS 变量字符串
+ * 轻化十六进制颜色值
+ * @param hex - 十六进制颜色值
+ * @returns 轻化后的颜色值
  */
 function lightenColor(hex: string): string {
   // ponytail: simple hex lighten for dark mode visibility
