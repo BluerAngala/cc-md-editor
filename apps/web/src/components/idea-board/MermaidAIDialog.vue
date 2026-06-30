@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Clock, RotateCcw, Settings, Sparkles, Trash2, Wand2, X } from '@lucide/vue'
 import mermaid from 'mermaid'
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import AIConfig from '@/components/ai/chat-box/AIConfig.vue'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -23,6 +23,71 @@ const mermaidCode = ref('')
 const error = ref('')
 const step = ref<'idle' | 'optimizing' | 'generating' | 'done'>('idle')
 const renderMode = ref<'mermaid' | 'json'>('mermaid')
+
+// ── JSON 预览解析 ─────────────────────────────────────────
+interface JsonPreviewNode {
+  id: string
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  label: string
+  backgroundColor: string
+}
+interface JsonPreviewEdge {
+  id: string
+  fromId: string
+  toId: string
+  label: string
+}
+
+const jsonPreview = computed(() => {
+  if (renderMode.value !== 'json' || !mermaidCode.value.trim())
+    return null
+  try {
+    const arr = JSON.parse(mermaidCode.value)
+    if (!Array.isArray(arr))
+      return null
+    const nodes: JsonPreviewNode[] = []
+    const edges: JsonPreviewEdge[] = []
+    for (const el of arr) {
+      if (el.type === 'rectangle' || el.type === 'diamond' || el.type === 'ellipse') {
+        nodes.push({
+          id: el.id,
+          type: el.type,
+          x: el.x || 0,
+          y: el.y || 0,
+          width: el.width || 160,
+          height: el.height || 50,
+          label: el.label?.text || '',
+          backgroundColor: el.backgroundColor || '#a5d8ff',
+        })
+      }
+      else if (el.type === 'arrow' || el.type === 'line') {
+        const fromId = el.startBinding?.elementId || ''
+        const toId = el.endBinding?.elementId || ''
+        edges.push({
+          id: el.id,
+          fromId,
+          toId,
+          label: el.label?.text || '',
+        })
+      }
+    }
+    if (!nodes.length)
+      return null
+    // 计算边界
+    const minX = Math.min(...nodes.map(n => n.x)) - 20
+    const minY = Math.min(...nodes.map(n => n.y)) - 20
+    const maxX = Math.max(...nodes.map(n => n.x + n.width)) + 20
+    const maxY = Math.max(...nodes.map(n => n.y + n.height)) + 20
+    return { nodes, edges, minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY }
+  }
+  catch {
+    return null
+  }
+})
 
 // ── 历史记录 ─────────────────────────────────────────────
 interface HistoryItem {
@@ -479,12 +544,72 @@ function handleInsert() {
                     <pre class="mt-2 whitespace-pre-wrap break-all rounded-md bg-muted p-3 text-xs leading-relaxed">{{ mermaidCode }}</pre>
                   </details>
                 </template>
-                <!-- JSON 模式：直接显示 JSON -->
+                <!-- JSON 模式：可视化预览 + 源码 -->
                 <template v-else>
-                  <p class="mb-2 text-xs text-muted-foreground">
-                    AI 生成的 Excalidraw 元素 JSON（点击"插入画布"渲染）
-                  </p>
-                  <pre class="whitespace-pre-wrap break-all rounded-md bg-muted p-3 text-xs leading-relaxed max-h-[60vh] overflow-auto">{{ mermaidCode }}</pre>
+                  <div v-if="jsonPreview" class="mb-3 overflow-auto rounded-md bg-white p-4 dark:bg-gray-900">
+                    <svg
+                      :viewBox="`${jsonPreview.minX} ${jsonPreview.minY} ${jsonPreview.width} ${jsonPreview.height}`"
+                      :width="jsonPreview.width"
+                      :height="jsonPreview.height"
+                      class="mx-auto"
+                    >
+                      <!-- 箭头连线 -->
+                      <line
+                        v-for="edge in jsonPreview.edges"
+                        :key="edge.id"
+                        :x1="jsonPreview.nodes.find(n => n.id === edge.fromId)?.x ?? 0 + (jsonPreview.nodes.find(n => n.id === edge.fromId)?.width ?? 0) / 2"
+                        :y1="(jsonPreview.nodes.find(n => n.id === edge.fromId)?.y ?? 0) + (jsonPreview.nodes.find(n => n.id === edge.fromId)?.height ?? 0)"
+                        :x2="jsonPreview.nodes.find(n => n.id === edge.toId)?.x ?? 0 + (jsonPreview.nodes.find(n => n.id === edge.toId)?.width ?? 0) / 2"
+                        :y2="jsonPreview.nodes.find(n => n.id === edge.toId)?.y ?? 0"
+                        stroke="#868e96"
+                        stroke-width="1.5"
+                        marker-end="url(#arrow)"
+                      />
+                      <!-- 箭头标记 -->
+                      <defs>
+                        <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                          <polygon points="0 0, 8 3, 0 6" fill="#868e96" />
+                        </marker>
+                      </defs>
+                      <!-- 节点 -->
+                      <g v-for="node in jsonPreview.nodes" :key="node.id">
+                        <rect
+                          v-if="node.type === 'rectangle'"
+                          :x="node.x"
+                          :y="node.y"
+                          :width="node.width"
+                          :height="node.height"
+                          :fill="node.backgroundColor"
+                          stroke="#1e1e1e"
+                          stroke-width="1"
+                          rx="6"
+                        />
+                        <polygon
+                          v-else-if="node.type === 'diamond'"
+                          :points="`${node.x + node.width / 2},${node.y} ${node.x + node.width},${node.y + node.height / 2} ${node.x + node.width / 2},${node.y + node.height} ${node.x},${node.y + node.height / 2}`"
+                          :fill="node.backgroundColor"
+                          stroke="#1e1e1e"
+                          stroke-width="1"
+                        />
+                        <text
+                          :x="node.x + node.width / 2"
+                          :y="node.y + node.height / 2"
+                          text-anchor="middle"
+                          dominant-baseline="central"
+                          fill="#1e1e1e"
+                          font-size="13"
+                        >
+                          {{ node.label }}
+                        </text>
+                      </g>
+                    </svg>
+                  </div>
+                  <details open class="mt-1">
+                    <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                      查看 JSON 源码
+                    </summary>
+                    <pre class="mt-2 whitespace-pre-wrap break-all rounded-md bg-muted p-3 text-xs leading-relaxed max-h-[30vh] overflow-auto">{{ mermaidCode }}</pre>
+                  </details>
                 </template>
               </div>
               <div v-else-if="step === 'generating'" class="flex items-center gap-2 text-xs text-muted-foreground">
