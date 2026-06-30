@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { FileText, Lightbulb } from '@lucide/vue'
 import { onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
 
@@ -29,7 +30,7 @@ onMounted(() => {
           class="group flex w-56 flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-sm transition-all hover:border-amber-500 hover:shadow-md"
           @click="uiStore.setCurrentView('ideaBoard')"
         >
-          <span class="i-lucide-lightbulb text-4xl text-amber-500 transition-transform group-hover:scale-110" />
+          <Lightbulb class="h-10 w-10 text-amber-500 transition-transform group-hover:scale-110" />
           <div class="text-center">
             <h2 class="text-lg font-semibold">
               想法库
@@ -45,7 +46,7 @@ onMounted(() => {
           class="group flex w-56 flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-sm transition-all hover:border-primary hover:shadow-md"
           @click="uiStore.setCurrentView('editor')"
         >
-          <span class="i-lucide-file-text text-4xl text-primary transition-transform group-hover:scale-110" />
+          <FileText class="h-10 w-10 text-primary transition-transform group-hover:scale-110" />
           <div class="text-center">
             <h2 class="text-lg font-semibold">
               Markdown 编辑器

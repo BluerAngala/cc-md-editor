@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { FileText, Home, LayoutGrid, Lightbulb, Plus, Search, Trash2 } from '@lucide/vue'
+import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import ExcalidrawWrapper from './ExcalidrawWrapper.vue'
 
@@ -9,59 +13,337 @@ const emit = defineEmits<{
   goToLanding: []
 }>()
 
-const STORAGE_KEY = 'idea-board-scene'
+const STORAGE_KEY = 'idea-board-scenes'
 
-interface SceneData {
+interface Scene {
+  id: string
+  title: string
+  desc: string
+  color: number
+  group: string
+  x: number
+  y: number
+  w: number
+  h: number
   elements: any[]
-  appState?: Record<string, any>
+  createdAt: number
+  updatedAt: number
 }
 
-const initialData = ref<{ elements: any[] }>({ elements: [] })
-const isDirty = ref(false)
-let saveTimer: ReturnType<typeof setTimeout> | null = null
+const COLORS = [
+  { bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-400', ring: 'ring-amber-400', label: '黄' },
+  { bg: 'bg-sky-50', border: 'border-sky-200', dot: 'bg-sky-400', ring: 'ring-sky-400', label: '蓝' },
+  { bg: 'bg-emerald-50', border: 'border-emerald-200', dot: 'bg-emerald-400', ring: 'ring-emerald-400', label: '绿' },
+  { bg: 'bg-pink-50', border: 'border-pink-200', dot: 'bg-pink-400', ring: 'ring-pink-400', label: '粉' },
+  { bg: 'bg-violet-50', border: 'border-violet-200', dot: 'bg-violet-400', ring: 'ring-violet-400', label: '紫' },
+  { bg: 'bg-orange-50', border: 'border-orange-200', dot: 'bg-orange-400', ring: 'ring-orange-400', label: '橙' },
+]
 
-onMounted(() => {
+const DEFAULTS = { title: '新想法', desc: '', color: 0, group: '', x: 20, y: 20, w: 200, h: 120, elements: [] }
+
+function normalizeScene(raw: any): Scene {
+  return { ...DEFAULTS, ...raw, createdAt: raw.createdAt || Date.now(), updatedAt: raw.updatedAt || Date.now() }
+}
+
+function loadScenes(): Scene[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw)
+      return JSON.parse(raw).map(normalizeScene)
+  }
+  catch {
+    // ignore
+  }
+  return []
+}
+
+function saveScenes(scenes: Scene[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes))
+}
+
+const scenes = ref<Scene[]>(loadScenes())
+const activeSceneId = ref<string | null>(scenes.value[0]?.id ?? null)
+const activeScene = computed(() => scenes.value.find(s => s.id === activeSceneId.value))
+
+const boardRef = ref<HTMLDivElement | null>(null)
+const editingId = ref<string | null>(null)
+const editingField = ref<'title' | 'desc' | null>(null)
+const activeGroup = ref<string | null>(null)
+const searchQuery = ref('')
+
+// 拖拽状态
+const dragState = ref<{ id: string, startX: number, startY: number, noteX: number, noteY: number } | null>(null)
+// 缩放状态
+const resizeState = ref<{ id: string, startX: number, startY: number, startW: number, startH: number } | null>(null)
+
+const groups = computed(() => {
+  const g = new Set(scenes.value.map(s => s.group).filter(Boolean))
+  return Array.from(g).sort()
+})
+
+const filteredScenes = computed(() => {
+  let result = scenes.value
+  if (activeGroup.value)
+    result = result.filter(s => s.group === activeGroup.value)
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(s => s.title.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q))
+  }
+  return result
+})
+
+function createScene() {
+  const now = Date.now()
+  const offsetX = (scenes.value.length % 5) * 20
+  const offsetY = (scenes.value.length % 5) * 20
+  const scene: Scene = {
+    id: now.toString(36) + Math.random().toString(36).slice(2, 6),
+    title: `想法 ${scenes.value.length + 1}`,
+    desc: '',
+    color: scenes.value.length % COLORS.length,
+    group: '',
+    x: 20 + offsetX,
+    y: 20 + offsetY,
+    w: 200,
+    h: 120,
+    elements: [],
+    createdAt: now,
+    updatedAt: now,
+  }
+  scenes.value.push(scene)
+  activeSceneId.value = scene.id
+  saveScenes(scenes.value)
+}
+
+function deleteScene(id: string) {
+  scenes.value = scenes.value.filter(s => s.id !== id)
+  if (activeSceneId.value === id)
+    activeSceneId.value = scenes.value[0]?.id ?? null
+  saveScenes(scenes.value)
+}
+
+function setSceneColor(scene: Scene, colorIdx: number) {
+  scene.color = colorIdx
+  saveScenes(scenes.value)
+}
+
+function setSceneGroup(scene: Scene, group: string) {
+  scene.group = group
+  saveScenes(scenes.value)
+}
+
+function startEdit(scene: Scene, field: 'title' | 'desc') {
+  editingId.value = scene.id
+  editingField.value = field
+}
+
+function finishEdit() {
+  if (editingId.value) {
+    const scene = scenes.value.find(s => s.id === editingId.value)
+    if (scene)
+      saveScenes(scenes.value)
+  }
+  editingId.value = null
+  editingField.value = null
+}
+
+function organizeNotes() {
+  if (!boardRef.value)
+    return
+  const containerW = boardRef.value.clientWidth
+  const gap = 16
+  const cols = 2
+  const noteW = Math.floor((containerW - gap * (cols + 1)) / cols)
+  const noteH = 120
+  const sorted = [...filteredScenes.value].sort((a, b) => b.updatedAt - a.updatedAt)
+  sorted.forEach((scene, i) => {
+    scene.w = noteW
+    scene.h = noteH
+    scene.x = gap + (i % cols) * (noteW + gap)
+    scene.y = gap + Math.floor(i / cols) * (noteH + gap)
+  })
+  saveScenes(scenes.value)
+}
+
+// ---- 拖拽 ----
+function onDragStart(e: MouseEvent, scene: Scene) {
+  if ((e.target as HTMLElement).closest('input, textarea, button'))
+    return
+  e.preventDefault()
+  activeSceneId.value = scene.id
+  dragState.value = {
+    id: scene.id,
+    startX: e.clientX,
+    startY: e.clientY,
+    noteX: scene.x,
+    noteY: scene.y,
+  }
+  window.addEventListener('mousemove', onDragMove)
+  window.addEventListener('mouseup', onDragEnd)
+}
+
+function onDragMove(e: MouseEvent) {
+  if (!dragState.value)
+    return
+  const scene = scenes.value.find(s => s.id === dragState.value!.id)
+  if (!scene || !boardRef.value)
+    return
+
+  const board = boardRef.value
+  const maxX = board.scrollWidth - scene.w
+  const maxY = board.scrollHeight - scene.h
+
+  scene.x = Math.max(0, Math.min(maxX, dragState.value.noteX + e.clientX - dragState.value.startX))
+  scene.y = Math.max(0, Math.min(maxY, dragState.value.noteY + e.clientY - dragState.value.startY))
+
+  // 接近边缘时自动滚动
+  const rect = board.getBoundingClientRect()
+  const edge = 40
+  const scrollSpeed = 12
+  if (e.clientX - rect.left < edge)
+    board.scrollLeft -= scrollSpeed
+  else if (rect.right - e.clientX < edge)
+    board.scrollLeft += scrollSpeed
+  if (e.clientY - rect.top < edge)
+    board.scrollTop -= scrollSpeed
+  else if (rect.bottom - e.clientY < edge)
+    board.scrollTop += scrollSpeed
+}
+
+function onDragEnd() {
+  if (dragState.value) {
+    const scene = scenes.value.find(s => s.id === dragState.value!.id)
+    if (scene)
+      saveScenes(scenes.value)
+  }
+  dragState.value = null
+  window.removeEventListener('mousemove', onDragMove)
+  window.removeEventListener('mouseup', onDragEnd)
+}
+
+// ---- 缩放 ----
+function onResizeStart(e: MouseEvent, scene: Scene) {
+  e.preventDefault()
+  e.stopPropagation()
+  activeSceneId.value = scene.id
+  resizeState.value = {
+    id: scene.id,
+    startX: e.clientX,
+    startY: e.clientY,
+    startW: scene.w,
+    startH: scene.h,
+  }
+  window.addEventListener('mousemove', onResizeMove)
+  window.addEventListener('mouseup', onResizeEnd)
+}
+
+function onResizeMove(e: MouseEvent) {
+  if (!resizeState.value)
+    return
+  const scene = scenes.value.find(s => s.id === resizeState.value!.id)
+  if (!scene)
+    return
+  scene.w = Math.max(120, resizeState.value.startW + e.clientX - resizeState.value.startX)
+  scene.h = Math.max(80, resizeState.value.startH + e.clientY - resizeState.value.startY)
+}
+
+function onResizeEnd() {
+  if (resizeState.value) {
+    const scene = scenes.value.find(s => s.id === resizeState.value!.id)
+    if (scene)
+      saveScenes(scenes.value)
+  }
+  resizeState.value = null
+  window.removeEventListener('mousemove', onResizeMove)
+  window.removeEventListener('mouseup', onResizeEnd)
+}
+
+function handleSceneChange(elements: readonly any[], _appState: any, _files: any) {
+  if (!activeScene.value)
+    return
+  activeScene.value.elements = [...elements]
+  activeScene.value.updatedAt = Date.now()
+  saveScenes(scenes.value)
+}
+
+if (scenes.value.length === 0)
+  createScene()
+
+// 兼容旧版数据
+const OLD_KEY = 'idea-board-scenes'
+const OLD_SINGLE = 'idea-board-scene'
+for (const key of [OLD_KEY, OLD_SINGLE]) {
+  try {
+    const raw = localStorage.getItem(key)
     if (raw) {
-      const data: SceneData = JSON.parse(raw)
-      initialData.value = { elements: data.elements || [] }
+      const data = JSON.parse(raw)
+      const items = Array.isArray(data) ? data : (data.elements?.length ? [data] : [])
+      for (const item of items) {
+        if (!scenes.value.some(s => s.id === item.id)) {
+          scenes.value.push({
+            id: item.id || Date.now().toString(36),
+            title: item.title || item.name || '旧数据',
+            desc: item.desc || '',
+            color: item.color ?? 0,
+            group: item.group || '',
+            x: item.x ?? 20,
+            y: item.y ?? 20,
+            w: item.w ?? 200,
+            h: item.h ?? 120,
+            elements: item.elements || [],
+            createdAt: item.createdAt || Date.now(),
+            updatedAt: item.updatedAt || Date.now(),
+          })
+        }
+      }
+      saveScenes(scenes.value)
+      localStorage.removeItem(key)
     }
   }
   catch {
     // ignore
   }
-})
-
-function handleChange(elements: readonly any[], appState: any, _files: any) {
-  isDirty.value = true
-
-  if (saveTimer)
-    clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
-    const data: SceneData = {
-      elements: [...elements],
-      appState: {
-        viewBackgroundColor: appState.viewBackgroundColor,
-      },
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    isDirty.value = false
-  }, 1000)
 }
 </script>
 
 <template>
-  <div class="flex h-screen flex-col">
+  <div class="flex h-screen flex-col select-none">
     <!-- Header -->
     <header class="flex items-center gap-3 border-b px-4 py-2">
-      <span class="i-lucide-lightbulb text-lg text-amber-500" />
+      <Lightbulb class="text-lg text-gray-700" />
       <h1 class="text-base font-semibold">
         想法库
       </h1>
 
-      <span v-if="isDirty" class="text-xs text-muted-foreground">保存中...</span>
-      <span v-else class="text-xs text-muted-foreground">已保存</span>
+      <!-- 分组过滤 -->
+      <div class="ml-4 flex items-center gap-1">
+        <button
+          class="rounded-full px-2 py-0.5 text-xs transition-colors"
+          :class="activeGroup === null ? 'bg-gray-800 text-white' : 'bg-muted hover:bg-muted/80'"
+          @click="activeGroup = null"
+        >
+          全部
+        </button>
+        <button
+          v-for="g in groups"
+          :key="g"
+          class="rounded-full px-2 py-0.5 text-xs transition-colors"
+          :class="activeGroup === g ? 'bg-gray-800 text-white' : 'bg-muted hover:bg-muted/80'"
+          @click="activeGroup = g"
+        >
+          {{ g }}
+        </button>
+      </div>
+
+      <!-- 搜索 -->
+      <div class="relative ml-2 w-48">
+        <Search class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          v-model="searchQuery"
+          placeholder="搜索想法..."
+          class="h-7 pl-7 text-xs"
+        />
+      </div>
 
       <div class="flex-1" />
 
@@ -69,7 +351,7 @@ function handleChange(elements: readonly any[], appState: any, _files: any) {
         <Tooltip>
           <TooltipTrigger as-child>
             <Button variant="outline" size="sm" @click="emit('goToLanding')">
-              <span class="i-lucide-home mr-1 h-4 w-4" />
+              <Home class="mr-1 h-4 w-4" />
               首页
             </Button>
           </TooltipTrigger>
@@ -79,7 +361,7 @@ function handleChange(elements: readonly any[], appState: any, _files: any) {
         <Tooltip>
           <TooltipTrigger as-child>
             <Button variant="outline" size="sm" @click="emit('goToEditor')">
-              <span class="i-lucide-file-text mr-1 h-4 w-4" />
+              <FileText class="mr-1 h-4 w-4" />
               编辑器
             </Button>
           </TooltipTrigger>
@@ -88,12 +370,159 @@ function handleChange(elements: readonly any[], appState: any, _files: any) {
       </TooltipProvider>
     </header>
 
-    <!-- Excalidraw canvas -->
-    <div class="flex-1">
-      <ExcalidrawWrapper
-        :initial-data="initialData"
-        @change="handleChange"
-      />
-    </div>
+    <!-- 主体 -->
+    <ResizablePanelGroup direction="horizontal" class="flex-1">
+      <!-- 左侧便签墙 -->
+      <ResizablePanel :default-size="35" :min-size="20" :max-size="50">
+        <div class="flex h-full flex-col">
+          <!-- 顶部按钮栏 -->
+          <div class="flex items-center justify-between border-b px-3 py-2">
+            <span class="text-sm font-medium">📌 便签墙</span>
+            <div class="flex items-center gap-1">
+              <Button variant="ghost" size="sm" class="h-7 gap-1 px-2 text-xs" @click="organizeNotes">
+                <LayoutGrid class="h-3.5 w-3.5" />
+                整理
+              </Button>
+              <Button variant="ghost" size="sm" class="h-7 gap-1 px-2 text-xs" @click="createScene">
+                <Plus class="h-3.5 w-3.5" />
+                新建
+              </Button>
+            </div>
+          </div>
+
+          <!-- 便签画布 -->
+          <div ref="boardRef" class="relative flex-1 overflow-auto">
+            <!-- 便签 -->
+            <div
+              v-for="scene in filteredScenes"
+              :key="scene.id"
+              class="absolute flex flex-col rounded-lg border-2 shadow-md transition-shadow"
+              :class="[
+                COLORS[scene.color]?.bg ?? COLORS[0].bg,
+                COLORS[scene.color]?.border ?? COLORS[0].border,
+                scene.id === activeSceneId ? `ring-2 shadow-xl z-10 ${COLORS[scene.color]?.ring ?? COLORS[0].ring}` : 'z-0',
+              ]"
+              :style="{
+                left: `${scene.x}px`,
+                top: `${scene.y}px`,
+                width: `${scene.w}px`,
+                height: `${scene.h}px`,
+              }"
+              @mousedown="activeSceneId = scene.id"
+            >
+              <!-- 拖拽条 -->
+              <div
+                class="flex cursor-grab items-center gap-1.5 border-b px-3 py-1.5 active:cursor-grabbing"
+                :class="COLORS[scene.color]?.border ?? COLORS[0].border"
+                @mousedown.left="onDragStart($event, scene)"
+              >
+                <!-- 颜色选择 -->
+                <div class="flex gap-0.5">
+                  <button
+                    v-for="(c, i) in COLORS"
+                    :key="i"
+                    class="h-3 w-3 rounded-full border border-gray-300 transition-transform hover:scale-125"
+                    :class="c.dot"
+                    @click.stop="setSceneColor(scene, i)"
+                  />
+                </div>
+
+                <div class="flex-1" />
+
+                <!-- 删除 -->
+                <button class="text-gray-400 hover:text-red-400" @click.stop="deleteScene(scene.id)">
+                  <Trash2 class="h-3 w-3" />
+                </button>
+              </div>
+
+              <!-- 内容区 -->
+              <div class="flex flex-1 flex-col overflow-hidden px-3 py-2" @dblclick="startEdit(scene, 'title')">
+                <!-- 标题 -->
+                <Input
+                  v-if="editingId === scene.id && editingField === 'title'"
+                  v-model="scene.title"
+                  class="h-6 border-0 bg-transparent p-0 text-sm font-semibold shadow-none focus-visible:ring-0"
+                  @blur="finishEdit"
+                  @keydown.enter="finishEdit"
+                  @keydown.escape="editingId = null"
+                />
+                <div v-else class="truncate text-sm font-semibold text-gray-800">
+                  {{ scene.title }}
+                </div>
+
+                <!-- 描述 -->
+                <div class="mt-1 min-h-0 flex-1" @dblclick.stop="startEdit(scene, 'desc')">
+                  <Textarea
+                    v-if="editingId === scene.id && editingField === 'desc'"
+                    v-model="scene.desc"
+                    class="h-full resize-none border-0 bg-transparent p-0 text-xs text-gray-600 shadow-none focus-visible:ring-0"
+                    @blur="finishEdit"
+                    @keydown.escape="editingId = null"
+                  />
+                  <p v-else class="line-clamp-3 text-xs text-gray-500">
+                    {{ scene.desc || '双击添加描述...' }}
+                  </p>
+                </div>
+
+                <!-- 分组标签 -->
+                <div class="mt-1 flex items-center gap-1">
+                  <Input
+                    v-if="editingId === scene.id && editingField === (null as any)"
+                    v-model="scene.group"
+                    class="h-5 w-16 border-0 bg-black/5 px-1 text-xs shadow-none focus-visible:ring-0"
+                    placeholder="分组"
+                    @blur="finishEdit"
+                  />
+                  <span
+                    v-else-if="scene.group"
+                    class="cursor-pointer rounded-full bg-black/5 px-1.5 py-0.5 text-xs text-gray-500"
+                    @click.stop="startEdit(scene, 'desc')"
+                  >
+                    {{ scene.group }}
+                  </span>
+                  <input
+                    v-else
+                    class="w-12 bg-transparent text-xs text-gray-400 outline-none placeholder:text-gray-300"
+                    placeholder="+标签"
+                    @change="setSceneGroup(scene, ($event.target as HTMLInputElement).value)"
+                  >
+                </div>
+              </div>
+
+              <!-- 缩放手柄 -->
+              <div
+                class="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize"
+                @mousedown.left="onResizeStart($event, scene)"
+              >
+                <svg class="h-4 w-4 text-gray-300" viewBox="0 0 16 16">
+                  <path d="M14 16L16 14M10 16L16 10M6 16L16 6" stroke="currentColor" stroke-width="1.5" fill="none" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ResizablePanel>
+
+      <!-- 可拖拽分割线 -->
+      <ResizableHandle class="w-1.5 bg-gray-200 hover:bg-gray-400 transition-colors" />
+
+      <!-- 右侧画布 -->
+      <ResizablePanel :default-size="65" :min-size="40">
+        <ExcalidrawWrapper
+          v-if="activeScene"
+          :key="activeScene.id"
+          :initial-data="{ elements: activeScene.elements }"
+          @change="handleSceneChange"
+        />
+        <div v-else class="flex h-full items-center justify-center text-muted-foreground">
+          <div class="text-center">
+            <Lightbulb class="mx-auto mb-4 h-12 w-12 opacity-30" />
+            <p class="text-lg">
+              点击左侧便签打开画布
+            </p>
+          </div>
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   </div>
 </template>
