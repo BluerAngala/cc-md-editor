@@ -227,6 +227,24 @@ export function useScrollSync(
       return
     }
 
+    const maxPreviewScrollTop = preview.scrollHeight - preview.clientHeight
+    if (maxPreviewScrollTop <= 0) {
+      isSyncingFromEditor = false
+      return
+    }
+
+    const scrollRatio = scroller.scrollTop / scrollable
+
+    // 边缘 15% 区域用比例滚动，中间用块映射，避免块数不一致导致的错位
+    const EDGE_THRESHOLD = 0.15
+    if (scrollRatio < EDGE_THRESHOLD || scrollRatio > (1 - EDGE_THRESHOLD)) {
+      const targetScrollTop = scrollRatio * maxPreviewScrollTop
+      pendingPreviewScrollTop = targetScrollTop
+      preview.scrollTop = targetScrollTop
+      requestAnimationFrame(() => { isSyncingFromEditor = false })
+      return
+    }
+
     const sourceBlocks = getSourceBlocks(view.state.doc)
     if (sourceBlocks.length === 0) {
       isSyncingFromEditor = false
@@ -248,7 +266,6 @@ export function useScrollSync(
 
     const previewIndex = mapBlockIndex(srcIndex, sourceBlocks.length, previewBlocks.length)
     const targetIndex = Math.min(previewIndex, previewBlocks.length - 1)
-    const maxPreviewScrollTop = preview.scrollHeight - preview.clientHeight
     const targetScrollTop = Math.min(previewOffsetTops[targetIndex], maxPreviewScrollTop)
     pendingPreviewScrollTop = targetScrollTop
     preview.scrollTop = targetScrollTop
@@ -291,6 +308,24 @@ export function useScrollSync(
       const maxEditorScrollTop = view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight
       pendingEditorScrollTop = maxEditorScrollTop
       view.scrollDOM.scrollTop = maxEditorScrollTop
+      requestAnimationFrame(() => { isSyncingFromPreview = false })
+      return
+    }
+
+    const maxEditorScrollTop = view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight
+    if (maxEditorScrollTop <= 0) {
+      isSyncingFromPreview = false
+      return
+    }
+
+    const scrollRatio = preview.scrollTop / previewScrollable
+
+    // 边缘 15% 区域用比例滚动
+    const EDGE_THRESHOLD = 0.15
+    if (scrollRatio < EDGE_THRESHOLD || scrollRatio > (1 - EDGE_THRESHOLD)) {
+      const targetScrollTop = scrollRatio * maxEditorScrollTop
+      pendingEditorScrollTop = targetScrollTop
+      view.scrollDOM.scrollTop = targetScrollTop
       requestAnimationFrame(() => { isSyncingFromPreview = false })
       return
     }
