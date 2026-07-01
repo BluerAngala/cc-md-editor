@@ -408,7 +408,7 @@ async function resetRemote() {
           @click="resetRemote"
         >
           <Upload class="size-3.5" />
-          重置远端（删除旧仓库，用本地数据重建）
+          重置远端（清空远端，用本地数据重建）
         </Button>
       </template>
     </div>

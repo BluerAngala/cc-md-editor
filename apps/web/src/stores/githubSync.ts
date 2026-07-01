@@ -343,7 +343,7 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     return sync(scope, true)
   }
 
-  /** 删除远端仓库并用本地数据重建（根治乱码） */
+  /** 清空远端仓库所有文件并用本地数据重建（根治乱码） */
   async function resetRemote(): Promise<void> {
     if (!client.value)
       return
@@ -353,22 +353,31 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
 
     try {
       const repo = storedRepoName.value
-      // 1. 删除旧仓库
-      await client.value.deleteRepo(repo)
+      const c = client.value
 
-      // 2. 重建仓库
-      storedRepoName.value = await client.value.ensureRepo()
-      const newRepo = storedRepoName.value
+      // 1. 删除仓库中所有现有文件
+      const rootFiles = await c.listFiles(repo, '')
+      for (const f of rootFiles) {
+        if (f.type === 'dir') {
+          // 删除目录下所有文件
+          const dirFiles = await c.listFiles(repo, f.path)
+          for (const df of dirFiles)
+            await c.deleteFile(repo, df.path, `reset: delete ${df.name}`, df.sha)
+        }
+        else {
+          await c.deleteFile(repo, f.path, `reset: delete ${f.name}`, f.sha)
+        }
+      }
 
-      // 3. 推送所有本地数据
+      // 2. 推送所有本地数据
       const localSnap = collectSnapshot('all')
       const localHash = hashSnapshot(localSnap)
-      await pushSnapshot(newRepo, localSnap, localHash)
+      await pushSnapshot(repo, localSnap, localHash)
 
-      // 4. 推送所有文章
+      // 3. 推送所有文章
       for (const post of postStore.posts) {
         const fileName = `${PATH_POSTS}/${post.id}.md`
-        await client.value.writeFile(newRepo, fileName, post.content, `init: ${post.title}`)
+        await c.writeFile(repo, fileName, post.content, `init: ${post.title}`)
       }
 
       lastSyncAt.value = Date.now()
