@@ -4,19 +4,29 @@ import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { GitHubSyncClient } from '@/services/github/client'
+import { store } from '@/storage'
+import { addPrefix } from '@/storage/prefix'
+import { useAuthStore } from '@/stores/auth'
 import { useGitHubSyncStore } from '@/stores/githubSync'
 
-const syncStore = useGitHubSyncStore()
+const SYNC_METHOD_KEY = addPrefix('sync_method')
+const syncMethod = store.reactive<'official' | 'github'>(SYNC_METHOD_KEY, 'github')
+
+const githubStore = useGitHubSyncStore()
+const authStore = useAuthStore()
 
 const showPanel = ref(false)
 const testing = ref(false)
 const testResult = ref('')
-const inputToken = ref(syncStore.token)
+const inputToken = ref(githubStore.token)
+
+const isOfficialConfigured = computed(() => authStore.isLoggedIn)
+const isGithubConfigured = computed(() => githubStore.isConfigured)
 
 const lastSyncText = computed(() => {
-  if (!syncStore.lastSyncAt)
+  if (!githubStore.lastSyncAt)
     return ''
-  const diff = Date.now() - syncStore.lastSyncAt
+  const diff = Date.now() - githubStore.lastSyncAt
   if (diff < 60000)
     return '刚刚'
   if (diff < 3600000)
@@ -26,11 +36,13 @@ const lastSyncText = computed(() => {
   return `${Math.floor(diff / 86400000)} 天前`
 })
 
-function save() {
-  syncStore.setToken(inputToken.value.trim())
-  showPanel.value = false
-  // 首次配置后自动同步
-  syncStore.sync()
+function selectMethod(method: 'official' | 'github') {
+  syncMethod.value = method
+}
+
+function saveGithubToken() {
+  githubStore.setToken(inputToken.value.trim())
+  githubStore.sync()
 }
 
 async function testConnection() {
@@ -52,11 +64,14 @@ async function testConnection() {
 }
 
 async function handleSync() {
-  if (!syncStore.isConfigured) {
-    showPanel.value = true
-    return
+  if (syncMethod.value === 'github') {
+    if (!githubStore.isConfigured) {
+      showPanel.value = true
+      return
+    }
+    await githubStore.sync()
   }
-  await syncStore.sync()
+  // 官方同步由底部 footer 的按钮处理
 }
 </script>
 
@@ -65,88 +80,141 @@ async function handleSync() {
     variant="ghost"
     size="sm"
     class="h-8 gap-1.5 text-xs"
-    :disabled="syncStore.status === 'syncing'"
+    :disabled="syncMethod === 'github' && githubStore.status === 'syncing'"
     @click="handleSync"
   >
-    <Loader2 v-if="syncStore.status === 'syncing'" class="h-3.5 w-3.5 animate-spin" />
-    <Cloud v-else-if="syncStore.isConfigured" class="h-3.5 w-3.5" />
+    <Loader2 v-if="syncMethod === 'github' && githubStore.status === 'syncing'" class="h-3.5 w-3.5 animate-spin" />
+    <Cloud v-else-if="syncMethod === 'official' && isOfficialConfigured" class="h-3.5 w-3.5" />
+    <Cloud v-else-if="syncMethod === 'github' && isGithubConfigured" class="h-3.5 w-3.5" />
     <CloudOff v-else class="h-3.5 w-3.5" />
-    {{ syncStore.status === 'syncing' ? '同步中...' : '同步' }}
+    {{ syncMethod === 'github' && githubStore.status === 'syncing' ? '同步中...' : '同步' }}
   </Button>
   <Button variant="ghost" size="icon" class="h-8 w-8" @click="showPanel = !showPanel">
-    <svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" /></svg>
+    <Cloud class="h-4 w-4" />
   </Button>
 
-  <div v-if="showPanel" class="absolute right-0 top-full z-50 mt-1 w-80 rounded-lg border bg-background shadow-lg">
+  <div v-if="showPanel" class="absolute right-0 top-full z-50 mt-1 w-96 rounded-lg border bg-background shadow-lg">
     <div class="flex items-center justify-between border-b px-4 py-2.5">
-      <span class="text-sm font-medium">GitHub 同步</span>
+      <span class="text-sm font-medium">同步设置</span>
       <Button variant="ghost" size="icon" class="h-6 w-6" @click="showPanel = false">
         <X class="h-3.5 w-3.5" />
       </Button>
     </div>
 
-    <div class="p-4 space-y-3">
-      <!-- 已连接 -->
-      <template v-if="syncStore.isConfigured">
-        <div class="flex items-center gap-2 text-sm">
-          <Check class="h-4 w-4 text-green-500" />
-          <span>已连接</span>
-          <span v-if="lastSyncText" class="text-xs text-muted-foreground ml-auto">{{ lastSyncText }}</span>
-        </div>
-        <p v-if="syncStore.lastError" class="text-xs text-red-500">
-          {{ syncStore.lastError }}
+    <div class="p-4 space-y-4">
+      <!-- 方案选择 -->
+      <div>
+        <p class="text-xs text-muted-foreground mb-2">
+          选择同步方案
         </p>
-        <div class="flex gap-2">
-          <Button size="sm" class="h-7 gap-1 text-xs" :disabled="syncStore.status === 'syncing'" @click="syncStore.sync()">
-            <RefreshCcw class="h-3 w-3" :class="{ 'animate-spin': syncStore.status === 'syncing' }" />
-            立即同步
-          </Button>
-          <a
-            v-if="syncStore.repoFullName"
-            :href="`https://github.com/${syncStore.repoFullName}`"
-            target="_blank"
-            class="inline-flex items-center"
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            class="rounded-lg border p-3 text-left transition-colors"
+            :class="syncMethod === 'github' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'"
+            @click="selectMethod('github')"
           >
-            <Button variant="outline" size="sm" class="h-7 gap-1 text-xs">
-              <ExternalLink class="h-3 w-3" />
-              查看仓库
-            </Button>
-          </a>
-          <Button variant="outline" size="sm" class="h-7 text-xs" @click="syncStore.clearToken(); showPanel = false">
-            断开
-          </Button>
+            <div class="flex items-center gap-2 mb-1">
+              <Cloud class="h-4 w-4" />
+              <span class="text-sm font-medium">GitHub 直连</span>
+            </div>
+            <p class="text-[10px] text-muted-foreground">
+              存到你自己的 GitHub 私有仓库，完全可控
+            </p>
+          </button>
+          <button
+            class="rounded-lg border p-3 text-left transition-colors"
+            :class="syncMethod === 'official' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'"
+            @click="selectMethod('official')"
+          >
+            <div class="flex items-center gap-2 mb-1">
+              <Cloud class="h-4 w-4" />
+              <span class="text-sm font-medium">官方云同步</span>
+            </div>
+            <p class="text-[10px] text-muted-foreground">
+              通过官方后端同步，需要 GitHub 登录
+            </p>
+          </button>
+        </div>
+      </div>
+
+      <!-- GitHub 直连配置 -->
+      <template v-if="syncMethod === 'github'">
+        <div class="border-t pt-3">
+          <template v-if="isGithubConfigured">
+            <div class="flex items-center gap-2 text-sm mb-2">
+              <Check class="h-4 w-4 text-green-500" />
+              <span>已连接</span>
+              <span v-if="lastSyncText" class="text-xs text-muted-foreground ml-auto">{{ lastSyncText }}</span>
+            </div>
+            <p v-if="githubStore.lastError" class="text-xs text-red-500 mb-2">
+              {{ githubStore.lastError }}
+            </p>
+            <div class="flex gap-2">
+              <Button size="sm" class="h-7 gap-1 text-xs" :disabled="githubStore.status === 'syncing'" @click="githubStore.sync()">
+                <RefreshCcw class="h-3 w-3" :class="{ 'animate-spin': githubStore.status === 'syncing' }" />
+                立即同步
+              </Button>
+              <a
+                v-if="githubStore.repoFullName"
+                :href="`https://github.com/${githubStore.repoFullName}`"
+                target="_blank"
+                class="inline-flex items-center"
+              >
+                <Button variant="outline" size="sm" class="h-7 gap-1 text-xs">
+                  <ExternalLink class="h-3 w-3" />
+                  查看仓库
+                </Button>
+              </a>
+              <Button variant="outline" size="sm" class="h-7 text-xs" @click="githubStore.clearToken()">
+                断开
+              </Button>
+            </div>
+          </template>
+          <template v-else>
+            <p class="text-xs text-muted-foreground mb-2">
+              输入 GitHub Token，同步到你的私有仓库
+              <a href="https://github.com/settings/tokens/new?scopes=repo&description=CC-MD-Editor" target="_blank" class="text-primary underline ml-1">
+                创建 Token →
+              </a>
+            </p>
+            <Input
+              v-model="inputToken"
+              type="password"
+              placeholder="ghp_xxxx"
+              class="h-8 text-xs font-mono"
+              @keydown.enter="saveGithubToken"
+            />
+            <div class="flex gap-2 mt-2">
+              <Button size="sm" class="h-7 text-xs" :disabled="!inputToken.trim()" @click="saveGithubToken">
+                连接
+              </Button>
+              <Button variant="outline" size="sm" class="h-7 text-xs" :disabled="testing || !inputToken.trim()" @click="testConnection">
+                {{ testing ? '...' : '测试' }}
+              </Button>
+              <span v-if="testResult" class="self-center text-xs" :class="testResult.startsWith('✅') ? 'text-green-500' : 'text-red-500'">
+                {{ testResult }}
+              </span>
+            </div>
+          </template>
         </div>
       </template>
 
-      <!-- 未配置：Token 输入 -->
-      <template v-else>
-        <p class="text-xs text-muted-foreground">
-          输入 GitHub Token，文档同步到你的私有仓库
-          <a
-            href="https://github.com/settings/tokens/new?scopes=repo&description=CC-MD-Editor"
-            target="_blank"
-            class="text-primary underline ml-1"
-          >
-            创建 Token →
-          </a>
-        </p>
-        <Input
-          v-model="inputToken"
-          type="password"
-          placeholder="ghp_xxxx 或 github_pat_xxxx"
-          class="h-8 text-xs font-mono"
-          @keydown.enter="save"
-        />
-        <div class="flex gap-2">
-          <Button size="sm" class="h-7 text-xs" :disabled="!inputToken.trim()" @click="save">
-            连接
-          </Button>
-          <Button variant="outline" size="sm" class="h-7 text-xs" :disabled="testing || !inputToken.trim()" @click="testConnection">
-            {{ testing ? '...' : '测试' }}
-          </Button>
-          <span v-if="testResult" class="self-center text-xs" :class="testResult.startsWith('✅') ? 'text-green-500' : 'text-red-500'">
-            {{ testResult }}
-          </span>
+      <!-- 官方同步状态 -->
+      <template v-if="syncMethod === 'official'">
+        <div class="border-t pt-3">
+          <template v-if="isOfficialConfigured">
+            <p class="text-xs text-green-500 mb-2">
+              ✅ 已登录官方账号
+            </p>
+            <p class="text-[10px] text-muted-foreground">
+              官方同步由底部状态栏自动管理，无需手动操作
+            </p>
+          </template>
+          <template v-else>
+            <p class="text-xs text-muted-foreground">
+              需要通过官方后端 GitHub 登录，请使用底部状态栏的同步按钮
+            </p>
+          </template>
         </div>
       </template>
     </div>
