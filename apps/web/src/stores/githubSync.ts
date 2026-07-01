@@ -7,6 +7,40 @@ const GITHUB_TOKEN_KEY = addPrefix('github_token')
 const LAST_SYNC_KEY = addPrefix('github_last_sync')
 const SYNCED_FILES_KEY = addPrefix('github_synced_files')
 
+/** 收集所有 localStorage 设置（含密钥，私有仓库不限制） */
+function collectAllSettings(): Record<string, unknown> {
+  const settings: Record<string, unknown> = {}
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key)
+      continue
+    // 跳过 GitHub 同步自身的状态
+    if (key === GITHUB_TOKEN_KEY || key === LAST_SYNC_KEY || key === SYNCED_FILES_KEY)
+      continue
+    try {
+      const raw = localStorage.getItem(key)
+      if (raw !== null)
+        settings[key] = JSON.parse(raw)
+    }
+    catch {
+      settings[key] = localStorage.getItem(key)
+    }
+  }
+  return settings
+}
+
+/** 将远端设置写入本地 localStorage */
+function applySettings(settings: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(settings)) {
+    if (key === GITHUB_TOKEN_KEY || key === LAST_SYNC_KEY || key === SYNCED_FILES_KEY)
+      continue
+    try {
+      localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
+    }
+    catch { /* quota error, ignore */ }
+  }
+}
+
 export type SyncStatus = 'idle' | 'syncing' | 'error'
 
 interface SyncedFileMap {
@@ -128,7 +162,27 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
         }
       }
 
-      // 6. 保存同步状态
+      // 6. 同步设置（全量，含密钥）
+      const settingsFile = await client.value.readFile(repo, 'settings.json')
+      if (settingsFile) {
+        try {
+          const remoteSettings = JSON.parse(settingsFile.content)
+          applySettings(remoteSettings)
+        }
+        catch { /* ignore parse errors */ }
+      }
+
+      const localSettings = collectAllSettings()
+      const settingsSha = settingsFile?.sha
+      await client.value.writeFile(
+        repo,
+        'settings.json',
+        JSON.stringify(localSettings, null, 2),
+        settingsSha ? 'update settings' : 'create settings',
+        settingsSha,
+      )
+
+      // 7. 保存同步状态
       writeSyncedFiles(syncedFiles)
       lastSyncAt.value = Date.now()
       await postStore.persistImmediately()
