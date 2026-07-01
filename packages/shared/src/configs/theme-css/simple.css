@@ -34,21 +34,21 @@ h3 {
 
 h4 {
   margin: 1.2em 8px 0.3em;
-  font-size: calc(var(--md-font-size) * 1.04);
+  font-size: calc(var(--md-font-size) * 1.15);
   font-weight: 700;
   color: hsl(var(--foreground));
 }
 
 h5 {
   margin: 1em 8px 0.3em;
-  font-size: var(--md-font-size);
+  font-size: calc(var(--md-font-size) * 1.08);
   font-weight: 700;
   color: var(--md-primary-color);
 }
 
 h6 {
   margin: 0.8em 8px 0.3em;
-  font-size: var(--md-font-size);
+  font-size: calc(var(--md-font-size) * 1.03);
   color: hsl(var(--muted-foreground));
 }
 
@@ -73,6 +73,16 @@ blockquote > p {
   display: block;
   font-size: calc(var(--md-font-size) - 2px);
   margin: 0 0 0.5em 0;
+}
+
+blockquote > ol,
+blockquote > ul {
+  font-size: calc(var(--md-font-size) - 2px);
+}
+
+blockquote > ol > li,
+blockquote > ul > li {
+  font-size: calc(var(--md-font-size) - 2px);
 }
 
 /* GFM Alert 样式覆盖 */

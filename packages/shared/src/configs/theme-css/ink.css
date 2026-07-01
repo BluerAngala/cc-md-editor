@@ -51,14 +51,14 @@ h3 {
 h4 {
   margin: 1.8em 8px 0.5em;
   color: hsl(var(--foreground));
-  font-size: calc(var(--md-font-size) * 1.08);
+  font-size: calc(var(--md-font-size) * 1.15);
   font-weight: 700;
 }
 
 h5 {
   margin: 1.5em 8px 0.5em;
   color: hsl(var(--muted-foreground, 0 0% 45%));
-  font-size: var(--md-font-size);
+  font-size: calc(var(--md-font-size) * 1.08);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -66,7 +66,7 @@ h5 {
 
 h6 {
   margin: 1.5em 8px 0.5em;
-  font-size: var(--md-font-size);
+  font-size: calc(var(--md-font-size) * 1.03);
   color: hsl(var(--muted-foreground, 0 0% 45%));
   font-weight: 600;
   text-transform: uppercase;
@@ -109,6 +109,16 @@ blockquote > p {
   letter-spacing: 0.06em;
   color: hsl(var(--foreground));
   margin: 0 0 0.5em 0;
+}
+
+blockquote > ol,
+blockquote > ul {
+  font-size: calc(var(--md-font-size) - 2px);
+}
+
+blockquote > ol > li,
+blockquote > ul > li {
+  font-size: calc(var(--md-font-size) - 2px);
 }
 
 /* ==================== 代码块 ==================== */

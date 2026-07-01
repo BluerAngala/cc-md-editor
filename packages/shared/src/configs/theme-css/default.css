@@ -43,7 +43,7 @@ h3 {
 h4 {
   margin: 2em 8px 0.5em;
   color: var(--md-primary-color);
-  font-size: calc(var(--md-font-size) * 1);
+  font-size: calc(var(--md-font-size) * 1.15);
   font-weight: bold;
 }
 
@@ -51,14 +51,14 @@ h4 {
 h5 {
   margin: 1.5em 8px 0.5em;
   color: var(--md-primary-color);
-  font-size: calc(var(--md-font-size) * 1);
+  font-size: calc(var(--md-font-size) * 1.08);
   font-weight: bold;
 }
 
 /* ==================== 六级标题 ==================== */
 h6 {
   margin: 1.5em 8px 0.5em;
-  font-size: calc(var(--md-font-size) * 1);
+  font-size: calc(var(--md-font-size) * 1.03);
   color: var(--md-primary-color);
 }
 
@@ -85,6 +85,16 @@ blockquote > p {
   letter-spacing: 0.1em;
   color: hsl(var(--foreground));
   margin: 0 0 0.5em 0;
+}
+
+blockquote > ol,
+blockquote > ul {
+  font-size: calc(var(--md-font-size) - 2px);
+}
+
+blockquote > ol > li,
+blockquote > ul > li {
+  font-size: calc(var(--md-font-size) - 2px);
 }
 
 /* ==================== 代码块 ==================== */
