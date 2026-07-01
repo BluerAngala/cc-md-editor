@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Article } from '@/stores/reading'
-import { ExternalLink, Lightbulb, Star } from '@lucide/vue'
+import { ExternalLink, Lightbulb, Quote, Star } from '@lucide/vue'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,29 +14,36 @@ const props = defineProps<{
 const readingStore = useReadingStore()
 const ideaStore = useIdeaBoardStore()
 
+const quoteText = ref('')
 const ideaText = ref('')
 const ideaSaved = ref(false)
-const contentRef = ref<HTMLDivElement | null>(null)
 
 function saveIdea() {
   if (!ideaText.value.trim())
     return
-  const prefix = `[${props.article.title.slice(0, 30)}] `
-  ideaStore.addNote(prefix + ideaText.value.trim(), 'yellow', '阅读笔记')
+
+  let content = ''
+  if (quoteText.value.trim()) {
+    content += `📖 摘要：${quoteText.value.trim()}\n\n`
+  }
+  content += `💡 想法：${ideaText.value.trim()}`
+
+  const title = props.article.title.slice(0, 30)
+  ideaStore.addNote(`[${title}] ${content}`, 'yellow', '阅读笔记')
+  quoteText.value = ''
   ideaText.value = ''
   ideaSaved.value = true
   setTimeout(() => { ideaSaved.value = false }, 2000)
 }
 
 function handleSelect() {
-  // 延迟一帧，确保 selection 已更新
   requestAnimationFrame(() => {
     const selection = window.getSelection()
     const text = selection?.toString().trim()
     if (text && text.length > 1) {
-      ideaText.value = ideaText.value
-        ? `${ideaText.value}\n「${text}」`
-        : `「${text}」`
+      quoteText.value = quoteText.value
+        ? `${quoteText.value}\n${text}`
+        : text
     }
   })
 }
@@ -89,33 +96,60 @@ function formatDate(ts: number) {
     <div class="flex flex-1 overflow-hidden">
       <!-- 文章正文 -->
       <div
-        ref="contentRef"
         class="article-content flex-1 overflow-y-auto px-8 py-6 select-text cursor-text"
         @mouseup="handleSelect"
         v-html="article.content || article.summary"
       />
 
       <!-- 记录想法侧栏 -->
-      <div class="w-72 border-l flex flex-col bg-muted/30">
+      <div class="w-80 border-l flex flex-col bg-muted/20">
         <div class="px-4 py-3 border-b flex items-center gap-2">
           <Lightbulb class="h-4 w-4 text-amber-500" />
           <span class="text-sm font-medium">记录想法</span>
         </div>
-        <div class="flex flex-1 flex-col p-4">
-          <p class="text-xs text-muted-foreground mb-3">
-            选中文章文字自动填入，或直接输入
-          </p>
-          <Textarea
-            v-model="ideaText"
-            placeholder="记录你的想法..."
-            class="flex-1 resize-none text-sm"
-          />
-          <div class="mt-3 flex items-center justify-between">
+        <div class="flex flex-1 flex-col p-4 gap-3 overflow-y-auto">
+          <!-- 摘录区 -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <Quote class="h-3.5 w-3.5 text-muted-foreground" />
+                <span class="text-xs font-medium text-muted-foreground">原文摘录</span>
+              </div>
+              <button
+                v-if="quoteText"
+                class="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+                @click="quoteText = ''"
+              >
+                清空
+              </button>
+            </div>
+            <Textarea
+              v-model="quoteText"
+              placeholder="选中文章文字自动填入..."
+              class="min-h-[80px] max-h-[200px] resize-none text-xs bg-background border-dashed"
+            />
+          </div>
+
+          <!-- 想法区 -->
+          <div class="flex-1 flex flex-col">
+            <div class="flex items-center gap-1.5 mb-1.5">
+              <Lightbulb class="h-3.5 w-3.5 text-amber-500" />
+              <span class="text-xs font-medium">我的想法</span>
+            </div>
+            <Textarea
+              v-model="ideaText"
+              placeholder="写下你的想法、观点、联想..."
+              class="flex-1 min-h-[120px] resize-none text-sm bg-background"
+            />
+          </div>
+
+          <!-- 保存按钮 -->
+          <div class="flex items-center justify-between pt-1">
             <span v-if="ideaSaved" class="text-xs text-green-500">
               ✓ 已保存到想法库
             </span>
             <span v-else class="text-xs text-muted-foreground">
-              将同步到便签墙
+              摘录 + 想法 → 便签墙
             </span>
             <Button
               size="sm"
