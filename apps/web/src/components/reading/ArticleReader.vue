@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Article } from '@/stores/reading'
-import { ExternalLink, Lightbulb, Quote, Star } from '@lucide/vue'
-import { ref } from 'vue'
+import { ExternalLink, History, Lightbulb, Pencil, Quote, Star, Trash2 } from '@lucide/vue'
+import { onMounted, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useReadingStore } from '@/stores/reading'
@@ -15,21 +15,109 @@ const readingStore = useReadingStore()
 const quoteText = ref('')
 const ideaText = ref('')
 const ideaSaved = ref(false)
+const editingId = ref<string | null>(null)
 
 const SCENE_STORAGE_KEY = 'idea-board-scenes'
 
+// ── 历史记录 ─────────────────────────────────────────────
+interface HistoryItem {
+  id: string
+  title: string
+  desc: string
+  createdAt: number
+}
+
+const history = ref<HistoryItem[]>([])
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(SCENE_STORAGE_KEY)
+    if (!raw)
+      return
+    const scenes = JSON.parse(raw)
+    history.value = scenes
+      .filter((s: any) => s.group === '阅读笔记')
+      .map((s: any) => ({ id: s.id, title: s.title, desc: s.desc, createdAt: s.createdAt }))
+      .sort((a: HistoryItem, b: HistoryItem) => b.createdAt - a.createdAt)
+      .slice(0, 50)
+  }
+  catch { /* ignore */ }
+}
+
+function deleteHistory(id: string) {
+  try {
+    const raw = localStorage.getItem(SCENE_STORAGE_KEY)
+    if (!raw)
+      return
+    const scenes = JSON.parse(raw).filter((s: any) => s.id !== id)
+    localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes))
+    loadHistory()
+  }
+  catch { /* ignore */ }
+}
+
+function startEdit(item: HistoryItem) {
+  editingId.value = item.id
+  // 解析 desc 中的摘录和想法
+  const lines = item.desc.split('\n')
+  let quote = ''
+  let idea = ''
+  for (const line of lines) {
+    if (line.startsWith('📖 '))
+      quote = line.slice(2).trim()
+    else if (line.startsWith('💡 '))
+      idea = line.slice(2).trim()
+    else
+      idea += (idea ? '\n' : '') + line
+  }
+  quoteText.value = quote
+  ideaText.value = idea
+}
+
+function saveEdit() {
+  if (!editingId.value || !ideaText.value.trim())
+    return
+  try {
+    const raw = localStorage.getItem(SCENE_STORAGE_KEY)
+    if (!raw)
+      return
+    const scenes = JSON.parse(raw)
+    const scene = scenes.find((s: any) => s.id === editingId.value)
+    if (scene) {
+      let desc = ''
+      if (quoteText.value.trim())
+        desc += `📖 ${quoteText.value.trim()}`
+      if (ideaText.value.trim())
+        desc += `${desc ? '\n' : ''}💡 ${ideaText.value.trim()}`
+      scene.desc = desc
+      scene.updatedAt = Date.now()
+      localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes))
+      loadHistory()
+    }
+  }
+  catch { /* ignore */ }
+  editingId.value = null
+  quoteText.value = ''
+  ideaText.value = ''
+}
+
+function cancelEdit() {
+  editingId.value = null
+  quoteText.value = ''
+  ideaText.value = ''
+}
+
+// ── 保存新想法 ───────────────────────────────────────────
 function saveIdea() {
   if (!ideaText.value.trim())
     return
 
-  // 构造描述：摘要 + 想法
   let desc = ''
   if (quoteText.value.trim())
     desc += `📖 ${quoteText.value.trim()}`
   if (ideaText.value.trim())
     desc += `${desc ? '\n' : ''}💡 ${ideaText.value.trim()}`
 
-  // 直接写入 IdeaBoard 的场景存储
   try {
     const raw = localStorage.getItem(SCENE_STORAGE_KEY)
     const scenes: any[] = raw ? JSON.parse(raw) : []
@@ -56,6 +144,7 @@ function saveIdea() {
   ideaText.value = ''
   ideaSaved.value = true
   setTimeout(() => { ideaSaved.value = false }, 2000)
+  loadHistory()
 }
 
 function handleSelect() {
@@ -71,14 +160,23 @@ function handleSelect() {
 }
 
 function formatDate(ts: number) {
-  return new Date(ts).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const d = new Date(ts)
+  const now = new Date()
+  const diff = now.getTime() - ts
+  if (diff < 86400000) {
+    const hours = Math.floor(diff / 3600000)
+    if (hours < 1)
+      return '刚刚'
+    return `${hours}小时前`
+  }
+  if (diff < 604800000) {
+    const days = Math.floor(diff / 86400000)
+    return `${days}天前`
+  }
+  return `${d.getMonth() + 1}/${d.getDate()}`
 }
+
+onMounted(() => loadHistory())
 </script>
 
 <template>
@@ -129,59 +227,129 @@ function formatDate(ts: number) {
           <Lightbulb class="h-4 w-4 text-amber-500" />
           <span class="text-sm font-medium">记录想法</span>
         </div>
-        <div class="flex flex-1 flex-col p-4 gap-3 overflow-y-auto">
-          <!-- 摘录区 -->
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <div class="flex items-center gap-1.5">
-                <Quote class="h-3.5 w-3.5 text-muted-foreground" />
-                <span class="text-xs font-medium text-muted-foreground">原文摘录</span>
+
+        <div class="flex-1 overflow-y-auto">
+          <!-- 摘录 + 想法输入 -->
+          <div class="p-4 space-y-3">
+            <!-- 摘录区 -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-1.5">
+                  <Quote class="h-3.5 w-3.5 text-muted-foreground" />
+                  <span class="text-xs font-medium text-muted-foreground">原文摘录</span>
+                </div>
+                <button
+                  v-if="quoteText"
+                  class="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+                  @click="quoteText = ''"
+                >
+                  清空
+                </button>
               </div>
-              <button
-                v-if="quoteText"
-                class="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
-                @click="quoteText = ''"
-              >
-                清空
-              </button>
+              <Textarea
+                v-model="quoteText"
+                placeholder="选中文章文字自动填入..."
+                class="min-h-[70px] max-h-[150px] resize-none text-xs bg-background border-dashed"
+              />
             </div>
-            <Textarea
-              v-model="quoteText"
-              placeholder="选中文章文字自动填入..."
-              class="min-h-[80px] max-h-[200px] resize-none text-xs bg-background border-dashed"
-            />
+
+            <!-- 想法区 -->
+            <div>
+              <div class="flex items-center gap-1.5 mb-1.5">
+                <Lightbulb class="h-3.5 w-3.5 text-amber-500" />
+                <span class="text-xs font-medium">{{ editingId ? '编辑想法' : '我的想法' }}</span>
+              </div>
+              <Textarea
+                v-model="ideaText"
+                placeholder="写下你的想法、观点、联想..."
+                class="min-h-[100px] resize-none text-sm bg-background"
+              />
+            </div>
+
+            <!-- 按钮 -->
+            <div class="flex items-center justify-between">
+              <span v-if="ideaSaved" class="text-xs text-green-500">
+                ✓ 已保存到想法库
+              </span>
+              <span v-else class="text-xs text-muted-foreground">
+                {{ editingId ? '编辑中' : '摘录 + 想法 → 便签墙' }}
+              </span>
+              <div class="flex gap-1.5">
+                <Button
+                  v-if="editingId"
+                  variant="ghost"
+                  size="sm"
+                  class="h-8 text-xs"
+                  @click="cancelEdit"
+                >
+                  取消
+                </Button>
+                <Button
+                  v-if="editingId"
+                  size="sm"
+                  class="h-8 gap-1 text-sm"
+                  :disabled="!ideaText.trim()"
+                  @click="saveEdit"
+                >
+                  保存
+                </Button>
+                <Button
+                  v-else
+                  size="sm"
+                  class="h-8 gap-1.5 text-sm"
+                  :disabled="!ideaText.trim()"
+                  @click="saveIdea"
+                >
+                  <Lightbulb class="h-3.5 w-3.5" />
+                  记录
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <!-- 想法区 -->
-          <div class="flex-1 flex flex-col">
-            <div class="flex items-center gap-1.5 mb-1.5">
-              <Lightbulb class="h-3.5 w-3.5 text-amber-500" />
-              <span class="text-xs font-medium">我的想法</span>
+          <!-- 历史记录 -->
+          <div class="border-t">
+            <div class="px-4 py-2.5 flex items-center gap-1.5">
+              <History class="h-3.5 w-3.5 text-muted-foreground" />
+              <span class="text-xs font-medium text-muted-foreground">历史记录</span>
+              <span class="text-[10px] text-muted-foreground/60">({{ history.length }})</span>
             </div>
-            <Textarea
-              v-model="ideaText"
-              placeholder="写下你的想法、观点、联想..."
-              class="flex-1 min-h-[120px] resize-none text-sm bg-background"
-            />
-          </div>
-
-          <!-- 保存按钮 -->
-          <div class="flex items-center justify-between pt-1">
-            <span v-if="ideaSaved" class="text-xs text-green-500">
-              ✓ 已保存到想法库
-            </span>
-            <span v-else class="text-xs text-muted-foreground">
-              摘录 + 想法 → 便签墙
-            </span>
-            <Button
-              size="sm"
-              class="h-8 gap-1.5 text-sm"
-              :disabled="!ideaText.trim()"
-              @click="saveIdea"
+            <div v-if="!history.length" class="px-4 pb-4 text-xs text-muted-foreground/50">
+              暂无记录
+            </div>
+            <div
+              v-for="item in history"
+              :key="item.id"
+              class="group px-4 py-2.5 border-t hover:bg-muted/50 transition-colors"
             >
-              <Lightbulb class="h-3.5 w-3.5" />
-              记录
-            </Button>
+              <div class="flex items-start justify-between gap-2">
+                <p class="text-xs font-medium truncate flex-1">
+                  {{ item.title }}
+                </p>
+                <span class="text-[10px] text-muted-foreground shrink-0">
+                  {{ formatDate(item.createdAt) }}
+                </span>
+              </div>
+              <p class="mt-1 text-[10px] text-muted-foreground whitespace-pre-wrap line-clamp-3">
+                {{ item.desc }}
+              </p>
+              <div class="mt-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  class="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
+                  @click="startEdit(item)"
+                >
+                  <Pencil class="h-2.5 w-2.5" />
+                  编辑
+                </button>
+                <button
+                  class="text-[10px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-0.5"
+                  @click="deleteHistory(item.id)"
+                >
+                  <Trash2 class="h-2.5 w-2.5" />
+                  删除
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
