@@ -44,7 +44,19 @@ function postSignature(post: Post): string {
  * 负责管理文章列表、当前文章、文章 CRUD 操作
  */
 export const usePostStore = defineStore(`post`, () => {
-  const loaded = getLoadedDocuments()
+  const EMERGENCY_KEY = `cc-md-editor:emergency-posts`
+
+  // 优先从 IndexedDB 加载，如果为空则检查 localStorage 兜底
+  let loaded = getLoadedDocuments()
+  if (!loaded?.length) {
+    try {
+      const emergency = localStorage.getItem(EMERGENCY_KEY)
+      if (emergency)
+        loaded = JSON.parse(emergency)
+    }
+    catch { /* ignore */ }
+  }
+
   const posts = ref<Post[]>(
     loaded?.length ? normalizePosts(loaded) : [createDefaultPost()],
   )
@@ -68,10 +80,12 @@ export const usePostStore = defineStore(`post`, () => {
 
   const persistAll = debounce(async (snapshot: Post[]) => {
     await documentRepo.saveAll(snapshot)
+    localStorage.removeItem(EMERGENCY_KEY)
   }, 500)
 
   const persistOne = debounce(async (post: Post) => {
     await documentRepo.savePost(post)
+    localStorage.removeItem(EMERGENCY_KEY)
   }, 500)
 
   /** 删除等关键操作立即落盘，避免防抖未完成时刷新导致数据回弹 */
@@ -122,10 +136,17 @@ export const usePostStore = defineStore(`post`, () => {
   onMounted(() => {
     const editorStore = useEditorStore()
 
+    const EMERGENCY_KEY = `cc-md-editor:emergency-posts`
+
     const flushToDisk = () => {
       editorStore.flushContentToPostStore()
-      persistAll.flush()
-      persistOne.flush()
+      persistAll.cancel()
+      persistOne.cancel()
+      // 同步写入 localStorage 兜底，防止 IndexedDB 异步写入未完成页面就关闭
+      try {
+        localStorage.setItem(EMERGENCY_KEY, JSON.stringify(posts.value))
+      }
+      catch { /* quota error, ignore */ }
       void persistImmediately()
     }
 

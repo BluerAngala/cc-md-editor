@@ -184,7 +184,7 @@ hr::after {
 /* ==================== 强调 ==================== */
 em {
   font-style: italic;
-  color: hsl(var(--foreground));
+  color: var(--md-primary-color);
 }
 
 /* ==================== 链接 ==================== */
@@ -199,7 +199,7 @@ a {
 /* ==================== 粗体 ==================== */
 strong {
   font-weight: 900;
-  color: hsl(var(--foreground));
+  color: var(--md-primary-color);
 }
 
 /* ==================== 表格（经典报纸风格） ==================== */
