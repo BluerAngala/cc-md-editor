@@ -35,22 +35,6 @@ onMounted(() => {
       </div>
 
       <div class="flex gap-6">
-        <!-- 想法库 -->
-        <button
-          class="group flex w-56 flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-sm transition-all hover:border-amber-500 hover:shadow-md"
-          @click="uiStore.setCurrentView('ideaBoard')"
-        >
-          <Lightbulb class="h-10 w-10 text-amber-500 transition-transform group-hover:scale-110" />
-          <div class="text-center">
-            <h2 class="text-lg font-semibold">
-              想法库
-            </h2>
-            <p class="mt-1 text-sm text-muted-foreground">
-              白板画布、自由创作
-            </p>
-          </div>
-        </button>
-
         <!-- 资讯阅读 -->
         <button
           class="group flex w-56 flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-sm transition-all hover:border-blue-500 hover:shadow-md"
@@ -63,6 +47,22 @@ onMounted(() => {
             </h2>
             <p class="mt-1 text-sm text-muted-foreground">
               RSS 订阅、阅读、记录想法
+            </p>
+          </div>
+        </button>
+
+        <!-- 想法库 -->
+        <button
+          class="group flex w-56 flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-sm transition-all hover:border-amber-500 hover:shadow-md"
+          @click="uiStore.setCurrentView('ideaBoard')"
+        >
+          <Lightbulb class="h-10 w-10 text-amber-500 transition-transform group-hover:scale-110" />
+          <div class="text-center">
+            <h2 class="text-lg font-semibold">
+              想法库
+            </h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              白板画布、自由创作
             </p>
           </div>
         </button>
