@@ -5,22 +5,42 @@ import { ref } from 'vue'
 const STORAGE_SOURCES = 'reading_sources'
 const STORAGE_ARTICLES = 'reading_articles'
 
-// CORS 代理：浏览器直接 fetch RSS 会被拦截，通过代理中转
-const CORS_PROXY = 'https://api.allorigins.win/raw?url='
+// RSS 代理：浏览器直接 fetch RSS 会被 CORS 拦截
+// rss2json 提供免费的 RSS 解析 API，返回结构化 JSON
+const RSS2JSON_API = 'https://api.rss2json.com/v1/api.json?rss_url='
 
-async function fetchWithProxy(url: string): Promise<string> {
+async function fetchFeed(url: string): Promise<{ title: string, items: any[] }> {
   // 先尝试直接请求（自建 RSSHub 可能已配置 CORS）
   try {
+    const parser = new RSSParser()
     const res = await window.fetch(url, { signal: AbortSignal.timeout(5000) })
-    if (res.ok)
-      return await res.text()
+    if (res.ok) {
+      const xml = await res.text()
+      const feed = await parser.parseString(xml)
+      return { title: feed.title || '', items: feed.items }
+    }
   }
   catch { /* CORS 拦截，走代理 */ }
-  // 走代理
-  const res = await window.fetch(CORS_PROXY + encodeURIComponent(url))
+
+  // 走 rss2json 代理
+  const res = await window.fetch(RSS2JSON_API + encodeURIComponent(url))
   if (!res.ok)
     throw new Error(`代理请求失败: ${res.status}`)
-  return await res.text()
+  const data = await res.json()
+  if (data.status !== 'ok')
+    throw new Error(data.message || 'RSS 解析失败')
+  return {
+    title: data.feed?.title || '',
+    items: data.items.map((item: any) => ({
+      title: item.title,
+      link: item.link,
+      content: item.content,
+      contentSnippet: item.description?.replace(/<[^>]*>/g, '').slice(0, 200),
+      creator: item.author,
+      pubDate: item.pubDate,
+      guid: item.guid,
+    })),
+  }
 }
 
 export interface RSSSource {
@@ -46,8 +66,8 @@ export interface Article {
 }
 
 const DEFAULT_SOURCES: RSSSource[] = [
-  { id: 'scspcx', url: 'https://rsshub.app/sspai/matrix', title: '少数派', category: '科技', addedAt: Date.now() },
-  { id: 'zhihu-hot', url: 'https://rsshub.app/zhihu/hotlist', title: '知乎热榜', category: '热点', addedAt: Date.now() },
+  { id: 'solidot', url: 'https://feeds.feedburner.com/solidot', title: '奇客Solidot', category: '科技', addedAt: Date.now() },
+  { id: '36kr', url: 'https://36kr.com/feed', title: '36氪', category: '商业', addedAt: Date.now() },
 ]
 
 export const useReadingStore = defineStore('reading', () => {
@@ -103,16 +123,15 @@ export const useReadingStore = defineStore('reading', () => {
     loading.value = true
     error.value = ''
     try {
-      const parser = new RSSParser()
       const results = await Promise.allSettled(
         sources.value.map(async (src) => {
           try {
-            const xml = await fetchWithProxy(src.url)
-            const feed = await parser.parseString(xml)
+            const feed = await fetchFeed(src.url)
+            const srcTitle = feed.title || src.title
             return feed.items.map(item => ({
               id: `art-${src.id}-${item.guid || item.link || Date.now()}`,
               sourceId: src.id,
-              sourceTitle: src.title,
+              sourceTitle: srcTitle,
               title: item.title || '无标题',
               link: item.link || '',
               content: item.content || item.contentSnippet || '',
