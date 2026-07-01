@@ -282,7 +282,8 @@ function renderAboutAuthor(props: Record<string, string>): string {
   const avatarSize = avatarSizeProp || `small`
   const avatarShape = avatarShapeProp || `rect`
   const avatarW = /^\d+$/.test(avatarSize) ? Number(avatarSize) : avatarSize === `full` ? 200 : avatarSize === `large` ? 120 : 64
-  const avatarH = /^\d+$/.test(props.avatarHeight || ``) ? Number(props.avatarHeight) : avatarW
+  // 圆形头像必须是正方形，否则 border-radius: 50% 会变成椭圆
+  const avatarH = avatarShape === `round` ? avatarW : (/^\d+$/.test(props.avatarHeight || ``) ? Number(props.avatarHeight) : avatarW)
   const avatarR = avatarShape === `round` ? `50%` : `8px`
   const esc = (s: string) => escapeHtml(s || ``)
   const bg = props.bgColor || ``
