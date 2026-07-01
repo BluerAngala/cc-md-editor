@@ -34,6 +34,22 @@ interface GitHubRepo {
   private: boolean
 }
 
+function encodeBase64Utf8(str: string): string {
+  const bytes = new TextEncoder().encode(str)
+  let binary = ''
+  for (const b of bytes)
+    binary += String.fromCharCode(b)
+  return btoa(binary)
+}
+
+function decodeBase64Utf8(base64: string): string {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++)
+    bytes[i] = binary.charCodeAt(i)
+  return new TextDecoder().decode(bytes)
+}
+
 export class GitHubSyncClient {
   constructor(private getToken: () => string | null) {}
 
@@ -156,8 +172,7 @@ export class GitHubSyncClient {
   async readFile(repo: string, path: string): Promise<{ content: string, sha: string } | null> {
     try {
       const file = await this.request<GitHubFile>(`GET`, `/repos/${repo}/contents/${path}`)
-      // GitHub API 返回 base4 编码的内容
-      const content = atob(file.content.replace(/\n/g, ``))
+      const content = decodeBase64Utf8(file.content.replace(/\n/g, ''))
       return { content, sha: file.sha }
     }
     catch {
@@ -169,7 +184,7 @@ export class GitHubSyncClient {
   async writeFile(repo: string, path: string, content: string, message: string, sha?: string): Promise<void> {
     const body: Record<string, string> = {
       message,
-      content: btoa(unescape(encodeURIComponent(content))),
+      content: encodeBase64Utf8(content),
     }
     if (sha)
       body.sha = sha
