@@ -5,6 +5,24 @@ import { ref } from 'vue'
 const STORAGE_SOURCES = 'reading_sources'
 const STORAGE_ARTICLES = 'reading_articles'
 
+// CORS 代理：浏览器直接 fetch RSS 会被拦截，通过代理中转
+const CORS_PROXY = 'https://api.allorigins.win/raw?url='
+
+async function fetchWithProxy(url: string): Promise<string> {
+  // 先尝试直接请求（自建 RSSHub 可能已配置 CORS）
+  try {
+    const res = await window.fetch(url, { signal: AbortSignal.timeout(5000) })
+    if (res.ok)
+      return await res.text()
+  }
+  catch { /* CORS 拦截，走代理 */ }
+  // 走代理
+  const res = await window.fetch(CORS_PROXY + encodeURIComponent(url))
+  if (!res.ok)
+    throw new Error(`代理请求失败: ${res.status}`)
+  return await res.text()
+}
+
 export interface RSSSource {
   id: string
   url: string
@@ -89,7 +107,8 @@ export const useReadingStore = defineStore('reading', () => {
       const results = await Promise.allSettled(
         sources.value.map(async (src) => {
           try {
-            const feed = await parser.parseURL(src.url)
+            const xml = await fetchWithProxy(src.url)
+            const feed = await parser.parseString(xml)
             return feed.items.map(item => ({
               id: `art-${src.id}-${item.guid || item.link || Date.now()}`,
               sourceId: src.id,
