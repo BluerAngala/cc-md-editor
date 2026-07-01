@@ -1,9 +1,13 @@
 import { defineStore } from 'pinia'
 import RSSParser from 'rss-parser'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const STORAGE_SOURCES = 'reading_sources'
 const STORAGE_ARTICLES = 'reading_articles'
+const STORAGE_COLLECTORS = 'reading_collectors'
+
+// CORS 代理：浏览器不能直接 fetch 任意网页
+const CORS_PROXY = 'https://api.allorigins.win/raw?url='
 
 // RSS 代理：浏览器直接 fetch RSS 会被 CORS 拦截
 // rss2json 提供免费的 RSS 解析 API，返回结构化 JSON
@@ -43,6 +47,62 @@ async function fetchFeed(url: string): Promise<{ title: string, items: any[] }> 
   }
 }
 
+/** 通过 CORS 代理获取网页 HTML */
+async function fetchHTML(url: string): Promise<string> {
+  const res = await window.fetch(CORS_PROXY + encodeURIComponent(url), {
+    signal: AbortSignal.timeout(15000),
+  })
+  if (!res.ok)
+    throw new Error(`获取页面失败: ${res.status}`)
+  return res.text()
+}
+
+/** 用 CSS 选择器从 HTML 中提取文章列表 */
+function parseHTMLWithSelectors(html: string, selectors: CollectorSelectors, sourceId: string, sourceTitle: string, baseUrl = ''): Article[] {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const items = doc.querySelectorAll(selectors.item)
+  const articles: Article[] = []
+
+  items.forEach((el, i) => {
+    const titleEl = selectors.title ? el.querySelector(selectors.title) : null
+    const linkEl = selectors.link ? el.querySelector(selectors.link) : null
+    const contentEl = selectors.content ? el.querySelector(selectors.content) : null
+    const summaryEl = selectors.summary ? el.querySelector(selectors.summary) : null
+    const authorEl = selectors.author ? el.querySelector(selectors.author) : null
+    const dateEl = selectors.date ? el.querySelector(selectors.date) : null
+
+    const title = titleEl?.textContent?.trim() || ''
+    if (!title)
+      return
+
+    const href = linkEl?.getAttribute('href') || ''
+    const link = href.startsWith('http') ? href : href.startsWith('/') ? new URL(baseUrl).origin + href : ''
+    const content = contentEl?.innerHTML || ''
+    const summary = summaryEl?.textContent?.trim() || content.replace(/<[^>]*>/g, '').slice(0, 200)
+    const author = authorEl?.textContent?.trim() || ''
+    const dateStr = dateEl?.getAttribute('datetime') || dateEl?.textContent?.trim() || ''
+    const publishedAt = dateStr ? new Date(dateStr).getTime() || Date.now() - i * 60000 : Date.now() - i * 60000
+
+    articles.push({
+      id: `col-${sourceId}-${link || title}-${i}`,
+      sourceId,
+      sourceTitle,
+      title,
+      link,
+      content,
+      summary,
+      author,
+      publishedAt,
+      read: false,
+      starred: false,
+      type: 'collector',
+    })
+  })
+
+  return articles
+}
+
 export interface RSSSource {
   id: string
   url: string
@@ -51,6 +111,31 @@ export interface RSSSource {
   addedAt: number
   /** 自动刷新间隔（分钟），0 = 关闭 */
   refreshInterval: number
+}
+
+export interface CollectorSource {
+  id: string
+  url: string
+  title: string
+  category: string
+  addedAt: number
+  refreshInterval: number
+  /** 提取规则：CSS 选择器 */
+  selectors: CollectorSelectors
+  /** AI 分析时的原始描述 */
+  description: string
+}
+
+export interface CollectorSelectors {
+  /** 文章列表容器（每项 = 一篇文章） */
+  item: string
+  /** 相对于 item 的选择器 */
+  title: string
+  link: string
+  content: string
+  summary: string
+  author: string
+  date: string
 }
 
 export interface Article {
@@ -65,6 +150,8 @@ export interface Article {
   publishedAt: number
   read: boolean
   starred: boolean
+  /** rss = RSS 订阅，collector = 通用采集 */
+  type?: 'rss' | 'collector'
 }
 
 const DEFAULT_SOURCES: RSSSource[] = [
@@ -85,15 +172,29 @@ export const useReadingStore = defineStore('reading', () => {
   /** 每个源上次自动刷新的时间戳 */
   const lastFetchMap = ref<Record<string, number>>({})
 
+  // ── 采集器数据 ───────────────────────────────────────
+  const collectors = ref<CollectorSource[]>(loadFromStorage<CollectorSource[]>(STORAGE_COLLECTORS, []))
+  const collectorLoading = ref(false)
+  const collectorError = ref('')
+
   function triggerSync() {
     window.dispatchEvent(new CustomEvent('md:data-changed', { detail: { scope: 'reading' } }))
   }
 
   // ── 计算属性 ─────────────────────────────────────────
   const categories = computed(() => {
-    const cats = new Set(sources.value.map(s => s.category).filter(Boolean))
+    const cats = new Set([
+      ...sources.value.map(s => s.category),
+      ...collectors.value.map(s => s.category),
+    ].filter(Boolean))
     return Array.from(cats).sort()
   })
+
+  /** 合并 RSS + 采集器源列表，供侧栏显示 */
+  const allSources = computed(() => [
+    ...sources.value.map(s => ({ ...s, sourceType: 'rss' as const })),
+    ...collectors.value.map(s => ({ ...s, sourceType: 'collector' as const })),
+  ])
 
   const filteredArticles = computed(() => {
     let result = articles.value
@@ -136,37 +237,106 @@ export const useReadingStore = defineStore('reading', () => {
     saveArticles()
   }
 
+  // ── 采集器操作 ───────────────────────────────────────
+  function addCollector(url: string, title: string, category: string, selectors: CollectorSelectors, description: string, refreshInterval = 60) {
+    const id = `col-${Date.now()}`
+    collectors.value.push({ id, url, title, category, addedAt: Date.now(), refreshInterval, selectors, description })
+    saveCollectors()
+  }
+
+  function removeCollector(id: string) {
+    collectors.value = collectors.value.filter(s => s.id !== id)
+    articles.value = articles.value.filter(a => a.sourceId !== id)
+    saveCollectors()
+    saveArticles()
+  }
+
+  function updateCollectorInterval(id: string, minutes: number) {
+    const src = collectors.value.find(s => s.id === id)
+    if (src) {
+      src.refreshInterval = minutes
+      saveCollectors()
+    }
+  }
+
+  async function fetchCollector(src: CollectorSource) {
+    try {
+      const html = await fetchHTML(src.url)
+      const newArticles = parseHTMLWithSelectors(html, src.selectors, src.id, src.title, src.url)
+      const existingIds = new Set(articles.value.map(a => a.id))
+      const toAdd = newArticles.filter(a => !existingIds.has(a.id))
+      if (toAdd.length) {
+        articles.value = [...toAdd, ...articles.value].slice(0, 500)
+        saveArticles()
+      }
+      lastFetchMap.value[src.id] = Date.now()
+    }
+    catch (e) {
+      console.warn(`[ReadingStore] Collector fetch failed for ${src.url}:`, e)
+    }
+  }
+
+  /** 预览采集结果（不保存） */
+  async function previewCollector(url: string, selectors: CollectorSelectors): Promise<Article[]> {
+    const html = await fetchHTML(url)
+    return parseHTMLWithSelectors(html, selectors, 'preview', '', url)
+  }
+
+  /** 获取网页 HTML（供 AI 分析用） */
+  async function fetchPageHTML(url: string): Promise<string> {
+    return fetchHTML(url)
+  }
+
   async function fetchAll() {
     loading.value = true
     error.value = ''
     try {
-      const results = await Promise.allSettled(
-        sources.value.map(async (src) => {
-          try {
-            const feed = await fetchFeed(src.url)
-            const srcTitle = feed.title || src.title
-            return feed.items.map(item => ({
-              id: `art-${src.id}-${item.guid || item.link || Date.now()}`,
-              sourceId: src.id,
-              sourceTitle: srcTitle,
-              title: item.title || '无标题',
-              link: item.link || '',
-              content: item.content || item.contentSnippet || '',
-              summary: item.contentSnippet?.slice(0, 200) || item.content?.replace(/<[^>]*>/g, '').slice(0, 200) || '',
-              author: item.creator || item.author || '',
-              publishedAt: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
-              read: false,
-              starred: false,
-            } as Article))
-          }
-          catch (e) {
-            console.warn(`[ReadingStore] Failed to fetch ${src.url}:`, e)
-            return []
-          }
-        }),
-      )
+      // 并行获取 RSS + 采集器
+      const [rssResults, collectorResults] = await Promise.all([
+        Promise.allSettled(
+          sources.value.map(async (src) => {
+            try {
+              const feed = await fetchFeed(src.url)
+              const srcTitle = feed.title || src.title
+              return feed.items.map(item => ({
+                id: `art-${src.id}-${item.guid || item.link || Date.now()}`,
+                sourceId: src.id,
+                sourceTitle: srcTitle,
+                title: item.title || '无标题',
+                link: item.link || '',
+                content: item.content || item.contentSnippet || '',
+                summary: item.contentSnippet?.slice(0, 200) || item.content?.replace(/<[^>]*>/g, '').slice(0, 200) || '',
+                author: item.creator || item.author || '',
+                publishedAt: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
+                read: false,
+                starred: false,
+                type: 'rss' as const,
+              } as Article))
+            }
+            catch (e) {
+              console.warn(`[ReadingStore] Failed to fetch ${src.url}:`, e)
+              return []
+            }
+          }),
+        ),
+        Promise.allSettled(
+          collectors.value.map(async (src) => {
+            try {
+              const html = await fetchHTML(src.url)
+              return parseHTMLWithSelectors(html, src.selectors, src.id, src.title, src.url)
+            }
+            catch (e) {
+              console.warn(`[ReadingStore] Failed to collect ${src.url}:`, e)
+              return []
+            }
+          }),
+        ),
+      ])
       // 合并新文章，去重
-      const newArticles = results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
+      const newArticles = [
+        ...rssResults.flatMap(r => r.status === 'fulfilled' ? r.value : []),
+        ...collectorResults.flatMap(r => r.status === 'fulfilled' ? r.value : []),
+      ]
       const existingIds = new Set(articles.value.map(a => a.id))
       const toAdd = newArticles.filter(a => !existingIds.has(a.id))
       articles.value = [...toAdd, ...articles.value].slice(0, 500) // 最多 500 篇
@@ -277,6 +447,13 @@ export const useReadingStore = defineStore('reading', () => {
         if (now - lastFetch >= src.refreshInterval * 60 * 1000)
           void fetchSource(src)
       }
+      for (const src of collectors.value) {
+        if (src.refreshInterval <= 0)
+          continue
+        const lastFetch = lastFetchMap.value[src.id] || 0
+        if (now - lastFetch >= src.refreshInterval * 60 * 1000)
+          void fetchCollector(src)
+      }
     }, 60_000)
   }
 
@@ -288,11 +465,14 @@ export const useReadingStore = defineStore('reading', () => {
   }
 
   /** 是否有任何源开启了自动刷新 */
-  const hasAutoRefresh = computed(() => sources.value.some(s => s.refreshInterval > 0))
+  const hasAutoRefresh = computed(() =>
+    sources.value.some(s => s.refreshInterval > 0) || collectors.value.some(s => s.refreshInterval > 0),
+  )
 
   function reloadFromStorage() {
     sources.value = loadFromStorage<RSSSource[]>(STORAGE_SOURCES, DEFAULT_SOURCES)
     articles.value = loadFromStorage<Article[]>(STORAGE_ARTICLES, [])
+    collectors.value = loadFromStorage<CollectorSource[]>(STORAGE_COLLECTORS, [])
   }
 
   function resetToDefaults() {
@@ -312,6 +492,11 @@ export const useReadingStore = defineStore('reading', () => {
     triggerSync()
   }
 
+  function saveCollectors() {
+    localStorage.setItem(STORAGE_COLLECTORS, JSON.stringify(collectors.value))
+    triggerSync()
+  }
+
   return {
     sources,
     articles,
@@ -324,6 +509,18 @@ export const useReadingStore = defineStore('reading', () => {
     filteredArticles,
     activeArticle,
     hasAutoRefresh,
+    // 采集器
+    collectors,
+    collectorLoading,
+    collectorError,
+    allSources,
+    addCollector,
+    removeCollector,
+    updateCollectorInterval,
+    fetchCollector,
+    previewCollector,
+    fetchPageHTML,
+    // RSS
     addSource,
     updateSourceInterval,
     removeSource,

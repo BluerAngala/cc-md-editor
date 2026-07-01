@@ -108,7 +108,7 @@ export async function hydrateSyncedSettings(appliedKeys: string[]): Promise<void
   if (keys.has(`quick_commands`))
     await quickCommandsStore.reloadFromStorage()
 
-  if (keys.has(`reading_sources`) || keys.has(`reading_articles`))
+  if (keys.has(`reading_sources`) || keys.has(`reading_articles`) || keys.has(`reading_collectors`))
     useReadingStore().reloadFromStorage()
 
   if (keys.has(`idea-board-notes`))

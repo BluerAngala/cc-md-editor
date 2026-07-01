@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useReadingStore } from '@/stores/reading'
 import ArticleReader from './ArticleReader.vue'
+import CollectorConfigDialog from './CollectorConfigDialog.vue'
 import SourceConfigDialog from './SourceConfigDialog.vue'
 
 const store = useReadingStore()
 
 const showSourceConfig = ref(false)
+const showCollectorConfig = ref(false)
 const showStarredOnly = ref(false)
 const selectedIds = ref<Set<string>>(new Set())
 const isSelecting = computed(() => selectedIds.value.size > 0)
@@ -106,6 +108,10 @@ onUnmounted(() => {
         订阅管理
       </Button>
 
+      <Button variant="outline" size="sm" @click="showCollectorConfig = true">
+        采集管理
+      </Button>
+
       <SyncButton />
     </header>
 
@@ -137,13 +143,14 @@ onUnmounted(() => {
               {{ cat }}
             </div>
             <button
-              v-for="src in store.sources.filter(s => s.category === cat)"
+              v-for="src in store.allSources.filter(s => s.category === cat)"
               :key="src.id"
               class="w-full px-4 py-2 text-left text-sm transition-colors"
               :class="store.activeSourceId === src.id ? 'bg-muted font-medium' : 'hover:bg-muted/50'"
               @click="store.activeSourceId = src.id; showStarredOnly = false"
             >
-              {{ src.title }}
+              <span>{{ src.title }}</span>
+              <span v-if="src.sourceType === 'collector'" class="ml-1 text-[9px] text-muted-foreground/50">采集</span>
             </button>
           </div>
         </div>
@@ -249,5 +256,8 @@ onUnmounted(() => {
 
     <!-- 订阅管理对话框 -->
     <SourceConfigDialog v-if="showSourceConfig" @close="showSourceConfig = false" />
+
+    <!-- 采集管理对话框 -->
+    <CollectorConfigDialog v-if="showCollectorConfig" @close="showCollectorConfig = false" />
   </div>
 </template>

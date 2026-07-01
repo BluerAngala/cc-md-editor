@@ -46,7 +46,7 @@ onMounted(() => {
               资讯阅读
             </h2>
             <p class="mt-1 text-sm text-muted-foreground">
-              RSS 订阅、阅读、记录想法
+              RSS 订阅、记录想法
             </p>
           </div>
         </button>

@@ -10,7 +10,7 @@ const open = ref(false)
 
 const views = [
   { id: 'landing' as const, label: '首页', icon: Home, color: '' },
-  { id: 'reading' as const, label: '资讯阅读', icon: Newspaper, color: 'text-blue-500' },
+  { id: 'reading' as const, label: '资讯', icon: Newspaper, color: 'text-blue-500' },
   { id: 'ideaBoard' as const, label: '想法库', icon: Lightbulb, color: 'text-amber-500' },
   { id: 'editor' as const, label: '编辑器', icon: FileText, color: '' },
 ]
