@@ -303,7 +303,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
   if (style === `blue`) {
     return `<section style="background: #1a3a6b; border-radius: 10px; padding: 24px 20px; margin: 20px 0; color: #fff;">
   <section style="display: table; width: 100%; margin-bottom: 16px;">
-    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: ${avatarW + 8}px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR}; border: 2px solid rgba(255,255,255,0.4);" /></section>` : ``}
+    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: ${avatarW + 8}px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; border-radius: ${avatarR}; border: 2px solid rgba(255,255,255,0.4);" /></section>` : ``}
     <section style="display: table-cell; vertical-align: middle; padding-left: ${avatar ? '16' : '0'}px;">
       <p style="margin: 0 0 4px; font-size: 20px; font-weight: bold; color: #fff;">${esc(name)}</p>
       ${title ? `<p style="margin: 0; font-size: 13px; color: #8ec5fc;">${esc(title)}</p>` : ``}
@@ -316,7 +316,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
   if (style === `card`) {
     return `<section style="border: 1px solid #e8e8e8; border-radius: 10px; margin: 20px 0; overflow: hidden; background: #fff;">
   <section style="display: table; width: 100%; padding: 20px; border-bottom: 1px solid #f0f0f0;">
-    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: ${avatarW + 8}px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR};" /></section>` : ``}
+    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: ${avatarW + 8}px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; border-radius: ${avatarR};" /></section>` : ``}
     <section style="display: table-cell; vertical-align: middle; padding-left: ${avatar ? '16' : '0'}px;">
       <p style="margin: 0 0 4px; font-size: 11px; color: #999; letter-spacing: 1px;">ABOUT THE AUTHOR</p>
       <p style="margin: 0; font-size: 18px; font-weight: bold; color: #333;">${esc(name)}</p>
@@ -332,7 +332,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
   if (style === `badge`) {
     return `<section style="margin: 20px 0; border-left: 3px solid #2a6cb6; padding: 0 0 0 16px;">
   <section style="display: table; width: 100%; margin-bottom: 12px;">
-    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: ${avatarW + 8}px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; border-radius: ${avatarR};" /></section>` : ``}
+    ${avatar ? `<section style="display: table-cell; vertical-align: middle; width: ${avatarW + 8}px;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; border-radius: ${avatarR};" /></section>` : ``}
     <section style="display: table-cell; vertical-align: middle; padding-left: ${avatar ? '12' : '0'}px;">
       <p style="margin: 0 0 2px; font-size: 18px; font-weight: bold; color: #333;">${esc(name)}</p>
       ${title ? `<p style="margin: 0; font-size: 13px; color: #2a6cb6;">${esc(title)}</p>` : ``}
@@ -345,8 +345,13 @@ function renderAboutAuthor(props: Record<string, string>): string {
   if (style === `lawyer`) {
     const lawyerBg = bg || `#f9f6f0`
     const lawyerAccent = accent || `#d4a76a`
+    // 头像容器用 text-align: center + overflow: hidden 实现居中和裁切
+    // img 用 inline 属性，不用 display:block/margin:auto/object-fit（公众号不支持）
+    const avatarContainer = avatar
+      ? `<section style="text-align: center; padding: 24px 20px 16px; background: ${lawyerBg};"><section style="display: inline-block; width: ${avatarW}px; height: ${avatarH}px; border-radius: ${avatarR}; overflow: hidden;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarH}px; border-radius: ${avatarR};" /></section></section>`
+      : ``
     return `<section style="margin: 20px 0; border: 1px solid ${lawyerAccent}; border-radius: 6px; overflow: hidden; background: #fff;">
-  ${avatar ? `<section style="text-align: center; padding: 24px 20px 16px; background: ${lawyerBg};"><img src="${esc(avatar)}" alt="${esc(name)}" style="display: block; margin: 0 auto; width: ${avatarW}px; height: ${avatarH}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
+  ${avatarContainer}
   <section style="padding: 16px 24px 24px; text-align: center;">
     <p style="margin: 0 0 6px; font-size: 22px; font-weight: bold; color: #1a1a2e; letter-spacing: 2px;">${esc(name)}</p>
     ${title ? `<p style="margin: 0 0 4px; font-size: 13px; color: ${lawyerAccent}; letter-spacing: 1px;">${esc(title)}</p>` : ``}
@@ -360,7 +365,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
     const execBg = bg || `#667eea`
     const execAccent = accent || `#764ba2`
     return `<section style="margin: 20px 0; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
-  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, ${execBg} 0%, ${execAccent} 100%);"><img src="${esc(avatar)}" alt="${esc(name)}" style="display: block; margin: 0 auto; width: ${avatarW}px; height: ${avatarW}px; object-fit: cover; object-position: center top; border-radius: ${avatarR};" /></section>` : ``}
+  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, ${execBg} 0%, ${execAccent} 100%);"><section style="display: inline-block; width: ${avatarW}px; height: ${avatarW}px; border-radius: ${avatarR}; overflow: hidden;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; border-radius: ${avatarR};" /></section></section>` : ``}
   <section style="padding: 20px 24px 24px; text-align: center;">
     <p style="margin: 0 0 4px; font-size: 11px; color: #999; letter-spacing: 3px; text-transform: uppercase;">FOUNDER</p>
     <p style="margin: 0 0 8px; font-size: 22px; font-weight: bold; color: #333;">${esc(name)}</p>
