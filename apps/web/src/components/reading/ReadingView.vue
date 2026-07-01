@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { RefreshCcw, Search, Star } from '@lucide/vue'
-import { computed, ref } from 'vue'
+import { RefreshCcw, Search, Star, Timer, Trash2 } from '@lucide/vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +35,19 @@ function formatDate(ts: number) {
   }
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
+
+function confirmDelete(e: MouseEvent, articleId: string) {
+  e.stopPropagation()
+  store.deleteArticle(articleId)
+}
+
+onMounted(() => {
+  store.startAutoRefresh()
+})
+
+onUnmounted(() => {
+  store.stopAutoRefresh()
+})
 </script>
 
 <template>
@@ -57,6 +70,16 @@ function formatDate(ts: number) {
       <Button variant="outline" size="sm" class="gap-1" @click="store.fetchAll()">
         <RefreshCcw class="h-3.5 w-3.5" :class="{ 'animate-spin': store.loading }" />
         刷新
+      </Button>
+
+      <Button
+        variant="outline"
+        size="sm"
+        :class="store.autoRefreshEnabled ? 'bg-primary/10 text-primary border-primary/30' : ''"
+        @click="store.toggleAutoRefresh()"
+      >
+        <Timer class="h-3.5 w-3.5" />
+        {{ store.autoRefreshEnabled ? '自动刷新' : '手动刷新' }}
       </Button>
 
       <Button variant="outline" size="sm" @click="showSourceConfig = true">
@@ -134,15 +157,22 @@ function formatDate(ts: number) {
                   {{ article.sourceTitle }} · {{ formatDate(article.publishedAt) }}
                 </p>
               </div>
-              <button
-                class="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                @click.stop="store.toggleStar(article.id)"
-              >
-                <Star
-                  class="h-3.5 w-3.5"
-                  :class="article.starred ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground'"
-                />
-              </button>
+              <div class="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  @click.stop="store.toggleStar(article.id)"
+                >
+                  <Star
+                    class="h-3.5 w-3.5"
+                    :class="article.starred ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground'"
+                  />
+                </button>
+                <button
+                  class="text-muted-foreground hover:text-destructive"
+                  @click="confirmDelete($event, article.id)"
+                >
+                  <Trash2 class="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           </div>
           <div v-if="!displayArticles.length" class="flex h-full items-center justify-center text-xs text-muted-foreground/50">

@@ -79,6 +79,9 @@ export const useReadingStore = defineStore('reading', () => {
   const activeSourceId = ref<string | null>(null)
   const activeArticleId = ref<string | null>(null)
   const searchQuery = ref('')
+  const autoRefreshEnabled = ref(loadFromStorage<boolean>('reading_auto_refresh', true))
+  let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
+  const AUTO_REFRESH_MS = 15 * 60 * 1000 // 15 分钟
 
   // ── 计算属性 ─────────────────────────────────────────
   const categories = computed(() => {
@@ -185,6 +188,40 @@ export const useReadingStore = defineStore('reading', () => {
       markRead(id)
   }
 
+  function deleteArticle(id: string) {
+    articles.value = articles.value.filter(a => a.id !== id)
+    if (activeArticleId.value === id)
+      activeArticleId.value = null
+    saveArticles()
+  }
+
+  // ── 自动刷新 ────────────────────────────────────────
+  function startAutoRefresh() {
+    stopAutoRefresh()
+    if (!autoRefreshEnabled.value)
+      return
+    autoRefreshTimer = setInterval(() => {
+      if (!loading.value)
+        void fetchAll()
+    }, AUTO_REFRESH_MS)
+  }
+
+  function stopAutoRefresh() {
+    if (autoRefreshTimer) {
+      clearInterval(autoRefreshTimer)
+      autoRefreshTimer = null
+    }
+  }
+
+  function toggleAutoRefresh() {
+    autoRefreshEnabled.value = !autoRefreshEnabled.value
+    localStorage.setItem('reading_auto_refresh', JSON.stringify(autoRefreshEnabled.value))
+    if (autoRefreshEnabled.value)
+      startAutoRefresh()
+    else
+      stopAutoRefresh()
+  }
+
   // ── 持久化 ───────────────────────────────────────────
   function saveSources() {
     localStorage.setItem(STORAGE_SOURCES, JSON.stringify(sources.value))
@@ -202,6 +239,7 @@ export const useReadingStore = defineStore('reading', () => {
     activeSourceId,
     activeArticleId,
     searchQuery,
+    autoRefreshEnabled,
     categories,
     filteredArticles,
     activeArticle,
@@ -211,6 +249,10 @@ export const useReadingStore = defineStore('reading', () => {
     markRead,
     toggleStar,
     setActiveArticle,
+    deleteArticle,
+    startAutoRefresh,
+    stopAutoRefresh,
+    toggleAutoRefresh,
   }
 })
 
