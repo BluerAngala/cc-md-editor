@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import { AlertCircle, Cloud, CloudCheck, CloudOff, ExternalLink, Loader2, LogIn, RefreshCw } from '@lucide/vue'
+import { AlertCircle, Cloud, CloudCheck, CloudOff, ExternalLink, Loader2, LogIn, RefreshCw, Upload } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import CloudFeatureState from '@/components/editor/editor-header/cloud/CloudFeatureState.vue'
@@ -197,6 +197,21 @@ async function handleSync() {
       toast.success(t(`sync.syncSuccess`))
   }
 }
+
+async function forcePush() {
+  const scope = uiStore.currentView === 'reading'
+    ? 'reading'
+    : uiStore.currentView === 'ideaBoard'
+      ? 'ideaBoard'
+      : uiStore.currentView === 'editor'
+        ? 'editor'
+        : 'all'
+  await githubStore.forcePushLocal(scope)
+  if (githubStore.status === 'error')
+    toast.error(githubStore.lastError)
+  else
+    toast.success('已用本地数据覆盖远端')
+}
 </script>
 
 <template>
@@ -360,7 +375,7 @@ async function handleSync() {
         </Alert>
 
         <!-- 操作按钮 -->
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           <Button
             class="h-9 flex-1 gap-2"
             :disabled="isSyncing"
@@ -391,6 +406,17 @@ async function handleSync() {
             </Button>
           </template>
         </div>
+
+        <Button
+          v-if="syncMethod === 'github'"
+          variant="outline"
+          class="h-8 w-full gap-2 text-xs text-destructive hover:text-destructive"
+          :disabled="isSyncing"
+          @click="forcePush"
+        >
+          <Upload class="size-3.5" />
+          修复乱码（强制用本地数据覆盖远端）
+        </Button>
       </template>
     </div>
   </PanelDialog>

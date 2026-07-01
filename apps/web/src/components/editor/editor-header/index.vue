@@ -2,6 +2,7 @@
 import { Copy, FolderKanban, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
 import { defineAsyncComponent } from 'vue'
 
+import SyncButton from '@/components/shared/SyncButton.vue'
 import ViewNav from '@/components/shared/ViewNav.vue'
 import { useEditorRefresh } from '@/composables/useEditorRefresh'
 import { generatePureHTML, processClipboardContent } from '@/services/export'
@@ -323,6 +324,8 @@ function copyToWeChat() {
         <Palette class="mr-2 h-4 w-4" />
         <span>{{ t('header.style') }}</span>
       </Button>
+
+      <SyncButton />
     </div>
   </header>
 

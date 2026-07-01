@@ -15,6 +15,13 @@ const PATH_POSTS = 'editor/posts'
 const PATH_SNAPSHOT = 'snapshot.json'
 const PATH_META = 'sync-meta.json'
 
+export type SyncScope = 'all' | 'editor' | 'reading' | 'ideaBoard'
+
+export interface ScopeSyncState {
+  lastSyncAt: number
+  syncedHash: string
+}
+
 // snapshot.json 包含的 localStorage keys
 const SNAPSHOT_KEYS = [
   'reading_sources',
@@ -105,7 +112,16 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
   const snapshotHash = store.reactive(SNAPSHOT_HASH_KEY, '')
   const status = ref<GitHubSyncStatus>('idle')
   const lastError = ref('')
+  const lastSyncScope = ref<SyncScope>('all')
   const storedRepoName = store.reactive(REPO_NAME_KEY, '')
+
+  // 每个 scope 的同步状态
+  const scopeStates = ref<Record<SyncScope, ScopeSyncState>>({
+    all: { lastSyncAt: 0, syncedHash: '' },
+    editor: { lastSyncAt: 0, syncedHash: '' },
+    reading: { lastSyncAt: 0, syncedHash: '' },
+    ideaBoard: { lastSyncAt: 0, syncedHash: '' },
+  })
 
   watch(token, async (t) => {
     if (!t || storedRepoName.value)
@@ -132,10 +148,10 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
 
   const MIN_SYNC_INTERVAL_MS = 10_000
 
-  async function sync(scope: 'all' | 'editor' | 'reading' | 'ideaBoard' = 'all'): Promise<void> {
+  async function sync(scope: SyncScope = 'all', forcePush = false): Promise<void> {
     if (!client.value || status.value === 'syncing')
       return
-    if (lastSyncAt.value > 0 && Date.now() - lastSyncAt.value < MIN_SYNC_INTERVAL_MS)
+    if (!forcePush && lastSyncAt.value > 0 && Date.now() - lastSyncAt.value < MIN_SYNC_INTERVAL_MS)
       return
 
     status.value = 'syncing'
@@ -145,25 +161,31 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
       storedRepoName.value = await client.value.ensureRepo()
       const repo = storedRepoName.value
 
-      // ── 1. 同步 snapshot.json（按 scope 决定同步哪些 key） ──
+      // ── 1. 同步 snapshot.json ──
       const localSnap = collectSnapshot(scope)
       const localHash = hashSnapshot(localSnap)
 
       const remoteMeta = await client.value.readFile(repo, PATH_META)
       const remoteSnapFile = await client.value.readFile(repo, PATH_SNAPSHOT)
 
-      if (remoteSnapFile && remoteMeta) {
+      if (forcePush || !remoteSnapFile || !remoteMeta) {
+        // 强制推送或首次同步 → 推送本地数据
+        await pushSnapshot(repo, localSnap, localHash, remoteSnapFile?.sha, remoteMeta?.sha)
+      }
+      else {
         const meta: SyncMeta = JSON.parse(remoteMeta.content)
         const remoteHash = meta.snapshotHash || ''
 
         if (remoteHash !== localHash) {
           const localUpdatedAt = findMaxUpdateTime()
-          if (meta.lastSyncAt > localUpdatedAt && remoteHash !== localHash) {
+          if (meta.lastSyncAt > localUpdatedAt) {
+            // 远端更新 → 用远端覆盖本地
             const remoteSnap = JSON.parse(remoteSnapFile.content)
             applySnapshot(remoteSnap, scope)
             snapshotHash.value = remoteHash
           }
           else {
+            // 本地更新 → 推送到远端
             await pushSnapshot(repo, localSnap, localHash, remoteSnapFile.sha, remoteMeta.sha)
           }
         }
@@ -171,16 +193,15 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
           snapshotHash.value = localHash
         }
       }
-      else {
-        await pushSnapshot(repo, localSnap, localHash)
-      }
 
-      // ── 2. 同步编辑器文章（仅 editor/all scope） ──
+      // ── 2. 同步编辑器文章 ──
       if (scope === 'all' || scope === 'editor')
-        await syncPosts(repo)
+        await syncPosts(repo, forcePush)
 
       // ── 3. 完成 ──
       lastSyncAt.value = Date.now()
+      lastSyncScope.value = scope
+      scopeStates.value[scope] = { lastSyncAt: Date.now(), syncedHash: localHash }
       await postStore.persistImmediately()
       status.value = 'idle'
     }
@@ -204,40 +225,43 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     snapshotHash.value = hash
   }
 
-  async function syncPosts(repo: string) {
+  async function syncPosts(repo: string, forcePush = false) {
     const c = client.value!
     const remoteFiles = await c.listFiles(repo, PATH_POSTS)
 
-    // 拉取远端文章（本地没有或远端更新的）
-    for (const f of remoteFiles) {
-      if (!f.name.endsWith('.md'))
-        continue
-      const docId = f.name.replace(/\.md$/, '')
-      const existing = postStore.getPostById(docId)
-
-      if (!existing) {
-        const fileData = await c.readFile(repo, f.path)
-        if (!fileData)
+    // 拉取远端文章（本地没有的）
+    if (!forcePush) {
+      for (const f of remoteFiles) {
+        if (!f.name.endsWith('.md'))
           continue
-        const title = extractTitle(fileData.content) || docId.slice(0, 8)
-        postStore.posts.push({
-          id: docId,
-          title,
-          content: fileData.content,
-          history: [{ datetime: formatLocalDateTime(), content: fileData.content }],
-          createDatetime: new Date(),
-          updateDatetime: new Date(),
-        })
+        const docId = f.name.replace(/\.md$/, '')
+        const existing = postStore.getPostById(docId)
+
+        if (!existing) {
+          const fileData = await c.readFile(repo, f.path)
+          if (!fileData)
+            continue
+          const title = extractTitle(fileData.content) || docId.slice(0, 8)
+          postStore.posts.push({
+            id: docId,
+            title,
+            content: fileData.content,
+            history: [{ datetime: formatLocalDateTime(), content: fileData.content }],
+            createDatetime: new Date(),
+            updateDatetime: new Date(),
+          })
+        }
       }
     }
 
-    // 推送本地文章
+    // 推送本地文章（forcePush 时覆盖远端所有文件）
     const remoteIds = new Set(remoteFiles.map(f => f.name.replace(/\.md$/, '')))
     for (const post of postStore.posts) {
-      if (remoteIds.has(post.id))
-        continue // 已存在，暂不处理冲突（简单策略：本地编辑不覆盖远端）
+      if (!forcePush && remoteIds.has(post.id))
+        continue
       const fileName = `${PATH_POSTS}/${post.id}.md`
-      await c.writeFile(repo, fileName, post.content, `create: ${post.title}`)
+      const existingRemote = remoteFiles.find(f => f.name === `${post.id}.md`)
+      await c.writeFile(repo, fileName, post.content, `${forcePush ? 'force push' : 'create'}: ${post.title}`, existingRemote?.sha)
     }
   }
 
@@ -300,21 +324,40 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     })
   }
 
+  // 当前 scope 的同步状态
+  function getScopeState(scope: SyncScope): ScopeSyncState {
+    return scopeStates.value[scope]
+  }
+
+  function isScopeSynced(scope: SyncScope): boolean {
+    const state = scopeStates.value[scope]
+    return state.lastSyncAt > 0 && Date.now() - state.lastSyncAt < 60_000
+  }
+
   watch(isConfigured, (ok) => {
     if (ok)
       startAutoSyncWatcher()
   }, { immediate: true })
+
+  function forcePushLocal(scope: SyncScope = 'all') {
+    return sync(scope, true)
+  }
 
   return {
     token,
     lastSyncAt,
     status,
     lastError,
+    lastSyncScope,
+    scopeStates,
     repoFullName: storedRepoName,
     isConfigured,
     setToken,
     clearToken,
     sync,
+    forcePushLocal,
     scheduleAutoSync,
+    getScopeState,
+    isScopeSynced,
   }
 })
