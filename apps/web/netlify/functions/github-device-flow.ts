@@ -1,4 +1,3 @@
-/* eslint-disable node/prefer-global/process */
 /**
  * Netlify Function: GitHub Device Flow 代理
  * 浏览器不能直接调 GitHub 的 Device Flow 端点（CORS 限制），
@@ -7,7 +6,7 @@
 
 import type { Context } from '@netlify/functions'
 
-const GITHUB_CLIENT_ID = process.env.VITE_GITHUB_CLIENT_ID || ''
+const GITHUB_CLIENT_ID = Deno.env.get('VITE_GITHUB_CLIENT_ID') || ''
 
 export default async (req: Request, _context: Context) => {
   if (!GITHUB_CLIENT_ID) {
