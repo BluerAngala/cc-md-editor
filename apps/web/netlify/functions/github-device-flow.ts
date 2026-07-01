@@ -4,17 +4,27 @@ export default async (req: Request, _context: Context) => {
   const url = new URL(req.url)
   const action = url.searchParams.get('action')
 
-  // 读取环境变量
+  // 读取环境变量 - 先检查 Deno 对象是否存在
   let clientId = ''
   try {
-    clientId = Deno.env.get('VITE_GITHUB_CLIENT_ID') || ''
+    if (typeof Deno !== 'undefined' && Deno.env) {
+      clientId = Deno.env.get('VITE_GITHUB_CLIENT_ID') || ''
+    }
   }
   catch {
-    return Response.json({ error: 'Cannot read env vars' }, { status: 500 })
+    // ignore
+  }
+
+  // 备用：从 Netlify context 读取
+  if (!clientId && _context?.env) {
+    clientId = (_context.env as Record<string, string>).VITE_GITHUB_CLIENT_ID || ''
   }
 
   if (!clientId) {
-    return Response.json({ error: 'VITE_GITHUB_CLIENT_ID not set in Netlify env vars' }, { status: 500 })
+    return Response.json({
+      error: 'VITE_GITHUB_CLIENT_ID not set. Set it in Netlify Site settings → Environment variables.',
+      denoAvailable: typeof Deno !== 'undefined',
+    }, { status: 500 })
   }
 
   try {
