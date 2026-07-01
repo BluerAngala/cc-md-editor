@@ -345,10 +345,8 @@ function renderAboutAuthor(props: Record<string, string>): string {
   if (style === `lawyer`) {
     const lawyerBg = bg || `#f9f6f0`
     const lawyerAccent = accent || `#d4a76a`
-    // 头像容器用 text-align: center + overflow: hidden 实现居中和裁切
-    // img 用 inline 属性，不用 display:block/margin:auto/object-fit（公众号不支持）
     const avatarContainer = avatar
-      ? `<section style="text-align: center; padding: 24px 20px 16px; background: ${lawyerBg};"><section style="display: inline-block; width: ${avatarW}px; height: ${avatarH}px; border-radius: ${avatarR}; overflow: hidden;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarH}px; border-radius: ${avatarR};" /></section></section>`
+      ? `<section style="text-align: center; padding: 24px 20px 16px; background: ${lawyerBg};"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarH}px; border-radius: ${avatarR};" /></section>`
       : ``
     return `<section style="margin: 20px 0; border: 1px solid ${lawyerAccent}; border-radius: 6px; overflow: hidden; background: #fff;">
   ${avatarContainer}
@@ -365,7 +363,7 @@ function renderAboutAuthor(props: Record<string, string>): string {
     const execBg = bg || `#667eea`
     const execAccent = accent || `#764ba2`
     return `<section style="margin: 20px 0; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
-  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, ${execBg} 0%, ${execAccent} 100%);"><section style="display: inline-block; width: ${avatarW}px; height: ${avatarW}px; border-radius: ${avatarR}; overflow: hidden;"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; border-radius: ${avatarR};" /></section></section>` : ``}
+  ${avatar ? `<section style="text-align: center; padding: 28px 20px 16px; background: linear-gradient(135deg, ${execBg} 0%, ${execAccent} 100%);"><img src="${esc(avatar)}" alt="${esc(name)}" style="width: ${avatarW}px; height: ${avatarW}px; border-radius: ${avatarR};" /></section>` : ``}
   <section style="padding: 20px 24px 24px; text-align: center;">
     <p style="margin: 0 0 4px; font-size: 11px; color: #999; letter-spacing: 3px; text-transform: uppercase;">FOUNDER</p>
     <p style="margin: 0 0 8px; font-size: 22px; font-weight: bold; color: #333;">${esc(name)}</p>
