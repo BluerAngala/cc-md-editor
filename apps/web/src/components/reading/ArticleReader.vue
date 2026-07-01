@@ -16,6 +16,7 @@ const quoteText = ref('')
 const ideaText = ref('')
 const ideaSaved = ref(false)
 const editingId = ref<string | null>(null)
+const showHistory = ref(false)
 
 const SCENE_STORAGE_KEY = 'idea-board-scenes'
 
@@ -309,47 +310,53 @@ onMounted(() => loadHistory())
 
           <!-- 历史记录 -->
           <div class="border-t">
-            <div class="px-4 py-2.5 flex items-center gap-1.5">
+            <button
+              class="w-full px-4 py-2.5 flex items-center gap-1.5 hover:bg-muted/50 transition-colors"
+              @click="showHistory = !showHistory"
+            >
               <History class="h-3.5 w-3.5 text-muted-foreground" />
               <span class="text-xs font-medium text-muted-foreground">历史记录</span>
               <span class="text-[10px] text-muted-foreground/60">({{ history.length }})</span>
-            </div>
-            <div v-if="!history.length" class="px-4 pb-4 text-xs text-muted-foreground/50">
-              暂无记录
-            </div>
-            <div
-              v-for="item in history"
-              :key="item.id"
-              class="group px-4 py-2.5 border-t hover:bg-muted/50 transition-colors"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <p class="text-xs font-medium truncate flex-1">
-                  {{ item.title }}
+              <span class="ml-auto text-[10px] text-muted-foreground">{{ showHistory ? '收起' : '展开' }}</span>
+            </button>
+            <template v-if="showHistory">
+              <div v-if="!history.length" class="px-4 pb-4 text-xs text-muted-foreground/50">
+                暂无记录
+              </div>
+              <div
+                v-for="item in history"
+                :key="item.id"
+                class="group px-4 py-2.5 border-t hover:bg-muted/50 transition-colors"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-xs font-medium truncate flex-1">
+                    {{ item.title }}
+                  </p>
+                  <span class="text-[10px] text-muted-foreground shrink-0">
+                    {{ formatDate(item.createdAt) }}
+                  </span>
+                </div>
+                <p class="mt-1 text-[10px] text-muted-foreground whitespace-pre-wrap line-clamp-3">
+                  {{ item.desc }}
                 </p>
-                <span class="text-[10px] text-muted-foreground shrink-0">
-                  {{ formatDate(item.createdAt) }}
-                </span>
+                <div class="mt-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    class="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
+                    @click="startEdit(item)"
+                  >
+                    <Pencil class="h-2.5 w-2.5" />
+                    编辑
+                  </button>
+                  <button
+                    class="text-[10px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-0.5"
+                    @click="deleteHistory(item.id)"
+                  >
+                    <Trash2 class="h-2.5 w-2.5" />
+                    删除
+                  </button>
+                </div>
               </div>
-              <p class="mt-1 text-[10px] text-muted-foreground whitespace-pre-wrap line-clamp-3">
-                {{ item.desc }}
-              </p>
-              <div class="mt-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  class="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
-                  @click="startEdit(item)"
-                >
-                  <Pencil class="h-2.5 w-2.5" />
-                  编辑
-                </button>
-                <button
-                  class="text-[10px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-0.5"
-                  @click="deleteHistory(item.id)"
-                >
-                  <Trash2 class="h-2.5 w-2.5" />
-                  删除
-                </button>
-              </div>
-            </div>
+            </template>
           </div>
         </div>
       </div>
