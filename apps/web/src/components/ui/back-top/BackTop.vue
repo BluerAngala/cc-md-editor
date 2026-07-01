@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowUpFromLine } from '@lucide/vue'
+import { ArrowDownToLine, ArrowUpFromLine } from '@lucide/vue'
 import { throttle } from 'es-toolkit'
 
 type Target = HTMLElement | Window | null
@@ -21,6 +21,16 @@ const target = ref<Target>(null)
 
 function scrollToTop(e: MouseEvent) {
   target.value?.scrollTo({ top: 0, left: 0, behavior: `smooth` })
+  props.onClick?.(e)
+}
+
+function scrollToBottom(e: MouseEvent) {
+  if (!target.value)
+    return
+  const maxTop = target.value instanceof HTMLElement
+    ? target.value.scrollHeight
+    : document.documentElement.scrollHeight
+  target.value.scrollTo({ top: maxTop, left: 0, behavior: `smooth` })
   props.onClick?.(e)
 }
 
@@ -54,7 +64,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Button v-if="visible" variant="outline" size="icon" class="absolute z-50 rounded-full border-border/40 bg-background/60 text-muted-foreground/70 backdrop-blur-sm hover:bg-background/80 hover:text-foreground" :style="{ left: `${left}px`, top: `${top}px`, right: `${right}px`, bottom: `${bottom}px` }" @click="scrollToTop">
-    <ArrowUpFromLine />
-  </Button>
+  <div v-if="visible" class="absolute z-50 flex flex-col gap-1" :style="{ left: `${left}px`, top: `${top}px`, right: `${right}px`, bottom: `${bottom}px` }">
+    <Button variant="outline" size="icon" class="rounded-full border-border/40 bg-background/60 text-muted-foreground/70 backdrop-blur-sm hover:bg-background/80 hover:text-foreground" @click="scrollToTop">
+      <ArrowUpFromLine />
+    </Button>
+    <Button variant="outline" size="icon" class="rounded-full border-border/40 bg-background/60 text-muted-foreground/70 backdrop-blur-sm hover:bg-background/80 hover:text-foreground" @click="scrollToBottom">
+      <ArrowDownToLine />
+    </Button>
+  </div>
 </template>
