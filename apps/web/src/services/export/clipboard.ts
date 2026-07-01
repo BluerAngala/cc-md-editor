@@ -143,6 +143,16 @@ export async function processClipboardContent(_primaryColor: string) {
       inlineComputedStyles(liveElements[i], clonedElements[i])
     }
 
+    // 强制将 th 背景色内联为 background-color（公众号会剥离 background 简写）
+    const liveThs = outputElement.querySelectorAll(`th`)
+    const clonedThs = clipboardDiv.querySelectorAll(`th`)
+    for (let i = 0; i < liveThs.length && i < clonedThs.length; i++) {
+      const bg = window.getComputedStyle(liveThs[i]).backgroundColor
+      if (bg && bg !== `rgba(0, 0, 0, 0)` && bg !== `transparent`) {
+        (clonedThs[i] as HTMLElement).style.backgroundColor = bg
+      }
+    }
+
     // 从内向外处理，避免浏览器自动修正 DOM 结构
     let lis = clipboardDiv.querySelectorAll(`li`)
     // 预计算有序列表序号
