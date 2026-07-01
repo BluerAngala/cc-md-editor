@@ -22,7 +22,7 @@ export const useUIStore = defineStore(`ui`, () => {
   const isOpenRightSlider = store.reactive(addPrefix(`is_open_right_slider`), false)
 
   // 是否打开文章列表滑块
-  const isOpenPostSlider = store.reactive(addPrefix(`is_open_post_slider`), false)
+  const isOpenPostSlider = store.reactive(addPrefix(`is_open_post_slider`), true)
 
   // 是否打开本地文件夹面板
   const isOpenFolderPanel = store.reactive(addPrefix(`is_open_folder_panel`), false)
