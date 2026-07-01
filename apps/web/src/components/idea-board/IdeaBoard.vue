@@ -533,14 +533,14 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
           <!-- AI 错误提示 -->
           <div
             v-if="aiError"
-            class="absolute bottom-14 right-4 z-10 rounded-md bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-600 shadow-md dark:bg-red-950 dark:border-red-800 dark:text-red-400"
+            class="absolute bottom-24 right-4 z-20 rounded-md bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-600 shadow-md dark:bg-red-950 dark:border-red-800 dark:text-red-400"
           >
             {{ aiError }}
           </div>
 
           <!-- 浮动按钮 -->
-          <div v-if="activeScene" class="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
-            <TooltipProvider :delay-duration="300">
+          <TooltipProvider v-if="activeScene" :delay-duration="600">
+            <div class="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button
@@ -555,8 +555,6 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
                 </TooltipTrigger>
                 <TooltipContent>打开 Mermaid 画布，将流程图转换为思维导图</TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider :delay-duration="300">
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button
@@ -571,8 +569,8 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
                 </TooltipTrigger>
                 <TooltipContent>截图画布内容，发给 AI 生成文章草稿</TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          </div>
+            </div>
+          </TooltipProvider>
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>
