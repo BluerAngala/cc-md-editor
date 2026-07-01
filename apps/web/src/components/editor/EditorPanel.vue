@@ -80,6 +80,7 @@ function editorPlaceholder() {
   return placeholder(t(`codemirror.contentPlaceholder`))
 }
 const changeTimer = ref<ReturnType<typeof setTimeout>>()
+let isSyncingContent = false
 
 const editorRef = useTemplateRef<HTMLDivElement>(`editorRef`)
 const codeMirrorWrapper = useTemplateRef<HTMLDivElement>(`codeMirrorWrapper`)
@@ -468,7 +469,7 @@ function createFormTextArea(dom: HTMLDivElement) {
       placeholderCompartment.of(editorPlaceholder()),
       themeCompartment.of(theme(isDark.value)),
       EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
+        if (update.docChanged && !isSyncingContent) {
           clearTimeout(changeTimer.value)
           changeTimer.value = setTimeout(() => {
             editorRefresh()
@@ -560,6 +561,13 @@ onMounted(() => {
   })
 
   document.addEventListener(`keydown`, handleGlobalKeydown, { passive: false, capture: false })
+
+  // 切换标签/最小化时立即保存，防止内容丢失
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === `hidden`)
+      commitEditorContentToPost()
+  }
+  document.addEventListener(`visibilitychange`, handleVisibilityChange)
 })
 
 watch(isDark, () => {
@@ -588,6 +596,7 @@ function syncEditorToPostContent(content: string) {
   if (currentContent === content)
     return
 
+  isSyncingContent = true
   const generation = ++postSwitchGeneration
   replaceDocumentWithoutHistory(view, content)
   resetEditorHistory(view, historyCompartment)
@@ -595,6 +604,7 @@ function syncEditorToPostContent(content: string) {
     if (generation !== postSwitchGeneration)
       return
     editorRefresh()
+    isSyncingContent = false
   })
 }
 
@@ -636,7 +646,7 @@ onMounted(() => {
     })
 
     currentPost.history.length = Math.min(currentPost.history.length, 10)
-  }, 30 * 1000)
+  }, 15 * 1000)
 })
 
 onUnmounted(() => {
