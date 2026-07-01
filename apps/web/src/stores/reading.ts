@@ -295,6 +295,12 @@ export const useReadingStore = defineStore('reading', () => {
     articles.value = loadFromStorage<Article[]>(STORAGE_ARTICLES, [])
   }
 
+  function resetToDefaults() {
+    sources.value = [...DEFAULT_SOURCES]
+    saveSources()
+    void fetchAll()
+  }
+
   // ── 持久化 ───────────────────────────────────────────
   function saveSources() {
     localStorage.setItem(STORAGE_SOURCES, JSON.stringify(sources.value))
@@ -332,14 +338,20 @@ export const useReadingStore = defineStore('reading', () => {
     startAutoRefresh,
     stopAutoRefresh,
     reloadFromStorage,
+    resetToDefaults,
   }
 })
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key)
-    if (raw)
-      return JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      // 空数组回退到默认值，避免用户清空订阅后无法恢复
+      if (Array.isArray(parsed) && parsed.length === 0)
+        return fallback
+      return parsed
+    }
   }
   catch { /* ignore */ }
   return fallback

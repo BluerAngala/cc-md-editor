@@ -14,7 +14,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useSyncFooterMeta } from '@/composables/useSyncStatusMeta'
 import { formatRelativeTime } from '@/lib/format/relative-time'
 import {
   clampGoToLineValue,
@@ -24,8 +23,6 @@ import {
 } from '@/lib/markdown/headingNavigation'
 import { computeHeadingBreadcrumbs, extractMarkdownHeadings } from '@/lib/markdown/headings'
 import { isShareUiEnabled } from '@/services/share/client'
-import { isSyncUiEnabled } from '@/services/sync/client'
-import { useAuthStore } from '@/stores/auth'
 import { useEditorStore } from '@/stores/editor'
 import { usePostStore } from '@/stores/post'
 import { useRenderStore } from '@/stores/render'
@@ -35,24 +32,15 @@ const renderStore = useRenderStore()
 const editorStore = useEditorStore()
 const postStore = usePostStore()
 const uiStore = useUIStore()
-const authStore = useAuthStore()
 const { readingTime } = storeToRefs(renderStore)
 const { editor } = storeToRefs(editorStore)
 const { currentPost } = storeToRefs(postStore)
 const { isDark } = storeToRefs(uiStore)
 const { isMobile, viewMode, previewDevice, enableScrollSync } = storeToRefs(uiStore)
-const { isLoggedIn } = storeToRefs(authStore)
-const showSyncUi = isSyncUiEnabled()
 const showShareUi = isShareUiEnabled()
-const { syncFooterIcon, syncFooterIconClass, syncTooltip } = useSyncFooterMeta()
 
 const isMoreOpen = ref(false)
 const { t, locale } = useI18n()
-
-function openSyncDialog() {
-  isMoreOpen.value = false
-  uiStore.toggleShowSyncDialog(true)
-}
 
 function openShareDialog() {
   isMoreOpen.value = false
@@ -653,36 +641,8 @@ const showDeviceToggle = computed(() => viewMode.value !== `edit` && !isMobile.v
 
         <span class="hidden text-border sm:block">·</span>
 
-        <!-- 账户 & 同步 & 分享 & 主题（桌面端） -->
+        <!-- 分享 & 主题（桌面端） -->
         <div class="hidden items-center gap-0.5 sm:flex">
-          <template v-if="showSyncUi">
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <button
-                  :aria-label="t('menu.cloudSync')"
-                  class="flex cursor-pointer items-center rounded-md p-1.5 transition-colors hover:bg-accent hover:text-foreground"
-                  @click="openSyncDialog"
-                >
-                  <img
-                    v-if="isLoggedIn && authStore.user?.avatar"
-                    :src="authStore.user.avatar"
-                    :alt="authStore.user.login"
-                    class="size-3 rounded-full"
-                  >
-                  <component
-                    :is="syncFooterIcon"
-                    v-else
-                    class="size-3"
-                    :class="syncFooterIconClass"
-                  />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" :side-offset="6" class="text-xs text-muted-foreground">
-                <p>{{ isLoggedIn ? syncTooltip : t('menu.cloudSync') }}</p>
-              </TooltipContent>
-            </Tooltip>
-          </template>
-
           <template v-if="showShareUi">
             <Tooltip>
               <TooltipTrigger as-child>
@@ -729,25 +689,6 @@ const showDeviceToggle = computed(() => viewMode.value !== `edit` && !isMobile.v
             </button>
           </PopoverTriggerPrimitive>
           <PopoverContent side="top" :side-offset="8" align="end" class="w-48 p-1">
-            <button
-              v-if="showSyncUi"
-              class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition-colors hover:bg-accent"
-              @click="openSyncDialog"
-            >
-              <img
-                v-if="isLoggedIn && authStore.user?.avatar"
-                :src="authStore.user.avatar"
-                :alt="authStore.user.login"
-                class="size-3 rounded-full"
-              >
-              <component
-                :is="syncFooterIcon"
-                v-else
-                class="size-3 shrink-0"
-                :class="syncFooterIconClass"
-              />
-              <span>{{ isLoggedIn ? syncTooltip : t('menu.cloudSync') }}</span>
-            </button>
             <button
               v-if="showShareUi"
               class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition-colors hover:bg-accent"

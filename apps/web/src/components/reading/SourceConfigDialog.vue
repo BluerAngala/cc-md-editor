@@ -101,8 +101,11 @@ function handleAdd() {
             </Button>
           </div>
         </div>
-        <div v-if="!store.sources.length" class="flex h-32 items-center justify-center text-xs text-muted-foreground/50">
-          暂无订阅源
+        <div v-if="!store.sources.length" class="flex h-32 flex-col items-center justify-center gap-2 text-xs text-muted-foreground/50">
+          <span>暂无订阅源</span>
+          <Button variant="outline" size="sm" class="h-7 text-xs" @click="store.resetToDefaults()">
+            恢复默认订阅源
+          </Button>
         </div>
       </div>
     </div>
