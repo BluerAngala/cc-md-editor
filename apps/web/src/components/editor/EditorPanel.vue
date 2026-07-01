@@ -558,6 +558,13 @@ onMounted(() => {
     editorRefresh()
     mdLocalToRemote()
     void completeInitialPreviewBoot()
+
+    // 编辑器失去焦点时立即保存，防止切走后修改丢失
+    editorView.dom.addEventListener(`blur`, () => {
+      clearTimeout(changeTimer.value)
+      changeTimer.value = undefined
+      commitEditorContentToPost()
+    })
   })
 
   document.addEventListener(`keydown`, handleGlobalKeydown, { passive: false, capture: false })
@@ -567,7 +574,12 @@ onMounted(() => {
     if (document.visibilityState === `hidden`)
       commitEditorContentToPost()
   }
+  // 窗口失去焦点时也保存（切换到其他应用）
+  const handleWindowBlur = () => {
+    commitEditorContentToPost()
+  }
   document.addEventListener(`visibilitychange`, handleVisibilityChange)
+  window.addEventListener(`blur`, handleWindowBlur)
 })
 
 watch(isDark, () => {
