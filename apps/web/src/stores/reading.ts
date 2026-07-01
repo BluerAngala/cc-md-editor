@@ -196,6 +196,63 @@ export const useReadingStore = defineStore('reading', () => {
     ...collectors.value.map(s => ({ ...s, sourceType: 'collector' as const })),
   ])
 
+  /** 每个源的未读数 */
+  const unreadCountMap = computed(() => {
+    const map: Record<string, number> = {}
+    for (const a of articles.value) {
+      if (!a.read) {
+        map[a.sourceId] = (map[a.sourceId] || 0) + 1
+      }
+    }
+    return map
+  })
+
+  const totalUnread = computed(() => articles.value.filter(a => !a.read).length)
+
+  // ── 列表（收藏夹分组） ────────────────────────────────
+  const STORAGE_LISTS = 'reading_lists'
+  interface ReadingList {
+    id: string
+    name: string
+    articleIds: string[]
+    createdAt: number
+  }
+  const lists = ref<ReadingList[]>(loadFromStorage<ReadingList[]>(STORAGE_LISTS, []))
+
+  function addList(name: string) {
+    lists.value.push({ id: `list-${Date.now()}`, name, articleIds: [], createdAt: Date.now() })
+    localStorage.setItem(STORAGE_LISTS, JSON.stringify(lists.value))
+  }
+
+  function removeList(id: string) {
+    lists.value = lists.value.filter(l => l.id !== id)
+    localStorage.setItem(STORAGE_LISTS, JSON.stringify(lists.value))
+  }
+
+  function addToList(listId: string, articleId: string) {
+    const list = lists.value.find(l => l.id === listId)
+    if (list && !list.articleIds.includes(articleId)) {
+      list.articleIds.push(articleId)
+      localStorage.setItem(STORAGE_LISTS, JSON.stringify(lists.value))
+    }
+  }
+
+  function removeFromList(listId: string, articleId: string) {
+    const list = lists.value.find(l => l.id === listId)
+    if (list) {
+      list.articleIds = list.articleIds.filter(id => id !== articleId)
+      localStorage.setItem(STORAGE_LISTS, JSON.stringify(lists.value))
+    }
+  }
+
+  function getListArticles(listId: string): Article[] {
+    const list = lists.value.find(l => l.id === listId)
+    if (!list)
+      return []
+    const idSet = new Set(list.articleIds)
+    return articles.value.filter(a => idSet.has(a.id))
+  }
+
   const filteredArticles = computed(() => {
     let result = articles.value
     if (activeSourceId.value)
@@ -285,6 +342,53 @@ export const useReadingStore = defineStore('reading', () => {
   /** 获取网页 HTML（供 AI 分析用） */
   async function fetchPageHTML(url: string): Promise<string> {
     return fetchHTML(url)
+  }
+
+  /**
+   * 全文提取：从文章链接获取完整正文。
+   * 使用 CORS 代理 + DOM 解析提取主要内容。
+   */
+  async function fetchFullText(url: string): Promise<string> {
+    const html = await fetchHTML(url)
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+    // 移除噪音元素
+    doc.querySelectorAll('script, style, noscript, nav, footer, header, aside, iframe, .ad, .advertisement, .sidebar, .comment').forEach(el => el.remove())
+    // 尝试常见正文容器
+    const selectors = ['article', 'main', '.post-content', '.article-content', '.entry-content', '.content', '#content', '.post-body']
+    for (const sel of selectors) {
+      const el = doc.querySelector(sel)
+      if (el && el.textContent && el.textContent.trim().length > 200) {
+        return el.innerHTML
+      }
+    }
+    // 回退到 body
+    return doc.body?.innerHTML || ''
+  }
+
+  /**
+   * RSSHub 路由发现：输入 URL，查询 RSSHub API 获取可用的 RSS 路由。
+   */
+  async function discoverRSSHubRoutes(url: string): Promise<Array<{ name: string, path: string }>> {
+    try {
+      const domain = new URL(url).hostname
+      const res = await window.fetch(`https://rsshub.app/v1/website?domain=${domain}`, {
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!res.ok)
+        return []
+      const data = await res.json()
+      if (data.routes && Array.isArray(data.routes)) {
+        return data.routes.map((r: string) => ({
+          name: r,
+          path: `https://rsshub.app${r}`,
+        }))
+      }
+      return []
+    }
+    catch {
+      return []
+    }
   }
 
   async function fetchAll() {
@@ -509,6 +613,16 @@ export const useReadingStore = defineStore('reading', () => {
     filteredArticles,
     activeArticle,
     hasAutoRefresh,
+    // 未读计数
+    unreadCountMap,
+    totalUnread,
+    // 列表
+    lists,
+    addList,
+    removeList,
+    addToList,
+    removeFromList,
+    getListArticles,
     // 采集器
     collectors,
     collectorLoading,
@@ -520,6 +634,8 @@ export const useReadingStore = defineStore('reading', () => {
     fetchCollector,
     previewCollector,
     fetchPageHTML,
+    fetchFullText,
+    discoverRSSHubRoutes,
     // RSS
     addSource,
     updateSourceInterval,

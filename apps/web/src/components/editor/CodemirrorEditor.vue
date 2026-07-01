@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, unref } from 'vue'
+import { defineAsyncComponent, nextTick, onMounted, unref } from 'vue'
 import FloatingAIPanel from '@/components/ai/chat-box/FloatingAIPanel.vue'
 import EditorPanel from '@/components/editor/EditorPanel.vue'
 import PreviewPanel from '@/components/editor/PreviewPanel.vue'
@@ -59,6 +59,18 @@ const { handlePreviewContentClick } = useCursorSync(getEditorView)
 
 // --- 滚动同步 ---
 useScrollSync(getEditorView, getPreviewContainer, enableScrollSync)
+
+// --- 从资讯阅读导入内容 ---
+onMounted(() => {
+  const imported = localStorage.getItem('md_import_content')
+  if (imported) {
+    localStorage.removeItem('md_import_content')
+    // 等编辑器初始化后再导入
+    nextTick(() => {
+      editorStore.importContent(imported)
+    })
+  }
+})
 
 // --- 复制状态 ---
 const backLight = ref(false)

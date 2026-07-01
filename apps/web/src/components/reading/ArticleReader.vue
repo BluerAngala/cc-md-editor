@@ -1,183 +1,169 @@
 <script setup lang="ts">
 import type { Article } from '@/stores/reading'
-import { ExternalLink, History, Lightbulb, Pencil, Quote, Star, Trash2 } from '@lucide/vue'
-import { onMounted, ref } from 'vue'
+import { BookOpen, ExternalLink, Languages, Loader2, Sparkles, Star } from '@lucide/vue'
+import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { buildAIHeaders, resolveEndpointUrl } from '@/composables/useAIFetch'
+import { useAIConfigStore } from '@/stores/aiConfig'
 import { useReadingStore } from '@/stores/reading'
+import ArticleAnnotator from './ArticleAnnotator.vue'
 
 const props = defineProps<{
   article: Article
 }>()
 
 const readingStore = useReadingStore()
-
-const quoteText = ref('')
-const ideaText = ref('')
-const ideaSaved = ref(false)
-const editingId = ref<string | null>(null)
-const showHistory = ref(false)
-
-const SCENE_STORAGE_KEY = 'idea-board-scenes'
-
-// ── 历史记录 ─────────────────────────────────────────────
-interface HistoryItem {
-  id: string
-  title: string
-  desc: string
-  createdAt: number
-}
-
-const history = ref<HistoryItem[]>([])
-
-function loadHistory() {
-  try {
-    const raw = localStorage.getItem(SCENE_STORAGE_KEY)
-    if (!raw)
-      return
-    const scenes = JSON.parse(raw)
-    history.value = scenes
-      .filter((s: any) => s.group === '阅读笔记')
-      .map((s: any) => ({ id: s.id, title: s.title, desc: s.desc, createdAt: s.createdAt }))
-      .sort((a: HistoryItem, b: HistoryItem) => b.createdAt - a.createdAt)
-      .slice(0, 50)
-  }
-  catch { /* ignore */ }
-}
-
-function deleteHistory(id: string) {
-  try {
-    const raw = localStorage.getItem(SCENE_STORAGE_KEY)
-    if (!raw)
-      return
-    const scenes = JSON.parse(raw).filter((s: any) => s.id !== id)
-    localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes))
-    loadHistory()
-  }
-  catch { /* ignore */ }
-}
-
-function startEdit(item: HistoryItem) {
-  editingId.value = item.id
-  // 解析 desc 中的摘录和想法
-  const lines = item.desc.split('\n')
-  let quote = ''
-  let idea = ''
-  for (const line of lines) {
-    if (line.startsWith('📖 '))
-      quote = line.slice(2).trim()
-    else if (line.startsWith('💡 '))
-      idea = line.slice(2).trim()
-    else
-      idea += (idea ? '\n' : '') + line
-  }
-  quoteText.value = quote
-  ideaText.value = idea
-}
-
-function saveEdit() {
-  if (!editingId.value || !ideaText.value.trim())
-    return
-  try {
-    const raw = localStorage.getItem(SCENE_STORAGE_KEY)
-    if (!raw)
-      return
-    const scenes = JSON.parse(raw)
-    const scene = scenes.find((s: any) => s.id === editingId.value)
-    if (scene) {
-      let desc = ''
-      if (quoteText.value.trim())
-        desc += `📖 ${quoteText.value.trim()}`
-      if (ideaText.value.trim())
-        desc += `${desc ? '\n' : ''}💡 ${ideaText.value.trim()}`
-      scene.desc = desc
-      scene.updatedAt = Date.now()
-      localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes))
-      loadHistory()
-    }
-  }
-  catch { /* ignore */ }
-  editingId.value = null
-  quoteText.value = ''
-  ideaText.value = ''
-}
-
-function cancelEdit() {
-  editingId.value = null
-  quoteText.value = ''
-  ideaText.value = ''
-}
-
-// ── 保存新想法 ───────────────────────────────────────────
-function saveIdea() {
-  if (!ideaText.value.trim())
-    return
-
-  let desc = ''
-  if (quoteText.value.trim())
-    desc += `📖 ${quoteText.value.trim()}`
-  if (ideaText.value.trim())
-    desc += `${desc ? '\n' : ''}💡 ${ideaText.value.trim()}`
-
-  try {
-    const raw = localStorage.getItem(SCENE_STORAGE_KEY)
-    const scenes: any[] = raw ? JSON.parse(raw) : []
-    const now = Date.now()
-    scenes.unshift({
-      id: now.toString(36) + Math.random().toString(36).slice(2, 8),
-      title: props.article.title.slice(0, 30),
-      desc,
-      color: 0,
-      group: '阅读笔记',
-      x: 20 + Math.random() * 100,
-      y: 20 + Math.random() * 100,
-      w: 220,
-      h: 140,
-      elements: [],
-      createdAt: now,
-      updatedAt: now,
-    })
-    localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes))
-  }
-  catch { /* ignore */ }
-
-  quoteText.value = ''
-  ideaText.value = ''
-  ideaSaved.value = true
-  setTimeout(() => { ideaSaved.value = false }, 2000)
-  loadHistory()
-}
-
-function handleSelect() {
-  requestAnimationFrame(() => {
-    const selection = window.getSelection()
-    const text = selection?.toString().trim()
-    if (text && text.length > 1) {
-      quoteText.value = quoteText.value
-        ? `${quoteText.value}\n${text}`
-        : text
-    }
-  })
-}
+const aiConfig = useAIConfigStore()
 
 function formatDate(ts: number) {
+  const diff = Date.now() - ts
+  if (diff < 3600000)
+    return '刚刚'
+  if (diff < 86400000)
+    return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 604800000)
+    return `${Math.floor(diff / 86400000)}天前`
   const d = new Date(ts)
-  const now = new Date()
-  const diff = now.getTime() - ts
-  if (diff < 86400000) {
-    const hours = Math.floor(diff / 3600000)
-    if (hours < 1)
-      return '刚刚'
-    return `${hours}小时前`
-  }
-  if (diff < 604800000) {
-    const days = Math.floor(diff / 86400000)
-    return `${days}天前`
-  }
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
-onMounted(() => loadHistory())
+/** 文章内容是否较短（可能是摘要），需要全文提取 */
+const needsFullText = computed(() => {
+  const content = props.article.content || props.article.summary || ''
+  return content.replace(/<[^>]*>/g, '').trim().length < 800 && !!props.article.link
+})
+
+/** 双语对照：将 HTML 拆分成段落块 */
+const fullTextContent = ref('')
+const bilingualBlocks = computed(() => {
+  const content = fullTextContent.value || props.article.content || props.article.summary || ''
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html')
+  const container = doc.body.firstElementChild
+  if (!container)
+    return []
+  return Array.from(container.children).map(el => ({
+    html: el.outerHTML,
+    text: el.textContent?.trim() || '',
+  }))
+})
+
+// ── AI 摘要 + 翻译 ──────────────────────────────────────
+const aiPanelTab = ref<'summary' | null>(null)
+const aiLoading = ref(false)
+const aiResult = ref('')
+const aiError = ref('')
+const translateTarget = ref<'zh' | 'en' | 'ja'>('en')
+const fullTextLoading = ref(false)
+const translating = ref(false)
+const translatedParagraphs = ref<Record<number, string>>({})
+const translationActive = ref(false)
+
+async function callAIStream(
+  systemPrompt: string,
+  userContent: string,
+  onDelta: (text: string) => void,
+): Promise<string> {
+  const endpoint = aiConfig.textEndpoint || aiConfig.endpoint
+  const apiKey = aiConfig.textApiKey || aiConfig.apiKey
+  const model = aiConfig.textModel || aiConfig.model
+  const type = aiConfig.textType || aiConfig.type
+  const url = resolveEndpointUrl(endpoint, 'chat')
+  const headers = buildAIHeaders(apiKey, type)
+  const payload = {
+    model,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+    ],
+    temperature: 0.3,
+    max_tokens: 2000,
+    stream: true,
+  }
+  const res = await window.fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) })
+  if (!res.ok)
+    throw new Error(`AI 请求失败: ${res.status}`)
+  const reader = res.body?.getReader()
+  if (!reader)
+    throw new Error('无法读取流')
+  const decoder = new TextDecoder()
+  let full = ''
+  let buffer = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done)
+      break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+    for (const line of lines) {
+      if (!line.trim() || line.trim() === 'data: [DONE]')
+        continue
+      try {
+        const delta = JSON.parse(line.replace(/^data: /, '')).choices?.[0]?.delta?.content
+        if (delta) { full += delta; onDelta(delta) }
+      }
+      catch { /* skip */ }
+    }
+  }
+  return full
+}
+
+async function handleSummarize() {
+  aiPanelTab.value = 'summary'
+  aiLoading.value = true
+  aiError.value = ''
+  aiResult.value = ''
+  try {
+    const content = fullTextContent.value || props.article.content || props.article.summary
+    const text = content.replace(/<[^>]*>/g, '').slice(0, 4000)
+    await callAIStream(
+      '你是一个专业的文章摘要助手。请用简洁的中文总结文章的核心要点，使用 bullet points 格式。不超过 5 条。',
+      `标题：${props.article.title}\n\n正文：${text}`,
+      (delta) => { aiResult.value += delta },
+    )
+  }
+  catch (e) { aiError.value = e instanceof Error ? e.message : '摘要失败' }
+  finally { aiLoading.value = false }
+}
+
+async function handleTranslate() {
+  if (translating.value) {
+    translating.value = false
+    translationActive.value = false
+    translatedParagraphs.value = {}
+    return
+  }
+  translating.value = true
+  translationActive.value = true
+  translatedParagraphs.value = {}
+  const blocks = bilingualBlocks.value
+  const langName = translateTarget.value === 'zh' ? '中文' : translateTarget.value === 'en' ? 'English' : '日本語'
+  try {
+    for (let i = 0; i < blocks.length && translating.value; i++) {
+      const text = blocks[i].text
+      if (!text || text.length < 5)
+        continue
+      translatedParagraphs.value[i] = ''
+      await callAIStream(
+        `翻译成${langName}，只输出翻译结果，不要解释。`,
+        text,
+        (delta) => { translatedParagraphs.value[i] = (translatedParagraphs.value[i] || '') + delta },
+      )
+    }
+  }
+  catch (e) { console.warn('翻译失败:', e) }
+  finally { translating.value = false }
+}
+
+async function handleFetchFullText() {
+  if (!props.article.link || fullTextLoading.value)
+    return
+  fullTextLoading.value = true
+  try { fullTextContent.value = await readingStore.fetchFullText(props.article.link) }
+  catch (e) { console.warn('全文提取失败:', e) }
+  finally { fullTextLoading.value = false }
+}
 </script>
 
 <template>
@@ -198,6 +184,49 @@ onMounted(() => loadHistory())
           </p>
         </div>
         <div class="flex items-center gap-1 shrink-0">
+          <!-- AI 功能按钮 -->
+          <div class="flex items-center gap-0.5 mr-2">
+            <Button variant="outline" size="sm" class="h-7 gap-1 text-xs" :disabled="aiLoading" @click="handleSummarize">
+              <Sparkles class="h-3 w-3" />
+              摘要
+            </Button>
+
+            <!-- 翻译按钮 + 语言选择 -->
+            <div class="flex items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-7 gap-1 text-xs rounded-r-none border-r-0"
+                :class="translationActive ? 'bg-primary/10 border-primary/30' : ''"
+                :disabled="translating"
+                @click="handleTranslate"
+              >
+                <Languages class="h-3 w-3" />
+                {{ translating ? '翻译中...' : translationActive ? '取消翻译' : '翻译' }}
+              </Button>
+              <select
+                v-model="translateTarget"
+                class="h-7 rounded-l-none border bg-background px-1.5 text-[10px]"
+                :disabled="translating"
+              >
+                <option value="en">
+                  EN
+                </option>
+                <option value="zh">
+                  中文
+                </option>
+                <option value="ja">
+                  日本語
+                </option>
+              </select>
+            </div>
+
+            <Button v-if="needsFullText" variant="outline" size="sm" class="h-7 gap-1 text-xs" :disabled="fullTextLoading" @click="handleFetchFullText">
+              <BookOpen class="h-3 w-3" />
+              {{ fullTextLoading ? '提取中...' : '全文' }}
+            </Button>
+          </div>
+
           <Button variant="ghost" size="icon" class="h-8 w-8" @click="readingStore.toggleStar(article.id)">
             <Star
               class="h-4.5 w-4.5"
@@ -213,152 +242,55 @@ onMounted(() => loadHistory())
       </div>
     </div>
 
-    <!-- 文章内容 + 记录想法 -->
-    <div class="flex flex-1 overflow-hidden">
-      <!-- 文章正文 -->
-      <div
-        class="article-content flex-1 overflow-y-auto px-8 py-6 select-text cursor-text"
-        @mouseup="handleSelect"
-        v-html="article.content || article.summary"
-      />
-
-      <!-- 记录想法侧栏 -->
-      <div class="w-80 border-l flex flex-col bg-muted/20">
-        <div class="px-4 py-3 border-b flex items-center gap-2">
-          <Lightbulb class="h-4 w-4 text-amber-500" />
-          <span class="text-sm font-medium">记录想法</span>
-        </div>
-
-        <!-- 摘录 + 想法输入 -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-3">
-          <!-- 摘录区 -->
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <div class="flex items-center gap-1.5">
-                <Quote class="h-3.5 w-3.5 text-muted-foreground" />
-                <span class="text-xs font-medium text-muted-foreground">原文摘录</span>
-              </div>
-              <button
-                v-if="quoteText"
-                class="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
-                @click="quoteText = ''"
-              >
-                清空
-              </button>
-            </div>
-            <Textarea
-              v-model="quoteText"
-              placeholder="选中文章文字自动填入..."
-              class="min-h-[70px] max-h-[150px] resize-none text-xs bg-background border-dashed"
-            />
-          </div>
-
-          <!-- 想法区 -->
-          <div>
-            <div class="flex items-center gap-1.5 mb-1.5">
-              <Lightbulb class="h-3.5 w-3.5 text-amber-500" />
-              <span class="text-xs font-medium">{{ editingId ? '编辑想法' : '我的想法' }}</span>
-            </div>
-            <Textarea
-              v-model="ideaText"
-              placeholder="写下你的想法、观点、联想..."
-              class="min-h-[100px] resize-none text-sm bg-background"
-            />
-          </div>
-
-          <!-- 按钮 -->
-          <div class="flex items-center justify-between">
-            <span v-if="ideaSaved" class="text-xs text-green-500">
-              ✓ 已保存到想法库
-            </span>
-            <span v-else class="text-xs text-muted-foreground">
-              {{ editingId ? '编辑中' : '摘录 + 想法 → 便签墙' }}
-            </span>
-            <div class="flex gap-1.5">
-              <Button
-                v-if="editingId"
-                variant="ghost"
-                size="sm"
-                class="h-8 text-xs"
-                @click="cancelEdit"
-              >
-                取消
-              </Button>
-              <Button
-                v-if="editingId"
-                size="sm"
-                class="h-8 gap-1 text-sm"
-                :disabled="!ideaText.trim()"
-                @click="saveEdit"
-              >
-                保存
-              </Button>
-              <Button
-                v-else
-                size="sm"
-                class="h-8 gap-1.5 text-sm"
-                :disabled="!ideaText.trim()"
-                @click="saveIdea"
-              >
-                <Lightbulb class="h-3.5 w-3.5" />
-                记录
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 历史记录（固定在底部） -->
-        <div class="border-t shrink-0">
-          <button
-            class="w-full px-4 py-2.5 flex items-center gap-1.5 hover:bg-muted/50 transition-colors"
-            @click="showHistory = !showHistory"
-          >
-            <History class="h-3.5 w-3.5 text-muted-foreground" />
-            <span class="text-xs font-medium text-muted-foreground">历史记录</span>
-            <span class="text-[10px] text-muted-foreground/60">({{ history.length }})</span>
-            <span class="ml-auto text-[10px] text-muted-foreground">{{ showHistory ? '收起' : '展开' }}</span>
+    <!-- AI 面板（摘要 / 对话） -->
+    <!-- AI 摘要面板 -->
+    <div v-if="aiPanelTab === 'summary'" class="border-b">
+      <div class="px-8 py-2.5">
+        <div class="flex items-center gap-2 mb-1.5">
+          <Sparkles class="h-3.5 w-3.5 text-primary" />
+          <span class="text-xs font-medium">AI 摘要</span>
+          <button class="ml-auto text-[10px] text-muted-foreground hover:text-foreground" @click="aiPanelTab = null">
+            关闭
           </button>
-          <div v-if="showHistory" class="max-h-[40vh] overflow-y-auto">
-            <div v-if="!history.length" class="px-4 pb-4 text-xs text-muted-foreground/50">
-              暂无记录
-            </div>
-            <div
-              v-for="item in history"
-              :key="item.id"
-              class="group px-4 py-2.5 border-t hover:bg-muted/50 transition-colors"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <p class="text-xs font-medium truncate flex-1">
-                  {{ item.title }}
-                </p>
-                <span class="text-[10px] text-muted-foreground shrink-0">
-                  {{ formatDate(item.createdAt) }}
-                </span>
-              </div>
-              <p class="mt-1 text-[10px] text-muted-foreground whitespace-pre-wrap line-clamp-3">
-                {{ item.desc }}
-              </p>
-              <div class="mt-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  class="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
-                  @click="startEdit(item)"
-                >
-                  <Pencil class="h-2.5 w-2.5" />
-                  编辑
-                </button>
-                <button
-                  class="text-[10px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-0.5"
-                  @click="deleteHistory(item.id)"
-                >
-                  <Trash2 class="h-2.5 w-2.5" />
-                  删除
-                </button>
-              </div>
-            </div>
+        </div>
+        <div v-if="aiLoading" class="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+          <Loader2 class="h-3.5 w-3.5 animate-spin" />
+          AI 分析中...
+        </div>
+        <div v-else-if="aiError" class="text-xs text-destructive">
+          {{ aiError }}
+        </div>
+        <div v-else-if="aiResult" class="text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">
+          {{ aiResult }}
+        </div>
+      </div>
+    </div>
+
+    <!-- 文章内容（批注模式 / 翻译模式） -->
+    <div v-if="translationActive" class="flex flex-1 overflow-hidden">
+      <!-- 翻译模式：双语对照 -->
+      <div class="article-content flex-1 overflow-y-auto px-8 py-6">
+        <div
+          v-for="(block, i) in bilingualBlocks"
+          :key="i"
+        >
+          <div v-html="block.html" />
+          <div
+            v-if="translatedParagraphs[i] !== undefined"
+            class="my-1 rounded bg-primary/5 px-3 py-1.5 text-xs text-primary/80 italic border-l-2 border-primary/20"
+          >
+            {{ translatedParagraphs[i] || '...' }}
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 普通模式：批注系统 -->
+    <ArticleAnnotator
+      v-else
+      :article="article"
+      :content="fullTextContent || article.content || article.summary"
+    />
   </div>
 </template>
 

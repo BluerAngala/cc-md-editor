@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Timer, Trash2, X } from '@lucide/vue'
+import { Loader2, Plus, Radio, Timer, Trash2, X } from '@lucide/vue'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,8 @@ const store = useReadingStore()
 const newUrl = ref('')
 const newTitle = ref('')
 const newCategory = ref('')
+const discovering = ref(false)
+const discoveredRoutes = ref<Array<{ name: string, path: string }>>([])
 
 const REFRESH_OPTIONS = [
   { value: 0, label: '关闭' },
@@ -30,6 +32,28 @@ function handleAdd() {
   newUrl.value = ''
   newTitle.value = ''
   newCategory.value = ''
+  discoveredRoutes.value = []
+}
+
+async function handleDiscover() {
+  if (!newUrl.value.trim())
+    return
+  discovering.value = true
+  discoveredRoutes.value = []
+  try {
+    discoveredRoutes.value = await store.discoverRSSHubRoutes(newUrl.value.trim())
+  }
+  catch { /* ignore */ }
+  finally {
+    discovering.value = false
+  }
+}
+
+function useRoute(route: { name: string, path: string }) {
+  newUrl.value = route.path
+  newTitle.value = route.name.split('/').pop() || route.name
+  newCategory.value = 'RSSHub'
+  discoveredRoutes.value = []
 }
 </script>
 
@@ -52,17 +76,38 @@ function handleAdd() {
           添加订阅源
         </p>
         <div class="flex gap-2">
-          <Input v-model="newUrl" placeholder="RSS 地址" class="h-8 text-xs flex-1" />
+          <Input v-model="newUrl" placeholder="RSS 地址或任意网站 URL" class="h-8 text-xs flex-1" />
           <Input v-model="newTitle" placeholder="标题（可选）" class="h-8 text-xs w-28" />
           <Input v-model="newCategory" placeholder="分类" class="h-8 text-xs w-20" />
+          <Button size="sm" variant="outline" class="h-8 gap-1" :disabled="!newUrl.trim() || discovering" @click="handleDiscover">
+            <Loader2 v-if="discovering" class="h-3.5 w-3.5 animate-spin" />
+            <Radio v-else class="h-3.5 w-3.5" />
+            发现
+          </Button>
           <Button size="sm" class="h-8 gap-1" @click="handleAdd">
             <Plus class="h-3.5 w-3.5" />
             添加
           </Button>
         </div>
         <p class="mt-1.5 text-[10px] text-muted-foreground">
-          支持标准 RSS/Atom 格式。可使用 RSSHub 生成任意网站的 RSS：https://rsshub.app
+          支持标准 RSS/Atom 格式。输入任意网站 URL 点击「发现」自动查找 RSS 源（via RSSHub）
         </p>
+        <!-- RSSHub 发现结果 -->
+        <div v-if="discoveredRoutes.length" class="mt-2 rounded-md border bg-muted/30 p-2">
+          <p class="text-[10px] text-muted-foreground mb-1.5">
+            发现 {{ discoveredRoutes.length }} 个可用路由：
+          </p>
+          <div class="flex flex-wrap gap-1">
+            <button
+              v-for="route in discoveredRoutes.slice(0, 10)"
+              :key="route.path"
+              class="rounded bg-background border px-2 py-0.5 text-[10px] hover:bg-primary/10 transition-colors"
+              @click="useRoute(route)"
+            >
+              {{ route.name }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 已订阅列表 -->

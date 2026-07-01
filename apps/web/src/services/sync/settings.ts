@@ -44,6 +44,7 @@ export const SYNC_SETTING_KEYS: string[] = [
   `reading_sources`,
   `reading_articles`,
   `reading_collectors`,
+  `reading_lists`,
   // 想法库
   `idea-board-notes`,
 ]
