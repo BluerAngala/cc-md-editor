@@ -2,7 +2,7 @@
 import type { Component } from 'vue'
 import { AlertCircle, Cloud, CloudCheck, CloudOff, ExternalLink, Loader2, LogIn, RefreshCw, Upload } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import CloudFeatureState from '@/components/editor/editor-header/cloud/CloudFeatureState.vue'
 import PanelCard from '@/components/shared/panel-dialog/PanelCard.vue'
 import PanelDialog from '@/components/shared/panel-dialog/PanelDialog.vue'
@@ -15,6 +15,7 @@ import { isSyncConfigured } from '@/services/sync/client'
 import { store as reactiveStore } from '@/storage'
 import { addPrefix } from '@/storage/prefix'
 import { useAuthStore } from '@/stores/auth'
+import { useConfirmStore } from '@/stores/confirm'
 import { useGitHubSyncStore } from '@/stores/githubSync'
 import { useLocaleStore } from '@/stores/locale'
 import { useSyncStore } from '@/stores/sync'
@@ -32,6 +33,7 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const syncStore = useSyncStore()
 const githubStore = useGitHubSyncStore()
+const confirmStore = useConfirmStore()
 const uiStore = useUIStore()
 const localeStore = useLocaleStore()
 
@@ -205,6 +207,16 @@ async function resetRemote() {
   else
     toast.success('远端已重置，本地数据已推送')
 }
+
+function confirmReset() {
+  confirmStore.confirm({
+    title: '确认重置远端？',
+    description: '此操作会清空 GitHub 仓库中的所有数据，然后用当前本地数据重新推送。如果其他设备有未同步的数据，将会丢失。\n\n此操作不可撤销。',
+    confirmText: '确认重置',
+    destructive: true,
+    onConfirm: resetRemote,
+  })
+}
 </script>
 
 <template>
@@ -241,10 +253,10 @@ async function resetRemote() {
           >
             <div class="flex items-center gap-2 mb-1">
               <Cloud class="h-4 w-4" />
-              <span class="text-sm font-medium">官方云同步</span>
+              <span class="text-sm font-medium">Doocs 同步</span>
             </div>
             <p class="text-[10px] text-muted-foreground">
-              通过官方后端同步，需要 GitHub 登录
+              通过 Doocs 服务同步，需要 GitHub 登录
             </p>
           </button>
         </div>
@@ -405,11 +417,13 @@ async function resetRemote() {
           variant="outline"
           class="h-8 w-full gap-2 text-xs text-destructive hover:text-destructive"
           :disabled="isSyncing"
-          @click="resetRemote"
+          @click="confirmReset"
         >
           <Upload class="size-3.5" />
           重置远端（清空远端，用本地数据重建）
         </Button>
+
+
       </template>
     </div>
   </PanelDialog>

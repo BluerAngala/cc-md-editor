@@ -72,6 +72,7 @@ export class GitHubSyncClient {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(30_000),
     })
 
     if (!res.ok) {
@@ -180,8 +181,8 @@ export class GitHubSyncClient {
     }
   }
 
-  /** 创建或更新文件 */
-  async writeFile(repo: string, path: string, content: string, message: string, sha?: string): Promise<void> {
+  /** 创建或更新文件，返回新 SHA */
+  async writeFile(repo: string, path: string, content: string, message: string, sha?: string): Promise<{ sha: string }> {
     const body: Record<string, string> = {
       message,
       content: encodeBase64Utf8(content),
@@ -189,7 +190,8 @@ export class GitHubSyncClient {
     if (sha)
       body.sha = sha
 
-    await this.request(`PUT`, `/repos/${repo}/contents/${path}`, body)
+    const result = await this.request<{ content: { sha: string } }>(`PUT`, `/repos/${repo}/contents/${path}`, body)
+    return { sha: result.content.sha }
   }
 
   /** 删除文件 */

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { LayoutGrid, Lightbulb, Plus, Search, Sparkles, Trash2 } from '@lucide/vue'
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import SyncButton from '@/components/shared/SyncButton.vue'
 import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
@@ -57,6 +57,7 @@ function loadScenes(): Scene[] {
 
 function saveScenes(scenes: Scene[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes))
+  window.dispatchEvent(new CustomEvent('md:data-changed', { detail: { scope: 'ideaBoard' } }))
 }
 
 const scenes = ref<Scene[]>(loadScenes())
@@ -360,6 +361,17 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
     // ignore
   }
 }
+
+// 同步完成后从 localStorage 重载场景数据
+onMounted(() => {
+  const handler = () => {
+    scenes.value = loadScenes()
+    if (!activeSceneId.value && scenes.value.length > 0)
+      activeSceneId.value = scenes.value[0].id
+  }
+  window.addEventListener('md:scenes-synced', handler)
+  onUnmounted(() => window.removeEventListener('md:scenes-synced', handler))
+})
 </script>
 
 <template>
