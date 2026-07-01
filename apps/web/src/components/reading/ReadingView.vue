@@ -62,8 +62,6 @@ function formatDate(ts: number) {
       <Button variant="outline" size="sm" @click="showSourceConfig = true">
         订阅管理
       </Button>
-
-      <ViewNav />
     </header>
 
     <!-- 主体 -->
