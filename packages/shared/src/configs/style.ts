@@ -410,7 +410,7 @@ export const perThemeDefaults: PerThemeSettingsMap = {
     isMacCodeBlock: true,
   },
   newspaper: {
-    primaryColor: `#0F4C81`,
+    primaryColor: `#E00000`,
     fontFamily: fontFamilyOptions[0].value,
     fontSize: `16px`,
     backgroundColor: `#f5f5f5`,
