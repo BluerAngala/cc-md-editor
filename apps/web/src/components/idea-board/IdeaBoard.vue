@@ -37,10 +37,26 @@ const COLORS = [
   { bg: 'bg-orange-50 dark:bg-orange-950', border: 'border-orange-200 dark:border-orange-800', dot: 'bg-orange-400', ring: 'ring-orange-400', label: '橙' },
 ]
 
-const DEFAULTS = { title: '新想法', desc: '', color: 0, group: '', x: 20, y: 20, w: 200, h: 120, elements: [] }
+const DEFAULTS: Omit<Scene, 'id' | 'createdAt' | 'updatedAt'> = {
+  title: '新想法',
+  desc: '',
+  color: 0,
+  group: '',
+  x: 20,
+  y: 20,
+  w: 200,
+  h: 120,
+  elements: [],
+}
 
 function normalizeScene(raw: Record<string, unknown>): Scene {
-  return { ...DEFAULTS, ...raw, createdAt: raw.createdAt || Date.now(), updatedAt: raw.updatedAt || Date.now() }
+  return {
+    ...DEFAULTS,
+    ...raw,
+    id: typeof raw.id === 'string' ? raw.id : crypto.randomUUID(),
+    createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
+    updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : Date.now(),
+  }
 }
 
 function loadScenes(): Scene[] {

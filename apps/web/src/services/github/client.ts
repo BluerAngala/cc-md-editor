@@ -25,8 +25,9 @@ interface GitHubFile {
   name: string
   path: string
   sha: string
-  content: string
-  size: number
+  content?: string
+  size?: number
+  type?: 'file' | 'dir'
 }
 
 interface GitHubRepo {
@@ -103,32 +104,32 @@ export class GitHubSyncClient {
 
   /** 轮询等待用户授权完成 */
   static async pollForToken(deviceCode: string, interval: number): Promise<string> {
-    const { promise, resolve, reject } = Promise.withResolvers<string>()
-    const poll = async () => {
-      try {
-        const res = await fetch('/.netlify/functions/github-device-flow?action=access_token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ device_code: deviceCode }),
-        })
-        const data = await res.json() as AccessTokenResponse
+    return new Promise((resolve, reject) => {
+      const poll = async () => {
+        try {
+          const res = await fetch('/.netlify/functions/github-device-flow?action=access_token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ device_code: deviceCode }),
+          })
+          const data = await res.json() as AccessTokenResponse
 
-        if (data.access_token) {
-          resolve(data.access_token)
-          return
+          if (data.access_token) {
+            resolve(data.access_token)
+            return
+          }
+          if (data.error === 'authorization_pending' || data.error === 'slow_down') {
+            setTimeout(poll, (interval + 1) * 1000)
+            return
+          }
+          reject(new Error(data.error_description || data.error || '授权失败'))
         }
-        if (data.error === 'authorization_pending' || data.error === 'slow_down') {
-          setTimeout(poll, (interval + 1) * 1000)
-          return
+        catch (e) {
+          reject(e)
         }
-        reject(new Error(data.error_description || data.error || '授权失败'))
       }
-      catch (e) {
-        reject(e)
-      }
-    }
-    setTimeout(poll, interval * 1000)
-    return promise
+      setTimeout(poll, interval * 1000)
+    })
   }
 
   /** 获取当前用户名 */
@@ -173,6 +174,8 @@ export class GitHubSyncClient {
   async readFile(repo: string, path: string): Promise<{ content: string, sha: string } | null> {
     try {
       const file = await this.request<GitHubFile>(`GET`, `/repos/${repo}/contents/${path}`)
+      if (!file.content)
+        return null
       const content = decodeBase64Utf8(file.content.replace(/\n/g, ''))
       return { content, sha: file.sha }
     }

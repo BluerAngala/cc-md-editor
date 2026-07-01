@@ -1,9 +1,9 @@
+import type { Post } from '@/types/post'
 import { watch } from 'vue'
 import { formatLocalDateTime } from '@/i18n/translate'
 import { GitHubSyncClient } from '@/services/github/client'
-import type { Post } from '@/types/post'
-import { isCacheKey } from '@/storage/keys'
 import { store } from '@/storage'
+import { isCacheKey } from '@/storage/keys'
 import { addPrefix } from '@/storage/prefix'
 import { useIdeaBoardStore } from '@/stores/ideaBoard'
 import { usePostStore } from '@/stores/post'
@@ -53,7 +53,7 @@ function sanitizeFilename(title: string): string {
   // 中文直接保留（GitHub 支持 Unicode 文件名），只替换真正不合法的字符
   return title
     // eslint-disable-next-line no-control-regex
-    .replace(/[<>:"\\|?*\x00-\x1f]/g, '')
+    .replace(/[<>:"\\|?*\x00-\x1F]/g, '')
     .replace(/\/\s+/g, '-')
     .replace(/[/\s]+/g, '-')
     .replace(/-+/g, '-')
@@ -244,8 +244,8 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     const postsChanged: Post[] = []
 
     // ── Phase 1: 分类 ──
-    const toDownload: string[] = []     // 远端较新，需下载
-    const toUpload: Post[] = []         // 本地较新，需上传
+    const toDownload: string[] = [] // 远端较新，需下载
+    const toUpload: Post[] = [] // 本地较新，需上传
     for (const [id, rMeta] of Object.entries(remoteMeta.posts)) {
       const local = localPosts.get(id)
       if (!local) {
@@ -253,7 +253,7 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
           // 两边都删了，跳过
         }
         else {
-          toDownload.push(id)  // 远端有本地没有 → 下载
+          toDownload.push(id) // 远端有本地没有 → 下载
         }
       }
       else {
@@ -261,10 +261,10 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
         const remoteTime = rMeta.updateDatetime
         const toleranceMs = 2000
         if (remoteTime > localTime + toleranceMs) {
-          toDownload.push(id)       // 远端更新 → 下载
+          toDownload.push(id) // 远端更新 → 下载
         }
         else if (localTime > remoteTime + toleranceMs) {
-          toUpload.push(local)      // 本地更新 → 上传
+          toUpload.push(local) // 本地更新 → 上传
         }
       }
     }
@@ -293,7 +293,9 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
         ? `${PATH_EDITOR_POSTS}/${rMeta.filename}`
         : `${PATH_EDITOR_POSTS}/${id}.md`
       const file = await c.readFile(repo, remotePath)
-      if (!file) continue
+      if (!file)
+        continue
+      const resolvedTitle = rMeta.title || extractTitle(file.content) || id.slice(0, 8)
 
       const existing = postStore.getPostById(id)
       if (existing) {
@@ -309,15 +311,16 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
         }
       }
       else {
-        const title = rMeta.title || extractTitle(file.content) || id.slice(0, 8)
         postsAdded.push({
-          id, title, content: file.content,
+          id,
+          title: resolvedTitle,
+          content: file.content,
           history: [{ datetime: formatLocalDateTime(), content: file.content }],
           createDatetime: new Date(rMeta.updateDatetime),
           updateDatetime: new Date(rMeta.updateDatetime),
         } as Post)
       }
-      const metaFilename = rMeta.filename || postFilename(rMeta.title || title, id)
+      const metaFilename = rMeta.filename || postFilename(resolvedTitle, id)
       updatedMetas[id] = { ...rMeta, sha: file.sha, filename: metaFilename }
     }
 
@@ -335,26 +338,30 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
         catch { /* already gone */ }
         const result = await c.writeFile(repo, `${PATH_EDITOR_POSTS}/${newFilename}`, post.content, `update: ${post.title}`)
         updatedMetas[post.id] = {
-          title: post.title, updateDatetime: new Date(post.updateDatetime).getTime(),
-          sha: result.sha, filename: newFilename,
+          title: post.title,
+          updateDatetime: new Date(post.updateDatetime).getTime(),
+          sha: result.sha,
+          filename: newFilename,
         }
       }
       else if (oldFilename) {
         // 文件名没变，正常更新
-        const result = await c.writeFile(repo, `${PATH_EDITOR_POSTS}/${oldFilename}`, post.content,
-          `update: ${post.title}`, rMeta!.sha,
-        )
+        const result = await c.writeFile(repo, `${PATH_EDITOR_POSTS}/${oldFilename}`, post.content, `update: ${post.title}`, rMeta!.sha)
         updatedMetas[post.id] = {
-          title: post.title, updateDatetime: new Date(post.updateDatetime).getTime(),
-          sha: result.sha, filename: oldFilename,
+          title: post.title,
+          updateDatetime: new Date(post.updateDatetime).getTime(),
+          sha: result.sha,
+          filename: oldFilename,
         }
       }
       else {
         // 全新文章
         const result = await c.writeFile(repo, `${PATH_EDITOR_POSTS}/${newFilename}`, post.content, `create: ${post.title}`)
         updatedMetas[post.id] = {
-          title: post.title, updateDatetime: new Date(post.updateDatetime).getTime(),
-          sha: result.sha, filename: newFilename,
+          title: post.title,
+          updateDatetime: new Date(post.updateDatetime).getTime(),
+          sha: result.sha,
+          filename: newFilename,
         }
       }
     }
@@ -388,8 +395,7 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     for (const post of postStore.posts)
       delete newMeta.tombstones[post.id]
 
-    await c.writeFile(repo, PATH_EDITOR_METADATA, JSON.stringify(newMeta, null, 2),
-      'sync editor metadata', remoteMetaSha)
+    await c.writeFile(repo, PATH_EDITOR_METADATA, JSON.stringify(newMeta, null, 2), 'sync editor metadata', remoteMetaSha)
   }
 
   // ── 主同步入口 ──
@@ -415,7 +421,8 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
       const repo = await client.value.ensureRepo()
       const c = client.value
 
-      if (syncTimedOut) return
+      if (syncTimedOut)
+        return
 
       // ── 编辑器 ──
       if (scope === 'all' || scope === 'editor') {
@@ -425,9 +432,11 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
         if (remoteSettings)
           await applyAllSettings(JSON.parse(remoteSettings.content))
         await c.writeFile(
-          repo, PATH_EDITOR_SETTINGS,
+          repo,
+          PATH_EDITOR_SETTINGS,
           JSON.stringify(await collectAllSettings(), null, 2),
-          'sync editor settings', remoteSettings?.sha,
+          'sync editor settings',
+          remoteSettings?.sha,
         )
 
         // posts
@@ -486,9 +495,11 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
       if (scope === 'all') {
         const remoteConfig = await c.readFile(repo, PATH_CONFIG)
         await c.writeFile(
-          repo, PATH_CONFIG,
+          repo,
+          PATH_CONFIG,
           JSON.stringify({ lastSyncAt: Date.now(), version: 2 }, null, 2),
-          'update config', remoteConfig?.sha,
+          'update config',
+          remoteConfig?.sha,
         )
       }
 

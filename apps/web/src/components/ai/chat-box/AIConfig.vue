@@ -129,6 +129,35 @@ async function testImage() {
     imageTesting.value = false
   }
 }
+
+const loading = computed(() =>
+  textTesting.value || visionTesting.value || imageTesting.value,
+)
+
+const testResult = computed(() =>
+  imageTestResult.value?.msg ?? visionTestResult.value?.msg ?? textTestResult.value?.msg ?? ``,
+)
+
+async function saveConfig() {
+  emit(`saved`)
+}
+
+async function clearConfig() {
+  await aiConfig.reset()
+  emit(`saved`)
+}
+
+async function testConnection() {
+  await testText()
+}
+
+defineExpose({
+  saveConfig,
+  clearConfig,
+  testConnection,
+  loading,
+  testResult,
+})
 </script>
 
 <template>

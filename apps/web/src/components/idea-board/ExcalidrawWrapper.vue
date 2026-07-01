@@ -25,6 +25,7 @@ let excalidrawRef: {
   getAppState: () => Record<string, unknown>
   getSceneElements: () => readonly Record<string, unknown>[]
   getFiles: () => Record<string, unknown>
+  scrollToContent?: (target?: readonly Record<string, unknown>[], options?: Record<string, unknown>) => void
 } | null = null
 
 // ── 移除不需要的菜单项 ─────────────────────────────────────
@@ -141,12 +142,12 @@ defineExpose({
       const skeletons = JSON.parse(json)
       if (!Array.isArray(skeletons) || !skeletons.length)
         return false
-      const elements = convertToExcalidrawElements(skeletons, { fontSize: 18 })
+      const elements = convertToExcalidrawElements(skeletons as any, { regenerateIds: true })
       const currentElements = excalidrawRef.getSceneElements() || []
       excalidrawRef.updateScene({
         elements: [...currentElements, ...elements],
       })
-      excalidrawRef.scrollToContent(elements, { animate: true, fitToContent: true })
+      excalidrawRef.scrollToContent?.(elements, { animate: true, fitToContent: true })
       return true
     }
     catch (e) {
@@ -170,14 +171,14 @@ defineExpose({
       })
       if (!skeletons?.length)
         return false
-      const elements = convertToExcalidrawElements(skeletons, { fontSize: 18 })
+      const elements = convertToExcalidrawElements(skeletons as any, { regenerateIds: true })
       // 居中插入到当前视口
       const currentElements = excalidrawRef.getSceneElements() || []
       excalidrawRef.updateScene({
         elements: [...currentElements, ...elements],
       })
       // 滚动到新元素
-      excalidrawRef.scrollToContent(elements, { animate: true, fitToContent: true })
+      excalidrawRef.scrollToContent?.(elements, { animate: true, fitToContent: true })
       return true
     }
     catch (e) {
