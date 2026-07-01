@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { FileText, Lightbulb, Settings } from '@lucide/vue'
+import { FileText, Lightbulb, Newspaper, Settings } from '@lucide/vue'
 import { onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
 
 const uiStore = useUIStore()
 
 onMounted(() => {
-  // 首页挂载后立即后台预加载编辑器和想法库
+  // 首页挂载后立即后台预加载编辑器、想法库和阅读模块
   import('@/components/editor/CodemirrorEditor.vue')
   import('@/components/idea-board/IdeaBoard.vue')
+  import('@/components/reading/ReadingView.vue')
 })
 </script>
 
@@ -46,6 +47,22 @@ onMounted(() => {
             </h2>
             <p class="mt-1 text-sm text-muted-foreground">
               白板画布、自由创作
+            </p>
+          </div>
+        </button>
+
+        <!-- 资讯阅读 -->
+        <button
+          class="group flex w-56 flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-sm transition-all hover:border-blue-500 hover:shadow-md"
+          @click="uiStore.setCurrentView('reading')"
+        >
+          <Newspaper class="h-10 w-10 text-blue-500 transition-transform group-hover:scale-110" />
+          <div class="text-center">
+            <h2 class="text-lg font-semibold">
+              资讯阅读
+            </h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              RSS 订阅、阅读、记录想法
             </p>
           </div>
         </button>

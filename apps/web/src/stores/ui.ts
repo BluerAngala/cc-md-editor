@@ -38,9 +38,9 @@ export const useUIStore = defineStore(`ui`, () => {
   }
 
   // 主视图：editor（编辑器）| ideaBoard（想法便签墙）
-  const currentView = store.reactive<'landing' | 'editor' | 'ideaBoard'>(`currentView`, 'landing')
+  const currentView = store.reactive<'landing' | 'editor' | 'ideaBoard' | 'reading'>(`currentView`, 'landing')
 
-  function setCurrentView(view: 'landing' | 'editor' | 'ideaBoard') {
+  function setCurrentView(view: 'landing' | 'editor' | 'ideaBoard' | 'reading') {
     currentView.value = view
   }
 
