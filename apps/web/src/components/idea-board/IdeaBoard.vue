@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { FileText, Home, LayoutGrid, Lightbulb, Plus, Search, Sparkles, Trash2 } from '@lucide/vue'
+import { LayoutGrid, Lightbulb, Plus, Search, Sparkles, Trash2 } from '@lucide/vue'
 import { computed, ref } from 'vue'
+import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
@@ -8,11 +9,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import AIDraftDialog from './AIDraftDialog.vue'
 import ExcalidrawWrapper from './ExcalidrawWrapper.vue'
 import MermaidAIDialog from './MermaidAIDialog.vue'
-
-const emit = defineEmits<{
-  goToEditor: []
-  goToLanding: []
-}>()
 
 const STORAGE_KEY = 'idea-board-scenes'
 
@@ -369,10 +365,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
   <div class="flex h-screen flex-col select-none">
     <!-- Header -->
     <header class="flex items-center gap-3 border-b px-4 py-2">
-      <Lightbulb class="text-lg text-gray-700 dark:text-gray-300" />
-      <h1 class="text-base font-semibold">
-        想法库
-      </h1>
+      <ViewNav />
 
       <!-- 有分组时才显示过滤 -->
       <div v-if="groups.length" class="ml-4 flex items-center gap-1">
@@ -395,30 +388,6 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
       </div>
 
       <div class="flex-1" />
-
-      <!-- AI 配置提示 -->
-
-      <TooltipProvider :delay-duration="300">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="outline" size="sm" @click="emit('goToLanding')">
-              <Home class="mr-1 h-4 w-4" />
-              首页
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>返回首页</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="outline" size="sm" @click="emit('goToEditor')">
-              <FileText class="mr-1 h-4 w-4" />
-              编辑器
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>前往 Markdown 编辑器</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
     </header>
 
     <!-- 主体 -->

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Copy, FolderKanban, Home, Lightbulb, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
+import { Copy, FolderKanban, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
 import { defineAsyncComponent } from 'vue'
+import ViewNav from '@/components/shared/ViewNav.vue'
 import { useEditorRefresh } from '@/composables/useEditorRefresh'
 import { generatePureHTML, processClipboardContent } from '@/services/export'
 import { isShareUiEnabled } from '@/services/share/client'
@@ -235,22 +236,7 @@ function copyToWeChat() {
   >
     <!-- 桌面端左侧菜单 -->
     <div class="space-x-1 hidden md:flex items-center">
-      <Button
-        variant="outline"
-        class="h-8 px-3 text-sm font-normal"
-        @click="uiStore.setCurrentView('landing')"
-      >
-        <Home class="mr-1.5 size-4" />
-        <span>首页</span>
-      </Button>
-      <Button
-        variant="outline"
-        class="h-8 px-3 text-sm font-normal"
-        @click="uiStore.setCurrentView('ideaBoard')"
-      >
-        <Lightbulb class="mr-1.5 size-4 text-amber-500" />
-        <span>想法库</span>
-      </Button>
+      <ViewNav />
       <Button
         variant="outline"
         class="h-8 px-3 text-sm font-normal"

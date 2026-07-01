@@ -8,6 +8,7 @@ import { useUIStore } from '@/stores/ui'
 
 const CodemirrorEditor = defineAsyncComponent(() => import('@/components/editor/CodemirrorEditor.vue'))
 const IdeaBoard = defineAsyncComponent(() => import('@/components/idea-board/IdeaBoard.vue'))
+const ReadingView = defineAsyncComponent(() => import('@/components/reading/ReadingView.vue'))
 const CommandPalette = defineAsyncComponent(() => import('@/components/editor/dialogs/CommandPalette.vue'))
 const ConfirmDialog = defineAsyncComponent(() => import('@/components/shared/confirm-dialog/ConfirmDialog.vue'))
 const PreferencesDialog = defineAsyncComponent(() => import('@/components/editor/dialogs/PreferencesDialog.vue'))
@@ -27,8 +28,9 @@ usePreferencesHotkey()
   <CodemirrorEditor v-else-if="currentView === 'editor'" />
   <IdeaBoard
     v-else-if="currentView === 'ideaBoard'"
-    @go-to-editor="uiStore.setCurrentView('editor')"
-    @go-to-landing="uiStore.setCurrentView('landing')"
+  />
+  <ReadingView
+    v-else-if="currentView === 'reading'"
   />
 
   <CommandPalette />
