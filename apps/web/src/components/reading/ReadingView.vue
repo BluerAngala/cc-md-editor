@@ -82,34 +82,34 @@ function formatDate(ts: number) {
     <!-- 主体 -->
     <div class="flex flex-1 overflow-hidden">
       <!-- 左栏：分类 + 源列表 -->
-      <div class="w-48 border-r flex flex-col">
-        <div class="p-3 border-b">
-          <span class="text-xs font-medium text-muted-foreground">分类</span>
+      <div class="w-56 border-r flex flex-col">
+        <div class="px-4 py-3 border-b">
+          <span class="text-sm font-medium text-muted-foreground">分类</span>
         </div>
         <div class="flex-1 overflow-y-auto">
           <button
-            class="w-full px-3 py-1.5 text-left text-xs transition-colors"
+            class="w-full px-4 py-2 text-left text-sm transition-colors"
             :class="!store.activeSourceId && !showStarredOnly ? 'bg-muted font-medium' : 'hover:bg-muted/50'"
             @click="store.activeSourceId = null; showStarredOnly = false"
           >
             全部文章
           </button>
           <button
-            class="w-full px-3 py-1.5 text-left text-xs transition-colors"
+            class="w-full px-4 py-2 text-left text-sm transition-colors"
             :class="showStarredOnly ? 'bg-muted font-medium' : 'hover:bg-muted/50'"
             @click="showStarredOnly = true; store.activeSourceId = null"
           >
-            <Star class="inline h-3 w-3 mr-1 text-amber-500" />
+            <Star class="inline h-3.5 w-3.5 mr-1.5 text-amber-500" />
             收藏
           </button>
-          <div v-for="cat in store.categories" :key="cat" class="mt-1">
-            <div class="px-3 py-1 text-[10px] font-medium text-muted-foreground uppercase">
+          <div v-for="cat in store.categories" :key="cat" class="mt-2">
+            <div class="px-4 py-1 text-xs font-medium text-muted-foreground uppercase">
               {{ cat }}
             </div>
             <button
               v-for="src in store.sources.filter(s => s.category === cat)"
               :key="src.id"
-              class="w-full px-3 py-1.5 text-left text-xs transition-colors"
+              class="w-full px-4 py-2 text-left text-sm transition-colors"
               :class="store.activeSourceId === src.id ? 'bg-muted font-medium' : 'hover:bg-muted/50'"
               @click="store.activeSourceId = src.id; showStarredOnly = false"
             >
@@ -120,12 +120,12 @@ function formatDate(ts: number) {
       </div>
 
       <!-- 中栏：文章列表 -->
-      <div class="w-72 border-r flex flex-col">
-        <div class="px-3 py-2 border-b flex items-center justify-between">
-          <span class="text-xs text-muted-foreground">
+      <div class="w-80 border-r flex flex-col">
+        <div class="px-4 py-2.5 border-b flex items-center justify-between">
+          <span class="text-sm text-muted-foreground">
             {{ displayArticles.length }} 篇文章
           </span>
-          <span v-if="store.loading" class="text-[10px] text-muted-foreground">
+          <span v-if="store.loading" class="text-xs text-muted-foreground">
             加载中...
           </span>
         </div>
@@ -133,19 +133,19 @@ function formatDate(ts: number) {
           <div
             v-for="article in displayArticles"
             :key="article.id"
-            class="group px-3 py-2.5 border-b cursor-pointer transition-colors hover:bg-muted/50"
+            class="group px-4 py-3 border-b cursor-pointer transition-colors hover:bg-muted/50"
             :class="{ 'bg-muted/30': store.activeArticleId === article.id }"
             @click="store.setActiveArticle(article.id)"
           >
             <div class="flex items-start gap-2">
               <div class="flex-1 min-w-0">
                 <p
-                  class="text-xs leading-snug line-clamp-2"
+                  class="text-sm leading-snug line-clamp-2"
                   :class="article.read ? 'text-muted-foreground' : 'font-medium'"
                 >
                   {{ article.title }}
                 </p>
-                <p class="mt-1 text-[10px] text-muted-foreground truncate">
+                <p class="mt-1.5 text-xs text-muted-foreground truncate">
                   {{ article.sourceTitle }} · {{ formatDate(article.publishedAt) }}
                 </p>
               </div>
