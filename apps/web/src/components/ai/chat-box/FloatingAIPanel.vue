@@ -518,7 +518,7 @@ function resetToAnchor() {
       <div
         v-if="panelStore.visible"
         ref="panelRef"
-        class="ai-floating-panel fixed flex flex-col rounded-xl border shadow-2xl overflow-hidden select-none"
+        class="ai-floating-panel fixed flex flex-col rounded-xl border shadow-2xl overflow-hidden"
         :style="{
           left: `${x}px`,
           top: `${y}px`,
@@ -530,7 +530,7 @@ function resetToAnchor() {
         <!-- ============ Header (drag handle) ============ -->
         <div
           ref="dragHandleRef"
-          class="ai-panel-header flex items-center justify-between px-3 py-2 cursor-move border-b shrink-0"
+          class="ai-panel-header flex items-center justify-between px-3 py-2 cursor-move border-b shrink-0 select-none"
           @mousedown="onDragStart"
           @dblclick="resetToAnchor()"
         >
@@ -727,7 +727,7 @@ function resetToAnchor() {
                   <pre class="mt-1 whitespace-pre-wrap">{{ msg.reasoning }}</pre>
                 </details>
 
-                <div class="whitespace-pre-wrap break-words">
+                <div class="whitespace-pre-wrap break-words select-text">
                   {{ msg.content }}
                 </div>
 
