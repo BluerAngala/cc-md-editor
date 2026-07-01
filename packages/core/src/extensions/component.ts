@@ -134,20 +134,20 @@ export const BUILT_IN_COMPONENTS: CustomComponentDef[] = [
       { name: `title`, description: `职位或标签` },
       { name: `bio`, description: `个人简介` },
       { name: `avatarShape`, description: `头像形状：round | rect`, default: `rect` },
+      { name: `avatarWidth`, description: `头像宽度：small | large | full 或数字 px`, default: `small` },
+      { name: `avatarHeight`, description: `头像高度 px，不设则为正方形` },
       { name: `bgColor`, description: `背景色（hex）` },
       { name: `accentColor`, description: `强调色（hex）` },
-      { name: `avatarSize`, description: `头像大小：small | large | full 或数字`, default: `small` },
-      { name: `avatarHeight`, description: `头像高度 px，不设则为正方形` },
       { name: `style`, description: `风格：card | blue | badge | lawyer | executive`, default: `card` },
     ],
     template: ``,
-    example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="card" />`,
+    example: `<AboutAuthor name="陈恒" avatar="https://raw.githubusercontent.com/BluerAngala/cc-md-editor/main/apps/web/public/images/chenheng.jpg" title="广东岭南律师事务所·专职律师" bio="您好，我是陈恒，主要业务是政府法律顾问和公司法务，擅长处理民商事纠纷、政府行政案件、企业合规事务等。业余积极探索法律AI科技实践，创建「法律AI 科技实践基地」知识库、开发「陈恒律师工具箱」小程序等。" style="lawyer" />`,
     examples: [
-      { label: `蓝底`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="blue" avatarSize="large" avatarShape="round" />` },
+      { label: `蓝底`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="blue" avatarWidth="large" avatarShape="round" />` },
       { label: `卡片`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师" bio="热爱技术，专注于 Web 开发与开源社区。" style="card" />` },
       { label: `徽章`, example: `<AboutAuthor name="张三" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="全栈工程师 / 开源爱好者" bio="热爱技术，专注于 Web 开发与开源社区。" style="badge" avatarShape="round" />` },
       { label: `律师`, example: `<AboutAuthor name="陈恒" avatar="https://raw.githubusercontent.com/BluerAngala/cc-md-editor/main/apps/web/public/images/chenheng.jpg" title="广东岭南律师事务所专职律师 / 产业投资专业委员会委员" bio="法学专业，爱好科技，略懂 AI 和自动化，业余折腾了一些法律科技有关的项目。如有志同道合的朋友，欢迎交流探讨。" style="lawyer" />` },
-      { label: `企业家`, example: `<AboutAuthor name="李明" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="未来智联创始人兼 CEO" bio="连续创业者，致力于用科技改变生活。曾获年度创新人物奖，带领团队从零做到行业领先。" style="executive" avatarSize="full" avatarShape="round" />` },
+      { label: `企业家`, example: `<AboutAuthor name="李明" avatar="https://avatars.githubusercontent.com/u/21008209?v=4" title="未来智联创始人兼 CEO" bio="连续创业者，致力于用科技改变生活。曾获年度创新人物奖，带领团队从零做到行业领先。" style="executive" avatarWidth="full" avatarShape="round" />` },
     ],
   },
 ]
@@ -277,7 +277,7 @@ function renderInfoGrid(props: Record<string, string>): string {
 }
 
 function renderAboutAuthor(props: Record<string, string>): string {
-  const { name, avatar, title, bio, style: styleProp, avatarSize: avatarSizeProp, avatarShape: avatarShapeProp } = props
+  const { name, avatar, title, bio, style: styleProp, avatarWidth: avatarWidthProp, avatarShape: avatarShapeProp } = props
   const style = styleProp || `card`
 
   // 各风格的智能默认值：shape 和 size
@@ -290,7 +290,8 @@ function renderAboutAuthor(props: Record<string, string>): string {
   }
   const defaults = styleDefaults[style] || styleDefaults.card
 
-  const avatarSize = avatarSizeProp || defaults.size
+  // 兼容旧属性 avatarSize
+  const avatarSize = avatarWidthProp || props.avatarSize || defaults.size
   const avatarShape = avatarShapeProp || defaults.shape
   const avatarW = /^\d+$/.test(avatarSize) ? Number(avatarSize) : avatarSize === `full` ? 200 : avatarSize === `large` ? 120 : 64
   // 圆形头像必须是正方形，否则 border-radius: 50% 会变成椭圆
