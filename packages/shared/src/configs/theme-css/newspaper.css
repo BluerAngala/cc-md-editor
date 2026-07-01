@@ -91,7 +91,7 @@ blockquote {
 
 blockquote > p {
   display: block;
-  font-size: 1em;
+  font-size: calc(var(--md-font-size) - 2px);
   color: hsl(var(--foreground));
   margin: 0 0 0.5em 0;
 }

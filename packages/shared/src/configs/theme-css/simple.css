@@ -69,6 +69,12 @@ blockquote {
   margin-bottom: 1em;
 }
 
+blockquote > p {
+  display: block;
+  font-size: calc(var(--md-font-size) - 2px);
+  margin: 0 0 0.5em 0;
+}
+
 /* GFM Alert 样式覆盖 */
 .markdown-alert-note,
 .markdown-alert-tip,
