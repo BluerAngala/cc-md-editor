@@ -1,4 +1,3 @@
-import type { Post } from '@/types/post'
 import { watch } from 'vue'
 import { formatLocalDateTime } from '@/i18n/translate'
 import { GitHubSyncClient } from '@/services/github/client'
@@ -8,128 +7,82 @@ import { usePostStore } from '@/stores/post'
 
 const GITHUB_TOKEN_KEY = addPrefix('github_token')
 const LAST_SYNC_KEY = addPrefix('github_last_sync')
-const SYNCED_FILES_KEY = addPrefix('github_synced_files')
+const SNAPSHOT_HASH_KEY = addPrefix('github_snapshot_hash')
 const REPO_NAME_KEY = addPrefix('github_repo_name')
-
-// localStorage keys for reading & idea board
-const READING_SOURCES_KEY = 'reading_sources'
-const READING_ARTICLES_KEY = 'reading_articles'
-const IDEA_BOARD_KEY = 'idea-board-notes'
 
 // 远端路径
 const PATH_POSTS = 'editor/posts'
-const PATH_SETTINGS = 'editor/settings.json'
-const PATH_READING_SOURCES = 'reading/sources.json'
-const PATH_READING_ARTICLES = 'reading/articles.json'
-const PATH_IDEA_NOTES = 'idea-board/notes.json'
+const PATH_SNAPSHOT = 'snapshot.json'
+const PATH_META = 'sync-meta.json'
 
-const SKIP_SETTINGS_KEYS = new Set([
-  GITHUB_TOKEN_KEY,
-  LAST_SYNC_KEY,
-  SYNCED_FILES_KEY,
-  addPrefix('current_post_id'),
+// snapshot.json 包含的 localStorage keys
+const SNAPSHOT_KEYS = [
+  'reading_sources',
+  'reading_articles',
+  'idea-board-notes',
+  addPrefix('theme'),
+  addPrefix('themeSettings'),
+  addPrefix('use_indent'),
+  addPrefix('use_justify'),
+  'isCiteStatus',
+  'isCountStatus',
+  'legend',
+  'previewWidth',
+  'locale',
+  'showAIToolbox',
+  'viewMode',
+  'previewDevice',
+  addPrefix('copyMode'),
   addPrefix('sort_mode'),
-  READING_SOURCES_KEY,
-  READING_ARTICLES_KEY,
-  IDEA_BOARD_KEY,
-])
-
-/** 收集编辑器 localStorage 设置（排除同步元数据、设备状态、阅读/想法库） */
-function collectEditorSettings(): Record<string, unknown> {
-  const settings: Record<string, unknown> = {}
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (!key || SKIP_SETTINGS_KEYS.has(key))
-      continue
-    try {
-      const raw = localStorage.getItem(key)
-      if (raw !== null)
-        settings[key] = JSON.parse(raw)
-    }
-    catch {
-      settings[key] = localStorage.getItem(key)
-    }
-  }
-  return settings
-}
-
-/** 应用远端编辑器设置到本地 */
-function applyEditorSettings(settings: Record<string, unknown>): void {
-  for (const [key, value] of Object.entries(settings)) {
-    if (SKIP_SETTINGS_KEYS.has(key))
-      continue
-    try {
-      localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
-    }
-    catch { /* quota error, ignore */ }
-  }
-}
+  addPrefix('enableImageReupload'),
+  addPrefix('enableScrollSync'),
+  'openai_type',
+  'openai_temperature',
+  'openai_max_token',
+  addPrefix('css_content_config'),
+  addPrefix('templates'),
+  addPrefix('custom_components'),
+  'quick_commands',
+]
 
 export type GitHubSyncStatus = 'idle' | 'syncing' | 'error'
 
-interface SyncedFileMap {
-  [docId: string]: { path: string, sha: string }
+interface SyncMeta {
+  lastSyncAt: number
+  snapshotHash: string
 }
 
-function readSyncedFiles(): SyncedFileMap {
-  try {
-    const raw = localStorage.getItem(SYNCED_FILES_KEY)
-    return raw ? JSON.parse(raw) : {}
-  }
-  catch {
-    return {}
-  }
-}
-
-function writeSyncedFiles(map: SyncedFileMap): void {
-  localStorage.setItem(SYNCED_FILES_KEY, JSON.stringify(map))
-}
-
-/** 从 markdown 内容提取标题（第一个 # 标题） */
-function extractTitle(content: string): string {
-  const lines = content.split('\n')
-  for (const line of lines) {
-    if (line.startsWith('# '))
-      return line.slice(2).trim().slice(0, 80)
-  }
-  return ''
-}
-
-/** 同步单个 JSON 文件（LWW：远端更新则写本地，本地更新则推远端） */
-async function syncJsonFile(
-  client: GitHubSyncClient,
-  repo: string,
-  path: string,
-  localData: string,
-  syncedFiles: SyncedFileMap,
-): Promise<string> {
-  const meta = syncedFiles[path]
-  const remote = await client.readFile(repo, path)
-
-  if (remote) {
-    if (!meta || meta.sha !== remote.sha) {
-      // 远端有更新 → 写本地
-      localStorage.setItem(
-        path === PATH_READING_SOURCES
-          ? READING_SOURCES_KEY
-          : path === PATH_READING_ARTICLES
-            ? READING_ARTICLES_KEY
-            : IDEA_BOARD_KEY,
-        remote.content,
-      )
-      syncedFiles[path] = { path, sha: remote.sha }
-      return remote.content
+/** 收集快照 */
+function collectSnapshot(): Record<string, unknown> {
+  const snap: Record<string, unknown> = {}
+  for (const key of SNAPSHOT_KEYS) {
+    const raw = localStorage.getItem(key)
+    if (raw !== null) {
+      try { snap[key] = JSON.parse(raw) }
+      catch { snap[key] = raw }
     }
   }
+  return snap
+}
 
-  // 本地有数据 → 推远端
-  if (localData && localData !== '[]') {
-    const sha = meta?.sha
-    await client.writeFile(repo, path, localData, sha ? `update ${path}` : `create ${path}`, sha)
-    syncedFiles[path] = { path, sha: '' } // sha 会在下次 listFiles 时更新
+/** 应用快照到本地 */
+function applySnapshot(snap: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(snap)) {
+    try {
+      localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
+    }
+    catch { /* ignore */ }
   }
+}
 
-  return localData
+/** 简单 hash 用于变更检测 */
+function hashSnapshot(snap: Record<string, unknown>): string {
+  const str = JSON.stringify(snap)
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0
+  }
+  return hash.toString(36)
 }
 
 export const useGitHubSyncStore = defineStore('githubSync', () => {
@@ -137,11 +90,11 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
 
   const token = store.reactive(GITHUB_TOKEN_KEY, '')
   const lastSyncAt = store.reactive(LAST_SYNC_KEY, 0)
+  const snapshotHash = store.reactive(SNAPSHOT_HASH_KEY, '')
   const status = ref<GitHubSyncStatus>('idle')
   const lastError = ref('')
   const storedRepoName = store.reactive(REPO_NAME_KEY, '')
 
-  // token 变化时主动获取用户名
   watch(token, async (t) => {
     if (!t || storedRepoName.value)
       return
@@ -156,15 +109,13 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
   const isConfigured = computed(() => Boolean(token.value))
   const client = computed(() => isConfigured.value ? new GitHubSyncClient(() => token.value) : null)
 
-  function setToken(t: string) {
-    token.value = t
-  }
+  function setToken(t: string) { token.value = t }
 
   function clearToken() {
     token.value = ''
     lastSyncAt.value = 0
+    snapshotHash.value = ''
     storedRepoName.value = ''
-    writeSyncedFiles({})
   }
 
   const MIN_SYNC_INTERVAL_MS = 10_000
@@ -172,8 +123,6 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
   async function sync(): Promise<void> {
     if (!client.value || status.value === 'syncing')
       return
-
-    // 冷却期保护
     if (lastSyncAt.value > 0 && Date.now() - lastSyncAt.value < MIN_SYNC_INTERVAL_MS)
       return
 
@@ -181,130 +130,47 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     lastError.value = ''
 
     try {
-      // 1. 确保仓库存在
       storedRepoName.value = await client.value.ensureRepo()
       const repo = storedRepoName.value
-      const syncedFiles = readSyncedFiles()
 
-      // ── 迁移旧结构 ──────────────────────────────────────
-      // 旧结构: posts/<id>.md + settings.json (根目录)
-      // 新结构: editor/posts/<id>.md + editor/settings.json + reading/ + idea-board/
-      const oldPosts = await client.value.listFiles(repo, 'posts')
-      if (oldPosts.length > 0) {
-        for (const f of oldPosts) {
-          if (!f.name.endsWith('.md'))
-            continue
-          const fileData = await client.value.readFile(repo, f.path)
-          if (!fileData)
-            continue
-          const newPath = `${PATH_POSTS}/${f.name}`
-          await client.value.writeFile(repo, newPath, fileData.content, `migrate: ${f.name}`)
-          await client.value.deleteFile(repo, f.path, `migrate: remove old ${f.name}`, f.sha)
-        }
-      }
-      const oldSettings = await client.value.readFile(repo, 'settings.json')
-      if (oldSettings) {
-        await client.value.writeFile(repo, PATH_SETTINGS, oldSettings.content, 'migrate: settings.json')
-        await client.value.deleteFile(repo, 'settings.json', 'migrate: remove old settings.json', oldSettings.sha)
-      }
+      // ── 1. 同步 snapshot.json（全量覆盖，谁新用谁） ──
+      const localSnap = collectSnapshot()
+      const localHash = hashSnapshot(localSnap)
 
-      // ── 2. 编辑器文章 ──────────────────────────────────
-      const remotePosts = await client.value.listFiles(repo, PATH_POSTS)
+      const remoteMeta = await client.value.readFile(repo, PATH_META)
+      const remoteSnapFile = await client.value.readFile(repo, PATH_SNAPSHOT)
 
-      // 拉取远端文章
-      for (const remoteFile of remotePosts) {
-        if (!remoteFile.name.endsWith('.md'))
-          continue
-        const docId = remoteFile.name.replace(/\.md$/, '')
-        const localMeta = syncedFiles[docId]
+      if (remoteSnapFile && remoteMeta) {
+        const meta: SyncMeta = JSON.parse(remoteMeta.content)
+        const remoteHash = meta.snapshotHash || ''
 
-        if (!localMeta || localMeta.sha !== remoteFile.sha) {
-          const fileData = await client.value.readFile(repo, remoteFile.path)
-          if (!fileData)
-            continue
-
-          const existing = postStore.getPostById(docId)
-          if (existing) {
-            const localUpdated = new Date(existing.updateDatetime).getTime()
-            if (localUpdated <= lastSyncAt.value || !localMeta)
-              postStore.updatePostContent(docId, fileData.content)
+        if (remoteHash !== localHash) {
+          // 有差异，比较时间决定方向
+          const localUpdatedAt = findMaxUpdateTime()
+          if (meta.lastSyncAt > localUpdatedAt && remoteHash !== localHash) {
+            // 远端更新 → 用远端覆盖本地
+            const remoteSnap = JSON.parse(remoteSnapFile.content)
+            applySnapshot(remoteSnap)
+            snapshotHash.value = remoteHash
           }
           else {
-            const title = extractTitle(fileData.content) || docId.slice(0, 8)
-            const newPost: Post = {
-              id: docId,
-              title,
-              content: fileData.content,
-              history: [
-                { datetime: formatLocalDateTime(), content: fileData.content },
-              ],
-              createDatetime: new Date(),
-              updateDatetime: new Date(),
-            }
-            postStore.posts.push(newPost)
+            // 本地更新 → 推送到远端
+            await pushSnapshot(repo, localSnap, localHash, remoteSnapFile.sha, remoteMeta.sha)
           }
-
-          syncedFiles[docId] = { path: remoteFile.path, sha: remoteFile.sha }
-        }
-      }
-
-      // 推送本地文章
-      for (const post of postStore.posts) {
-        const localMeta = syncedFiles[post.id]
-        const fileName = `${PATH_POSTS}/${post.id}.md`
-
-        if (localMeta && localMeta.sha) {
-          const localUpdated = new Date(post.updateDatetime).getTime()
-          if (localUpdated <= lastSyncAt.value)
-            continue
-          await client.value.writeFile(repo, fileName, post.content, `update: ${post.title}`, localMeta.sha)
-          syncedFiles[post.id] = { path: fileName, sha: localMeta.sha }
         }
         else {
-          await client.value.writeFile(repo, fileName, post.content, `create: ${post.title}`)
-          syncedFiles[post.id] = { path: fileName, sha: '' }
+          snapshotHash.value = localHash
         }
       }
-
-      // 删除远端已删除的本地文章
-      const currentIds = new Set(postStore.posts.map(p => p.id))
-      for (const [docId, meta] of Object.entries(syncedFiles)) {
-        if (meta.path.startsWith(PATH_POSTS) && !currentIds.has(docId)) {
-          try {
-            await client.value.deleteFile(repo, meta.path, `delete: ${docId}`, meta.sha)
-          }
-          catch { /* already deleted */ }
-          delete syncedFiles[docId]
-        }
+      else {
+        // 首次同步 → 推送本地数据
+        await pushSnapshot(repo, localSnap, localHash)
       }
 
-      // ── 3. 编辑器设置 ──────────────────────────────────
-      const remoteSettings = await client.value.readFile(repo, PATH_SETTINGS)
-      if (remoteSettings) {
-        applyEditorSettings(JSON.parse(remoteSettings.content))
-        syncedFiles[PATH_SETTINGS] = { path: PATH_SETTINGS, sha: remoteSettings.sha }
-      }
-      const localSettings = collectEditorSettings()
-      const settingsSha = syncedFiles[PATH_SETTINGS]?.sha
-      await client.value.writeFile(
-        repo,
-        PATH_SETTINGS,
-        JSON.stringify(localSettings, null, 2),
-        settingsSha ? 'update settings' : 'create settings',
-        settingsSha,
-      )
+      // ── 2. 同步编辑器文章（逐文件，按修改时间） ──
+      await syncPosts(repo)
 
-      // ── 4. 阅读数据 ──────────────────────────────────
-      const reading = collectReadingData()
-      await syncJsonFile(client.value, repo, PATH_READING_SOURCES, reading.sources, syncedFiles)
-      await syncJsonFile(client.value, repo, PATH_READING_ARTICLES, reading.articles, syncedFiles)
-
-      // ── 5. 想法库数据 ────────────────────────────────
-      const ideaNotes = collectIdeaBoardData()
-      await syncJsonFile(client.value, repo, PATH_IDEA_NOTES, ideaNotes, syncedFiles)
-
-      // ── 6. 保存同步状态 ──────────────────────────────
-      writeSyncedFiles(syncedFiles)
+      // ── 3. 完成 ──
       lastSyncAt.value = Date.now()
       await postStore.persistImmediately()
       status.value = 'idle'
@@ -315,20 +181,78 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     }
   }
 
-  function collectReadingData() {
-    return {
-      sources: localStorage.getItem(READING_SOURCES_KEY) || '[]',
-      articles: localStorage.getItem(READING_ARTICLES_KEY) || '[]',
+  async function pushSnapshot(
+    repo: string,
+    snap: Record<string, unknown>,
+    hash: string,
+    snapSha?: string,
+    metaSha?: string,
+  ) {
+    const c = client.value!
+    await c.writeFile(repo, PATH_SNAPSHOT, JSON.stringify(snap, null, 2), 'update snapshot', snapSha)
+    const meta: SyncMeta = { lastSyncAt: Date.now(), snapshotHash: hash }
+    await c.writeFile(repo, PATH_META, JSON.stringify(meta, null, 2), 'update sync meta', metaSha)
+    snapshotHash.value = hash
+  }
+
+  async function syncPosts(repo: string) {
+    const c = client.value!
+    const remoteFiles = await c.listFiles(repo, PATH_POSTS)
+
+    // 拉取远端文章（本地没有或远端更新的）
+    for (const f of remoteFiles) {
+      if (!f.name.endsWith('.md'))
+        continue
+      const docId = f.name.replace(/\.md$/, '')
+      const existing = postStore.getPostById(docId)
+
+      if (!existing) {
+        const fileData = await c.readFile(repo, f.path)
+        if (!fileData)
+          continue
+        const title = extractTitle(fileData.content) || docId.slice(0, 8)
+        postStore.posts.push({
+          id: docId,
+          title,
+          content: fileData.content,
+          history: [{ datetime: formatLocalDateTime(), content: fileData.content }],
+          createDatetime: new Date(),
+          updateDatetime: new Date(),
+        })
+      }
+    }
+
+    // 推送本地文章
+    const remoteIds = new Set(remoteFiles.map(f => f.name.replace(/\.md$/, '')))
+    for (const post of postStore.posts) {
+      if (remoteIds.has(post.id))
+        continue // 已存在，暂不处理冲突（简单策略：本地编辑不覆盖远端）
+      const fileName = `${PATH_POSTS}/${post.id}.md`
+      await c.writeFile(repo, fileName, post.content, `create: ${post.title}`)
     }
   }
 
-  function collectIdeaBoardData(): string {
-    return localStorage.getItem(IDEA_BOARD_KEY) || '[]'
+  function findMaxUpdateTime(): number {
+    let max = 0
+    for (const p of postStore.posts) {
+      const t = new Date(p.updateDatetime).getTime()
+      if (t > max)
+        max = t
+    }
+    return max
+  }
+
+  function extractTitle(content: string): string {
+    for (const line of content.split('\n')) {
+      if (line.startsWith('# '))
+        return line.slice(2).trim().slice(0, 80)
+    }
+    return ''
   }
 
   // ── 自动同步 ──────────────────────────────────────
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
-  const AUTO_SYNC_DEBOUNCE_MS = 5 * 60 * 1000 // 5 分钟
+  const AUTO_SYNC_DEBOUNCE_MS = 5 * 60 * 1000
   let watcherStarted = false
 
   function scheduleAutoSync() {
@@ -346,24 +270,14 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     if (watcherStarted)
       return
     watcherStarted = true
-    // 编辑器文章变化
-    watch(
-      () => postStore.posts,
-      () => scheduleAutoSync(),
-      { deep: true },
-    )
-    // 阅读 / 想法库数据变化（同 tab 通过自定义事件，跨 tab 通过 storage 事件）
+    watch(() => postStore.posts, () => scheduleAutoSync(), { deep: true })
     window.addEventListener('md:data-changed', () => scheduleAutoSync())
     window.addEventListener('storage', (e) => {
-      if (e.key === READING_SOURCES_KEY
-        || e.key === READING_ARTICLES_KEY
-        || e.key === IDEA_BOARD_KEY) {
+      if (e.key && SNAPSHOT_KEYS.includes(e.key))
         scheduleAutoSync()
-      }
     })
   }
 
-  // 配置完成后启动自动同步
   watch(isConfigured, (ok) => {
     if (ok)
       startAutoSyncWatcher()
