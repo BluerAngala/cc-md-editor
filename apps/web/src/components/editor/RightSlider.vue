@@ -60,7 +60,7 @@ const selectedHeadingStyle = computed({
   },
 })
 
-const { isMobile, isOpenRightSlider } = storeToRefs(uiStore)
+const { isMobile, isOpenRightSlider, historyLimit } = storeToRefs(uiStore)
 
 // Theme change handlers
 function themeChanged(newTheme: keyof typeof themeMap) {
@@ -412,6 +412,19 @@ watch(isMobile, () => {
       <div class="flex items-center justify-between gap-3">
         <Label for="use-justify" class="min-w-0 shrink text-xs leading-snug sm:text-sm">{{ t('rightSlider.paragraphJustify') }}</Label>
         <Switch id="use-justify" class="shrink-0" :model-value="isUseJustify" @update:model-value="setUseJustify" />
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <Label class="min-w-0 shrink text-xs leading-snug sm:text-sm">{{ t('rightSlider.historyLimit') || '历史记录条数' }}</Label>
+        <Select :model-value="String(historyLimit)" @update:model-value="v => historyLimit = Number(v)">
+          <SelectTrigger class="w-24">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="n in [50, 100, 200, 500]" :key="n" :value="String(n)">
+              {{ n }} 条
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div class="space-y-2">
         <h2 class="text-sm font-medium">

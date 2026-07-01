@@ -660,8 +660,28 @@ function saveHistorySnapshot() {
     datetime: formatLocalDateTime(),
   })
 
-  // 最多保留 100 条
-  currentPost.history.length = Math.min(currentPost.history.length, 100)
+  // 单文档上限
+  const perDocLimit = uiStore.historyLimit
+  currentPost.history.length = Math.min(currentPost.history.length, perDocLimit)
+
+  // 全局总量控制：所有文档的历史条目总和不超过 1000
+  // 超出时从最久没编辑的文章开始清理历史
+  const GLOBAL_LIMIT = 1000
+  const totalEntries = posts.value.reduce((sum, p) => sum + (p.history?.length ?? 0), 0)
+  if (totalEntries > GLOBAL_LIMIT) {
+    // 按 updateDatetime 排序，最旧的排前面
+    const sorted = [...posts.value]
+      .filter(p => p.history?.length)
+      .sort((a, b) => new Date(a.updateDatetime).getTime() - new Date(b.updateDatetime).getTime())
+    for (const post of sorted) {
+      const currentTotal = posts.value.reduce((sum, p) => sum + (p.history?.length ?? 0), 0)
+      if (currentTotal <= GLOBAL_LIMIT)
+        break
+      // 从最旧的文章开始，每次删一半历史
+      const removeCount = Math.max(1, Math.floor((post.history?.length ?? 0) / 2))
+      post.history = (post.history ?? []).slice(0, -removeCount)
+    }
+  }
 }
 
 onUnmounted(() => {

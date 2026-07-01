@@ -63,6 +63,9 @@ export const useUIStore = defineStore(`ui`, () => {
   const enableScrollSync = store.reactive(addPrefix(`enableScrollSync`), true)
   const toggleScrollSync = useToggle(enableScrollSync)
 
+  // 历史记录保留条数上限
+  const historyLimit = store.reactive(addPrefix(`historyLimit`), 100)
+
   // 复制到公众号时的格式模式
   const copyMode = store.reactive(addPrefix(`copyMode`), `txt`)
 
@@ -249,6 +252,7 @@ export const useUIStore = defineStore(`ui`, () => {
     isOpenFolderPanel,
     enableImageReupload,
     enableScrollSync,
+    historyLimit,
     copyMode,
 
     // ==================== 对话框状态 ====================
