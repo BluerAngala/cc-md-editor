@@ -180,7 +180,14 @@ async function testConnection() {
 
 async function handleSync() {
   if (syncMethod.value === 'github') {
-    await githubStore.sync()
+    const scope = uiStore.currentView === 'reading'
+      ? 'reading'
+      : uiStore.currentView === 'ideaBoard'
+        ? 'ideaBoard'
+        : uiStore.currentView === 'editor'
+          ? 'editor'
+          : 'all'
+    await githubStore.sync(scope)
   }
   else {
     await syncStore.sync()

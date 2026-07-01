@@ -86,7 +86,7 @@ export const useReadingStore = defineStore('reading', () => {
   const lastFetchMap = ref<Record<string, number>>({})
 
   function triggerSync() {
-    window.dispatchEvent(new CustomEvent('md:data-changed'))
+    window.dispatchEvent(new CustomEvent('md:data-changed', { detail: { scope: 'reading' } }))
   }
 
   // ── 计算属性 ─────────────────────────────────────────
