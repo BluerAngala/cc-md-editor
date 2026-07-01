@@ -253,6 +253,11 @@ export const usePostStore = defineStore(`post`, () => {
     if (post) {
       post.content = content
       post.updateDatetime = new Date()
+      // 如果更新的是当前文章，同步到编辑器，防止 debounce 回调用旧内容覆盖
+      if (id === currentPostId.value) {
+        const editorStore = useEditorStore()
+        editorStore.importContent(content)
+      }
     }
   }
 
