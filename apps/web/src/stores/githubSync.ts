@@ -42,7 +42,7 @@ function applySettings(settings: Record<string, unknown>): void {
   }
 }
 
-export type SyncStatus = 'idle' | 'syncing' | 'error'
+export type GitHubSyncStatus = 'idle' | 'syncing' | 'error'
 
 interface SyncedFileMap {
   [docId: string]: { path: string, sha: string }
@@ -62,12 +62,22 @@ function writeSyncedFiles(map: SyncedFileMap): void {
   localStorage.setItem(SYNCED_FILES_KEY, JSON.stringify(map))
 }
 
+/** 从 markdown 内容提取标题（第一个 # 标题） */
+function extractTitle(content: string): string {
+  const lines = content.split('\n')
+  for (const line of lines) {
+    if (line.startsWith('# '))
+      return line.slice(2).trim().slice(0, 80)
+  }
+  return ''
+}
+
 export const useGitHubSyncStore = defineStore('githubSync', () => {
   const postStore = usePostStore()
 
   const token = store.reactive(GITHUB_TOKEN_KEY, '')
   const lastSyncAt = store.reactive(LAST_SYNC_KEY, 0)
-  const status = ref<SyncStatus>('idle')
+  const status = ref<GitHubSyncStatus>('idle')
   const lastError = ref('')
   const repoFullName = store.reactive(REPO_NAME_KEY, '')
 
@@ -123,8 +133,9 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
             }
           }
           else {
-            postStore.addPost(docId)
-            postStore.updatePostContent(docId, fileData.content)
+            const title = extractTitle(fileData.content) || docId.slice(0, 8)
+            postStore.addPost(title)
+            postStore.updatePostContent(postStore.currentPostId, fileData.content)
           }
 
           syncedFiles[docId] = { path: remoteFile.path, sha: fileData.sha }

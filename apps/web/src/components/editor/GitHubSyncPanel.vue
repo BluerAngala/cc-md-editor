@@ -102,7 +102,8 @@ async function handleSync() {
             立即同步
           </Button>
           <a
-            :href="`https://github.com/${syncStore.repoFullName || ''}`"
+            v-if="syncStore.repoFullName"
+            :href="`https://github.com/${syncStore.repoFullName}`"
             target="_blank"
             class="inline-flex items-center"
           >
