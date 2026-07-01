@@ -1,3 +1,4 @@
+import { watch } from 'vue'
 import { GitHubSyncClient } from '@/services/github/client'
 import { store } from '@/storage'
 import { addPrefix } from '@/storage/prefix'
@@ -79,7 +80,19 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
   const lastSyncAt = store.reactive(LAST_SYNC_KEY, 0)
   const status = ref<GitHubSyncStatus>('idle')
   const lastError = ref('')
-  const repoFullName = store.reactive(REPO_NAME_KEY, '')
+  const storedRepoName = store.reactive(REPO_NAME_KEY, '')
+
+  // token 变化时主动获取用户名
+  watch(token, async (t) => {
+    if (!t || storedRepoName.value)
+      return
+    try {
+      const c = new GitHubSyncClient(() => t)
+      const username = await c.getUsername()
+      storedRepoName.value = `${username}/${REPO_NAME}`
+    }
+    catch { /* ignore */ }
+  }, { immediate: true })
 
   const isConfigured = computed(() => Boolean(token.value))
   const client = computed(() => isConfigured.value ? new GitHubSyncClient(() => token.value) : null)
@@ -91,7 +104,7 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
   function clearToken() {
     token.value = ''
     lastSyncAt.value = 0
-    repoFullName.value = ''
+    storedRepoName.value = ''
     writeSyncedFiles({})
   }
 
@@ -104,8 +117,8 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
 
     try {
       // 1. 确保仓库存在
-      repoFullName.value = await client.value.ensureRepo()
-      const repo = repoFullName.value
+      storedRepoName.value = await client.value.ensureRepo()
+      const repo = storedRepoName.value
       const syncedFiles = readSyncedFiles()
 
       // 2. 拉取远端文件列表
@@ -212,7 +225,7 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     lastSyncAt,
     status,
     lastError,
-    repoFullName,
+    repoFullName: storedRepoName,
     isConfigured,
     setToken,
     clearToken,
