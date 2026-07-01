@@ -365,10 +365,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
   <div class="flex h-screen flex-col select-none">
     <!-- Header -->
     <header class="flex items-center gap-3 border-b px-4 py-2">
-      <Lightbulb class="text-lg text-gray-700 dark:text-gray-300" />
-      <h1 class="text-base font-semibold">
-        想法库
-      </h1>
+      <ViewNav />
 
       <!-- 有分组时才显示过滤 -->
       <div v-if="groups.length" class="ml-4 flex items-center gap-1">
@@ -391,8 +388,6 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
       </div>
 
       <div class="flex-1" />
-
-      <ViewNav />
     </header>
 
     <!-- 主体 -->
