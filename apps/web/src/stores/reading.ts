@@ -49,6 +49,8 @@ export interface RSSSource {
   title: string
   category: string
   addedAt: number
+  /** 自动刷新间隔（分钟），0 = 关闭 */
+  refreshInterval: number
 }
 
 export interface Article {
@@ -66,8 +68,8 @@ export interface Article {
 }
 
 const DEFAULT_SOURCES: RSSSource[] = [
-  { id: 'solidot', url: 'https://feeds.feedburner.com/solidot', title: '奇客Solidot', category: '科技', addedAt: Date.now() },
-  { id: '36kr', url: 'https://36kr.com/feed', title: '36氪', category: '商业', addedAt: Date.now() },
+  { id: 'solidot', url: 'https://feeds.feedburner.com/solidot', title: '奇客Solidot', category: '科技', addedAt: Date.now(), refreshInterval: 30 },
+  { id: '36kr', url: 'https://36kr.com/feed', title: '36氪', category: '商业', addedAt: Date.now(), refreshInterval: 30 },
 ]
 
 export const useReadingStore = defineStore('reading', () => {
@@ -79,9 +81,9 @@ export const useReadingStore = defineStore('reading', () => {
   const activeSourceId = ref<string | null>(null)
   const activeArticleId = ref<string | null>(null)
   const searchQuery = ref('')
-  const autoRefreshEnabled = ref(loadFromStorage<boolean>('reading_auto_refresh', true))
   let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
-  const AUTO_REFRESH_MS = 15 * 60 * 1000 // 15 分钟
+  /** 每个源上次自动刷新的时间戳 */
+  const lastFetchMap = ref<Record<string, number>>({})
 
   // ── 计算属性 ─────────────────────────────────────────
   const categories = computed(() => {
@@ -109,10 +111,18 @@ export const useReadingStore = defineStore('reading', () => {
   )
 
   // ── 操作 ─────────────────────────────────────────────
-  function addSource(url: string, title: string, category: string) {
+  function addSource(url: string, title: string, category: string, refreshInterval = 30) {
     const id = `src-${Date.now()}`
-    sources.value.push({ id, url, title, category, addedAt: Date.now() })
+    sources.value.push({ id, url, title, category, addedAt: Date.now(), refreshInterval })
     saveSources()
+  }
+
+  function updateSourceInterval(id: string, minutes: number) {
+    const src = sources.value.find(s => s.id === id)
+    if (src) {
+      src.refreshInterval = minutes
+      saveSources()
+    }
   }
 
   function removeSource(id: string) {
@@ -218,15 +228,52 @@ export const useReadingStore = defineStore('reading', () => {
     saveArticles()
   }
 
-  // ── 自动刷新 ────────────────────────────────────────
+  // ── 自动刷新（按订阅源间隔） ──────────────────────
+  async function fetchSource(src: RSSSource) {
+    try {
+      const feed = await fetchFeed(src.url)
+      const srcTitle = feed.title || src.title
+      const newArticles = feed.items.map(item => ({
+        id: `art-${src.id}-${item.guid || item.link || Date.now()}`,
+        sourceId: src.id,
+        sourceTitle: srcTitle,
+        title: item.title || '无标题',
+        link: item.link || '',
+        content: item.content || item.contentSnippet || '',
+        summary: item.contentSnippet?.slice(0, 200) || item.content?.replace(/<[^>]*>/g, '').slice(0, 200) || '',
+        author: item.creator || item.author || '',
+        publishedAt: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
+        read: false,
+        starred: false,
+      } as Article))
+      const existingIds = new Set(articles.value.map(a => a.id))
+      const toAdd = newArticles.filter(a => !existingIds.has(a.id))
+      if (toAdd.length) {
+        articles.value = [...toAdd, ...articles.value].slice(0, 500)
+        saveArticles()
+      }
+      lastFetchMap.value[src.id] = Date.now()
+    }
+    catch (e) {
+      console.warn(`[ReadingStore] Auto-refresh failed for ${src.url}:`, e)
+    }
+  }
+
   function startAutoRefresh() {
     stopAutoRefresh()
-    if (!autoRefreshEnabled.value)
-      return
+    // 每分钟检查一次哪些源需要刷新
     autoRefreshTimer = setInterval(() => {
-      if (!loading.value)
-        void fetchAll()
-    }, AUTO_REFRESH_MS)
+      if (loading.value)
+        return
+      const now = Date.now()
+      for (const src of sources.value) {
+        if (src.refreshInterval <= 0)
+          continue
+        const lastFetch = lastFetchMap.value[src.id] || 0
+        if (now - lastFetch >= src.refreshInterval * 60 * 1000)
+          void fetchSource(src)
+      }
+    }, 60_000)
   }
 
   function stopAutoRefresh() {
@@ -236,14 +283,8 @@ export const useReadingStore = defineStore('reading', () => {
     }
   }
 
-  function toggleAutoRefresh() {
-    autoRefreshEnabled.value = !autoRefreshEnabled.value
-    localStorage.setItem('reading_auto_refresh', JSON.stringify(autoRefreshEnabled.value))
-    if (autoRefreshEnabled.value)
-      startAutoRefresh()
-    else
-      stopAutoRefresh()
-  }
+  /** 是否有任何源开启了自动刷新 */
+  const hasAutoRefresh = computed(() => sources.value.some(s => s.refreshInterval > 0))
 
   function reloadFromStorage() {
     sources.value = loadFromStorage<RSSSource[]>(STORAGE_SOURCES, DEFAULT_SOURCES)
@@ -267,11 +308,12 @@ export const useReadingStore = defineStore('reading', () => {
     activeSourceId,
     activeArticleId,
     searchQuery,
-    autoRefreshEnabled,
     categories,
     filteredArticles,
     activeArticle,
+    hasAutoRefresh,
     addSource,
+    updateSourceInterval,
     removeSource,
     fetchAll,
     markRead,
@@ -283,7 +325,6 @@ export const useReadingStore = defineStore('reading', () => {
     unstarArticles,
     startAutoRefresh,
     stopAutoRefresh,
-    toggleAutoRefresh,
     reloadFromStorage,
   }
 })

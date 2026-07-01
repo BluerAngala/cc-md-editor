@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckSquare, RefreshCcw, Search, Square, Star, Timer, Trash2, X } from '@lucide/vue'
+import { CheckSquare, RefreshCcw, Search, Square, Star, Trash2, X } from '@lucide/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
@@ -99,16 +99,6 @@ onUnmounted(() => {
       <Button variant="outline" size="sm" class="gap-1" @click="store.fetchAll()">
         <RefreshCcw class="h-3.5 w-3.5" :class="{ 'animate-spin': store.loading }" />
         刷新
-      </Button>
-
-      <Button
-        variant="outline"
-        size="sm"
-        :class="store.autoRefreshEnabled ? 'bg-primary/10 text-primary border-primary/30' : ''"
-        @click="store.toggleAutoRefresh()"
-      >
-        <Timer class="h-3.5 w-3.5" />
-        {{ store.autoRefreshEnabled ? '自动刷新' : '手动刷新' }}
       </Button>
 
       <Button variant="outline" size="sm" @click="showSourceConfig = true">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Trash2, X } from '@lucide/vue'
+import { Plus, Timer, Trash2, X } from '@lucide/vue'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,14 @@ const store = useReadingStore()
 const newUrl = ref('')
 const newTitle = ref('')
 const newCategory = ref('')
+
+const REFRESH_OPTIONS = [
+  { value: 0, label: '关闭' },
+  { value: 15, label: '15分钟' },
+  { value: 30, label: '30分钟' },
+  { value: 60, label: '1小时' },
+  { value: 120, label: '2小时' },
+]
 
 function handleAdd() {
   if (!newUrl.value.trim())
@@ -73,6 +81,18 @@ function handleAdd() {
             </p>
           </div>
           <div class="flex items-center gap-2 shrink-0 ml-2">
+            <div class="flex items-center gap-1">
+              <Timer class="h-3 w-3 text-muted-foreground" />
+              <select
+                class="rounded border bg-background px-1.5 py-0.5 text-[10px]"
+                :value="src.refreshInterval"
+                @change="store.updateSourceInterval(src.id, Number(($event.target as HTMLSelectElement).value))"
+              >
+                <option v-for="opt in REFRESH_OPTIONS" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
             <span class="rounded-full bg-muted px-2 py-0.5 text-[10px]">
               {{ src.category }}
             </span>
