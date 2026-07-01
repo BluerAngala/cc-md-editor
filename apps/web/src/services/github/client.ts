@@ -196,4 +196,9 @@ export class GitHubSyncClient {
   async deleteFile(repo: string, path: string, message: string, sha: string): Promise<void> {
     await this.request(`DELETE`, `/repos/${repo}/contents/${path}`, { message, sha })
   }
+
+  /** 删除整个仓库 */
+  async deleteRepo(repo: string): Promise<void> {
+    await this.request(`DELETE`, `/repos/${repo}`)
+  }
 }

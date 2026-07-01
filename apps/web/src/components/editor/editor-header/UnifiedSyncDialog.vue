@@ -198,19 +198,12 @@ async function handleSync() {
   }
 }
 
-async function forcePush() {
-  const scope = uiStore.currentView === 'reading'
-    ? 'reading'
-    : uiStore.currentView === 'ideaBoard'
-      ? 'ideaBoard'
-      : uiStore.currentView === 'editor'
-        ? 'editor'
-        : 'all'
-  await githubStore.forcePushLocal(scope)
+async function resetRemote() {
+  await githubStore.resetRemote()
   if (githubStore.status === 'error')
     toast.error(githubStore.lastError)
   else
-    toast.success('已用本地数据覆盖远端')
+    toast.success('远端已重置，本地数据已推送')
 }
 </script>
 
@@ -412,10 +405,10 @@ async function forcePush() {
           variant="outline"
           class="h-8 w-full gap-2 text-xs text-destructive hover:text-destructive"
           :disabled="isSyncing"
-          @click="forcePush"
+          @click="resetRemote"
         >
           <Upload class="size-3.5" />
-          修复乱码（强制用本地数据覆盖远端）
+          重置远端（删除旧仓库，用本地数据重建）
         </Button>
       </template>
     </div>

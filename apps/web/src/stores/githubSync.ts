@@ -343,6 +343,45 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     return sync(scope, true)
   }
 
+  /** 删除远端仓库并用本地数据重建（根治乱码） */
+  async function resetRemote(): Promise<void> {
+    if (!client.value)
+      return
+
+    status.value = 'syncing'
+    lastError.value = ''
+
+    try {
+      const repo = storedRepoName.value
+      // 1. 删除旧仓库
+      await client.value.deleteRepo(repo)
+
+      // 2. 重建仓库
+      storedRepoName.value = await client.value.ensureRepo()
+      const newRepo = storedRepoName.value
+
+      // 3. 推送所有本地数据
+      const localSnap = collectSnapshot('all')
+      const localHash = hashSnapshot(localSnap)
+      await pushSnapshot(newRepo, localSnap, localHash)
+
+      // 4. 推送所有文章
+      for (const post of postStore.posts) {
+        const fileName = `${PATH_POSTS}/${post.id}.md`
+        await client.value.writeFile(newRepo, fileName, post.content, `init: ${post.title}`)
+      }
+
+      lastSyncAt.value = Date.now()
+      snapshotHash.value = localHash
+      await postStore.persistImmediately()
+      status.value = 'idle'
+    }
+    catch (e) {
+      status.value = 'error'
+      lastError.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
   return {
     token,
     lastSyncAt,
@@ -356,6 +395,7 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     clearToken,
     sync,
     forcePushLocal,
+    resetRemote,
     scheduleAutoSync,
     getScopeState,
     isScopeSynced,
