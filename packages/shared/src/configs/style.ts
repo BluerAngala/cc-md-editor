@@ -56,7 +56,7 @@ export const colorOptions: IConfigOption[] = [
   },
   {
     label: `公文红`,
-    value: `#CC0000`,
+    value: `#E00000`,
     desc: `庄重正式`,
   },
   {
