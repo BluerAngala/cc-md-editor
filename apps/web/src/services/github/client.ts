@@ -3,9 +3,27 @@
  * 不需要后端，用 Personal Access Token 鉴权
  */
 
-const GITHUB_API = `https://api.github.com`
-const REPO_NAME = `cc-md-editor-data`
-const REPO_DESC = `CC Markdown Editor 数据仓库（自动创建，请勿手动修改）`
+const GITHUB_API = 'https://api.github.com'
+const REPO_NAME = 'cc-md-editor-data'
+const REPO_DESC = 'CC Markdown Editor 数据仓库（自动创建，请勿手动修改）'
+
+// Device Flow 不需要 client_secret，只需 client_id
+// 使用前需在 GitHub 创建 OAuth App 并启用 Device Flow
+const CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || ''
+
+interface DeviceCodeResponse {
+  device_code: string
+  user_code: string
+  verification_uri: string
+  expires_in: number
+  interval: number
+}
+
+interface AccessTokenResponse {
+  access_token?: string
+  error?: string
+  error_description?: string
+}
 
 interface GitHubFile {
   name: string
@@ -29,14 +47,14 @@ export class GitHubSyncClient {
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     if (!this.token)
-      throw new Error(`未配置 GitHub Token`)
+      throw new Error('未配置 GitHub Token')
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.token}`,
-      Accept: `application/vnd.github.v3+json`,
+      Accept: 'application/vnd.github.v3+json',
     }
     if (body !== undefined)
-      headers[`Content-Type`] = `application/json`
+      headers['Content-Type'] = 'application/json'
 
     const res = await fetch(`${GITHUB_API}${path}`, {
       method,
@@ -49,11 +67,61 @@ export class GitHubSyncClient {
       throw new Error(`GitHub API ${res.status}: ${(errBody.message as string) || res.statusText}`)
     }
 
-    // 204 No Content
     if (res.status === 204)
       return undefined as T
 
     return res.json() as Promise<T>
+  }
+
+  /** 发起 Device Flow 授权 */
+  static async startDeviceFlow(): Promise<DeviceCodeResponse> {
+    if (!CLIENT_ID)
+      throw new Error('未配置 VITE_GITHUB_CLIENT_ID 环境变量')
+
+    const res = await fetch('https://github.com/login/device/code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ client_id: CLIENT_ID, scope: 'repo' }),
+    })
+
+    if (!res.ok)
+      throw new Error(`Device Flow 启动失败: ${res.status}`)
+
+    return res.json() as Promise<DeviceCodeResponse>
+  }
+
+  /** 轮询等待用户授权完成 */
+  static async pollForToken(deviceCode: string, interval: number): Promise<string> {
+    const { promise, resolve, reject } = Promise.withResolvers<string>()
+    const poll = async () => {
+      try {
+        const res = await fetch('https://github.com/login/oauth/access_token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            client_id: CLIENT_ID,
+            device_code: deviceCode,
+            grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+          }),
+        })
+        const data = await res.json() as AccessTokenResponse
+
+        if (data.access_token) {
+          resolve(data.access_token)
+          return
+        }
+        if (data.error === 'authorization_pending' || data.error === 'slow_down') {
+          setTimeout(poll, (interval + 1) * 1000)
+          return
+        }
+        reject(new Error(data.error_description || data.error || '授权失败'))
+      }
+      catch (e) {
+        reject(e)
+      }
+    }
+    setTimeout(poll, interval * 1000)
+    return promise
   }
 
   /** 获取当前用户名 */
