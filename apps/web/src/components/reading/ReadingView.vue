@@ -10,6 +10,7 @@ import SourceConfigDialog from './SourceConfigDialog.vue'
 const emit = defineEmits<{
   goToEditor: []
   goToLanding: []
+  goToIdeaBoard: []
 }>()
 
 const store = useReadingStore()
@@ -73,6 +74,10 @@ function formatDate(ts: number) {
       <Button variant="outline" size="sm" @click="emit('goToLanding')">
         <Home class="mr-1 h-4 w-4" />
         首页
+      </Button>
+      <Button variant="outline" size="sm" @click="emit('goToIdeaBoard')">
+        <Lightbulb class="mr-1 h-4 w-4 text-amber-500" />
+        想法库
       </Button>
       <Button variant="outline" size="sm" @click="emit('goToEditor')">
         编辑器

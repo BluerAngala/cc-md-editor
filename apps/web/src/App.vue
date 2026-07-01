@@ -35,6 +35,7 @@ usePreferencesHotkey()
     v-else-if="currentView === 'reading'"
     @go-to-editor="uiStore.setCurrentView('editor')"
     @go-to-landing="uiStore.setCurrentView('landing')"
+    @go-to-idea-board="uiStore.setCurrentView('ideaBoard')"
   />
 
   <CommandPalette />
