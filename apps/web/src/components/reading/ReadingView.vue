@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Home, Lightbulb, RefreshCcw, Search, Star } from '@lucide/vue'
+import { Home, Lightbulb, Newspaper, RefreshCcw, Search, Star } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,7 +46,7 @@ function formatDate(ts: number) {
   <div class="flex h-screen flex-col">
     <!-- Header -->
     <header class="flex items-center gap-3 border-b px-4 py-2">
-      <Lightbulb class="text-lg text-amber-500" />
+      <Newspaper class="text-lg text-blue-500" />
       <h1 class="text-base font-semibold">
         资讯阅读
       </h1>
