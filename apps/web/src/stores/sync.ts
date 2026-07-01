@@ -109,8 +109,14 @@ export const useSyncStore = defineStore(`sync`, () => {
     return e instanceof Error ? e.message : String(e)
   }
 
+  const MIN_SYNC_INTERVAL_MS = 10_000
+
   async function sync(): Promise<void> {
     if (!isAvailable.value || status.value === `syncing`)
+      return
+
+    // 冷却期保护：距离上次成功同步不足 10s 则跳过
+    if (lastSyncAt.value > 0 && Date.now() - lastSyncAt.value < MIN_SYNC_INTERVAL_MS)
       return
 
     status.value = `syncing`

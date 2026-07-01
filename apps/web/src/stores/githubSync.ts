@@ -1,4 +1,6 @@
+import type { Post } from '@/types/post'
 import { watch } from 'vue'
+import { formatLocalDateTime } from '@/i18n/translate'
 import { GitHubSyncClient } from '@/services/github/client'
 import { store } from '@/storage'
 import { addPrefix } from '@/storage/prefix'
@@ -33,8 +35,15 @@ function collectAllSettings(): Record<string, unknown> {
 
 /** 将远端设置写入本地 localStorage */
 function applySettings(settings: Record<string, unknown>): void {
+  const SKIP_KEYS = new Set([
+    GITHUB_TOKEN_KEY,
+    LAST_SYNC_KEY,
+    SYNCED_FILES_KEY,
+    addPrefix('current_post_id'),
+    addPrefix('sort_mode'),
+  ])
   for (const [key, value] of Object.entries(settings)) {
-    if (key === GITHUB_TOKEN_KEY || key === LAST_SYNC_KEY || key === SYNCED_FILES_KEY)
+    if (SKIP_KEYS.has(key))
       continue
     try {
       localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
@@ -108,8 +117,14 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     writeSyncedFiles({})
   }
 
+  const MIN_SYNC_INTERVAL_MS = 10_000
+
   async function sync(): Promise<void> {
     if (!client.value || status.value === 'syncing')
+      return
+
+    // 冷却期保护
+    if (lastSyncAt.value > 0 && Date.now() - lastSyncAt.value < MIN_SYNC_INTERVAL_MS)
       return
 
     status.value = 'syncing'
@@ -147,8 +162,17 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
           }
           else {
             const title = extractTitle(fileData.content) || docId.slice(0, 8)
-            postStore.addPost(title)
-            postStore.updatePostContent(postStore.currentPostId, fileData.content)
+            const newPost: Post = {
+              id: docId,
+              title,
+              content: fileData.content,
+              history: [
+                { datetime: formatLocalDateTime(), content: fileData.content },
+              ],
+              createDatetime: new Date(),
+              updateDatetime: new Date(),
+            }
+            postStore.posts.push(newPost)
           }
 
           syncedFiles[docId] = { path: remoteFile.path, sha: fileData.sha }

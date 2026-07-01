@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Copy, FolderKanban, Loader2, Menu, Palette, Share2 } from '@lucide/vue'
 import { defineAsyncComponent } from 'vue'
-import GitHubSyncPanel from '@/components/editor/GitHubSyncPanel.vue'
+
 import ViewNav from '@/components/shared/ViewNav.vue'
 import { useEditorRefresh } from '@/composables/useEditorRefresh'
 import { generatePureHTML, processClipboardContent } from '@/services/export'
@@ -26,7 +26,7 @@ const EditorStateDialog = defineAsyncComponent(() => import('@/components/editor
 const MarkdownHelpDialog = defineAsyncComponent(() => import('./MarkdownHelpDialog.vue'))
 const KeyboardShortcutsDialog = defineAsyncComponent(() => import('./KeyboardShortcutsDialog.vue'))
 const AccountDialog = defineAsyncComponent(() => import('./AccountDialog.vue'))
-const SyncDialog = defineAsyncComponent(() => import('./SyncDialog.vue'))
+const UnifiedSyncDialog = defineAsyncComponent(() => import('./UnifiedSyncDialog.vue'))
 const ShareDialog = defineAsyncComponent(() => import('./ShareDialog.vue'))
 
 const editorStore = useEditorStore()
@@ -288,9 +288,6 @@ function copyToWeChat() {
 
     <!-- 右侧操作区 -->
     <div class="flex flex-wrap items-center gap-2">
-      <!-- GitHub 同步 -->
-      <GitHubSyncPanel />
-
       <!-- 分享按钮 -->
       <Button
         v-if="showShareUi"
@@ -337,7 +334,7 @@ function copyToWeChat() {
   <MarkdownHelpDialog v-if="isShowMarkdownHelpDialog" v-model:open="isShowMarkdownHelpDialog" />
   <KeyboardShortcutsDialog v-if="isShowKeyboardShortcutsDialog" v-model:open="isShowKeyboardShortcutsDialog" />
   <AccountDialog v-if="isShowAccountDialog" v-model:open="isShowAccountDialog" />
-  <SyncDialog v-if="isShowSyncDialog" v-model:open="isShowSyncDialog" />
+  <UnifiedSyncDialog v-if="isShowSyncDialog" v-model:open="isShowSyncDialog" />
   <ShareDialog v-if="isShowShareDialog" v-model:open="isShowShareDialog" />
 </template>
 

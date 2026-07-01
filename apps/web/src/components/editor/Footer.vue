@@ -2,7 +2,7 @@
 import type { MarkdownHeading } from '@/lib/markdown/headings'
 import { StateEffect } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { ArrowUpDown, BookOpen, ChevronRight, ChevronsUpDown, Clock, Columns2, Ellipsis, Eye, FileText, Keyboard, ListTree, LogIn, Monitor, Moon, PenLine, Pilcrow, Search, Share2, Smartphone, Sun, Type, User } from '@lucide/vue'
+import { ArrowUpDown, BookOpen, ChevronRight, ChevronsUpDown, Clock, Columns2, Ellipsis, Eye, FileText, Keyboard, ListTree, Monitor, Moon, PenLine, Pilcrow, Search, Share2, Smartphone, Sun, Type } from '@lucide/vue'
 import {
   Popover,
   PopoverContent,
@@ -23,7 +23,6 @@ import {
   moveOutlineFocusIndex,
 } from '@/lib/markdown/headingNavigation'
 import { computeHeadingBreadcrumbs, extractMarkdownHeadings } from '@/lib/markdown/headings'
-import { isAccountUiEnabled } from '@/services/account/config'
 import { isShareUiEnabled } from '@/services/share/client'
 import { isSyncUiEnabled } from '@/services/sync/client'
 import { useAuthStore } from '@/stores/auth'
@@ -43,24 +42,12 @@ const { currentPost } = storeToRefs(postStore)
 const { isDark } = storeToRefs(uiStore)
 const { isMobile, viewMode, previewDevice, enableScrollSync } = storeToRefs(uiStore)
 const { isLoggedIn } = storeToRefs(authStore)
-const showAccountUi = isAccountUiEnabled()
 const showSyncUi = isSyncUiEnabled()
 const showShareUi = isShareUiEnabled()
 const { syncFooterIcon, syncFooterIconClass, syncTooltip } = useSyncFooterMeta()
 
 const isMoreOpen = ref(false)
 const { t, locale } = useI18n()
-
-const accountTooltip = computed(() => {
-  if (!isLoggedIn.value)
-    return t(`footer.loginAccount`)
-  return t(`footer.accountWithLogin`, { login: authStore.user?.login ?? '' })
-})
-
-function openAccountDialog() {
-  isMoreOpen.value = false
-  uiStore.toggleShowAccountDialog(true)
-}
 
 function openSyncDialog() {
   isMoreOpen.value = false
@@ -668,31 +655,6 @@ const showDeviceToggle = computed(() => viewMode.value !== `edit` && !isMobile.v
 
         <!-- 账户 & 同步 & 分享 & 主题（桌面端） -->
         <div class="hidden items-center gap-0.5 sm:flex">
-          <template v-if="showAccountUi">
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <button
-                  :aria-label="t('common.account')"
-                  class="flex cursor-pointer items-center rounded-md p-1.5 transition-colors hover:bg-accent hover:text-foreground"
-                  :class="isLoggedIn ? 'text-primary' : ''"
-                  @click="openAccountDialog"
-                >
-                  <img
-                    v-if="isLoggedIn && authStore.user?.avatar"
-                    :src="authStore.user.avatar"
-                    :alt="authStore.user.login"
-                    class="size-3 rounded-full"
-                  >
-                  <User v-else-if="isLoggedIn" class="size-3" />
-                  <LogIn v-else class="size-3" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" :side-offset="6" class="text-xs text-muted-foreground">
-                <p>{{ accountTooltip }}</p>
-              </TooltipContent>
-            </Tooltip>
-          </template>
-
           <template v-if="showSyncUi">
             <Tooltip>
               <TooltipTrigger as-child>
@@ -701,8 +663,15 @@ const showDeviceToggle = computed(() => viewMode.value !== `edit` && !isMobile.v
                   class="flex cursor-pointer items-center rounded-md p-1.5 transition-colors hover:bg-accent hover:text-foreground"
                   @click="openSyncDialog"
                 >
+                  <img
+                    v-if="isLoggedIn && authStore.user?.avatar"
+                    :src="authStore.user.avatar"
+                    :alt="authStore.user.login"
+                    class="size-3 rounded-full"
+                  >
                   <component
                     :is="syncFooterIcon"
+                    v-else
                     class="size-3"
                     :class="syncFooterIconClass"
                   />
@@ -761,9 +730,9 @@ const showDeviceToggle = computed(() => viewMode.value !== `edit` && !isMobile.v
           </PopoverTriggerPrimitive>
           <PopoverContent side="top" :side-offset="8" align="end" class="w-48 p-1">
             <button
-              v-if="showAccountUi"
+              v-if="showSyncUi"
               class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition-colors hover:bg-accent"
-              @click="openAccountDialog"
+              @click="openSyncDialog"
             >
               <img
                 v-if="isLoggedIn && authStore.user?.avatar"
@@ -771,17 +740,9 @@ const showDeviceToggle = computed(() => viewMode.value !== `edit` && !isMobile.v
                 :alt="authStore.user.login"
                 class="size-3 rounded-full"
               >
-              <User v-else-if="isLoggedIn" class="size-3 shrink-0" />
-              <LogIn v-else class="size-3 shrink-0" />
-              <span class="min-w-0 flex-1 truncate">{{ accountTooltip }}</span>
-            </button>
-            <button
-              v-if="showSyncUi"
-              class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition-colors hover:bg-accent"
-              @click="openSyncDialog"
-            >
               <component
                 :is="syncFooterIcon"
+                v-else
                 class="size-3 shrink-0"
                 :class="syncFooterIconClass"
               />

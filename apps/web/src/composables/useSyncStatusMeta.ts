@@ -3,7 +3,10 @@ import { AlertCircle, Cloud, CloudCheck, CloudOff, Loader2 } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { t } from '@/i18n/translate'
+import { store } from '@/storage'
+import { addPrefix } from '@/storage/prefix'
 import { useAuthStore } from '@/stores/auth'
+import { useGitHubSyncStore } from '@/stores/githubSync'
 import { useSyncStore } from '@/stores/sync'
 
 export type SyncUiState = `syncing` | `synced` | `error` | `pending`
@@ -98,17 +101,33 @@ export function useSyncStatusMeta(options?: { errorHint?: `detail` | `generic` }
   }
 }
 
-/** Footer 云同步图标：依赖登录态，与弹窗内 meta 分离 */
+/** Footer 同步图标：根据当前同步方案反映对应状态 */
 export function useSyncFooterMeta() {
   const authStore = useAuthStore()
+  const githubStore = useGitHubSyncStore()
   const { isLoggedIn } = storeToRefs(authStore)
   const { syncStatusMeta, syncState, isSyncing, syncTooltip } = useSyncStatusMeta()
 
-  const isActivelySyncing = computed(
-    () => isSyncing.value || syncState.value === `syncing`,
-  )
+  const SYNC_METHOD_KEY = addPrefix('sync_method')
+  const syncMethod = store.reactive<'official' | 'github'>(SYNC_METHOD_KEY, 'github')
 
-  const syncFooterIcon = computed(() => {
+  const isActivelySyncing = computed(() => {
+    if (syncMethod.value === 'github')
+      return githubStore.status === 'syncing'
+    return isSyncing.value || syncState.value === `syncing`
+  })
+
+  const syncFooterIcon = computed<Component>(() => {
+    if (syncMethod.value === 'github') {
+      if (!githubStore.isConfigured)
+        return CloudOff
+      if (githubStore.status === 'syncing')
+        return Loader2
+      if (githubStore.status === 'error')
+        return AlertCircle
+      return CloudCheck
+    }
+    // Official
     if (!isLoggedIn.value)
       return Cloud
     if (isActivelySyncing.value)
@@ -117,6 +136,16 @@ export function useSyncFooterMeta() {
   })
 
   const syncFooterIconClass = computed(() => {
+    if (syncMethod.value === 'github') {
+      if (!githubStore.isConfigured)
+        return `text-muted-foreground`
+      if (githubStore.status === 'syncing')
+        return `text-primary animate-spin`
+      if (githubStore.status === 'error')
+        return `text-destructive`
+      return `text-green-500`
+    }
+    // Official
     if (!isLoggedIn.value)
       return ``
     if (isActivelySyncing.value)
@@ -124,9 +153,22 @@ export function useSyncFooterMeta() {
     return syncStatusMeta.value.footerIconClass
   })
 
+  const syncFooterTooltip = computed(() => {
+    if (syncMethod.value === 'github') {
+      if (!githubStore.isConfigured)
+        return 'GitHub 同步未配置'
+      if (githubStore.status === 'syncing')
+        return 'GitHub 同步中…'
+      if (githubStore.status === 'error')
+        return 'GitHub 同步失败，点击查看详情'
+      return 'GitHub 已同步'
+    }
+    return syncTooltip.value
+  })
+
   return {
     syncFooterIcon,
     syncFooterIconClass,
-    syncTooltip,
+    syncTooltip: syncFooterTooltip,
   }
 }
