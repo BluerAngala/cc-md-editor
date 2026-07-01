@@ -1,0 +1,154 @@
+import { GitHubSyncClient } from '@/services/github/client'
+import { store } from '@/storage'
+import { addPrefix } from '@/storage/prefix'
+import { usePostStore } from '@/stores/post'
+
+const GITHUB_TOKEN_KEY = addPrefix('github_token')
+const LAST_SYNC_KEY = addPrefix('github_last_sync')
+const SYNCED_FILES_KEY = addPrefix('github_synced_files')
+
+export type SyncStatus = 'idle' | 'syncing' | 'error'
+
+interface SyncedFileMap {
+  [docId: string]: { path: string, sha: string }
+}
+
+function readSyncedFiles(): SyncedFileMap {
+  try {
+    const raw = localStorage.getItem(SYNCED_FILES_KEY)
+    return raw ? JSON.parse(raw) : {}
+  }
+  catch {
+    return {}
+  }
+}
+
+function writeSyncedFiles(map: SyncedFileMap): void {
+  localStorage.setItem(SYNCED_FILES_KEY, JSON.stringify(map))
+}
+
+export const useGitHubSyncStore = defineStore('githubSync', () => {
+  const postStore = usePostStore()
+
+  const token = store.reactive(GITHUB_TOKEN_KEY, '')
+  const lastSyncAt = store.reactive(LAST_SYNC_KEY, 0)
+  const status = ref<SyncStatus>('idle')
+  const lastError = ref('')
+  const repoFullName = ref('')
+
+  const isConfigured = computed(() => Boolean(token.value))
+  const client = computed(() => isConfigured.value ? new GitHubSyncClient(() => token.value) : null)
+
+  function setToken(t: string) {
+    token.value = t
+  }
+
+  function clearToken() {
+    token.value = ''
+    lastSyncAt.value = 0
+    writeSyncedFiles({})
+  }
+
+  async function sync(): Promise<void> {
+    if (!client.value || status.value === 'syncing')
+      return
+
+    status.value = 'syncing'
+    lastError.value = ''
+
+    try {
+      // 1. 确保仓库存在
+      repoFullName.value = await client.value.ensureRepo()
+      const repo = repoFullName.value
+      const syncedFiles = readSyncedFiles()
+
+      // 2. 拉取远端文件列表
+      const remoteFiles = await client.value.listFiles(repo, 'posts')
+
+      // 3. 拉取远端变更（本地没有或远端更新的）
+      for (const remoteFile of remoteFiles) {
+        if (!remoteFile.name.endsWith('.md'))
+          continue
+        const docId = remoteFile.name.replace(/\.md$/, '')
+        const localMeta = syncedFiles[docId]
+
+        // 远端文件有更新
+        if (!localMeta || localMeta.sha !== remoteFile.sha) {
+          const fileData = await client.value.readFile(repo, remoteFile.path)
+          if (!fileData)
+            continue
+
+          const existing = postStore.getPostById(docId)
+          if (existing) {
+            // 本地有这篇文章，检查是否本地也有修改
+            const localUpdated = new Date(existing.updateDatetime).getTime()
+            if (localUpdated <= lastSyncAt.value || !localMeta) {
+              postStore.updatePostContent(docId, fileData.content)
+            }
+          }
+          else {
+            postStore.addPost(docId)
+            postStore.updatePostContent(docId, fileData.content)
+          }
+
+          syncedFiles[docId] = { path: remoteFile.path, sha: fileData.sha }
+        }
+      }
+
+      // 4. 推送本地变更
+      for (const post of postStore.posts) {
+        const localMeta = syncedFiles[post.id]
+        const fileName = `posts/${post.id}.md`
+
+        if (localMeta && localMeta.sha) {
+          const localUpdated = new Date(post.updateDatetime).getTime()
+          if (localUpdated <= lastSyncAt.value)
+            continue
+
+          await client.value.writeFile(repo, fileName, post.content, `update: ${post.title}`, localMeta.sha)
+          syncedFiles[post.id] = { path: fileName, sha: localMeta.sha }
+        }
+        else {
+          await client.value.writeFile(repo, fileName, post.content, `create: ${post.title}`)
+          syncedFiles[post.id] = { path: fileName, sha: '' }
+        }
+      }
+
+      // 5. 删除远端已删除的本地文件
+      const currentIds = new Set(postStore.posts.map(p => p.id))
+      for (const [docId, meta] of Object.entries(syncedFiles)) {
+        if (!currentIds.has(docId)) {
+          try {
+            await client.value.deleteFile(repo, meta.path, `delete: ${docId}`, meta.sha)
+          }
+          catch {
+            // 文件可能已删除，忽略
+          }
+          delete syncedFiles[docId]
+        }
+      }
+
+      // 6. 保存同步状态
+      writeSyncedFiles(syncedFiles)
+      lastSyncAt.value = Date.now()
+      await postStore.persistImmediately()
+      status.value = 'idle'
+    }
+    catch (e) {
+      status.value = 'error'
+      lastError.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
+  return {
+    token,
+    lastSyncAt,
+    status,
+    lastError,
+    repoFullName,
+    isConfigured,
+    setToken,
+    clearToken,
+    sync,
+  }
+})

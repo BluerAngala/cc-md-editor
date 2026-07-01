@@ -13,6 +13,7 @@ import { useUIStore } from '@/stores/ui'
 import EditDropdown from './EditDropdown.vue'
 import FileDropdown from './FileDropdown.vue'
 import FormatDropdown from './FormatDropdown.vue'
+import GitHubSyncPanel from './GitHubSyncPanel.vue'
 import HelpDropdown from './HelpDropdown.vue'
 import InsertDropdown from './InsertDropdown.vue'
 import StyleDropdown from './StyleDropdown.vue'
@@ -287,6 +288,9 @@ function copyToWeChat() {
 
     <!-- 右侧操作区 -->
     <div class="flex flex-wrap items-center gap-2">
+      <!-- GitHub 同步 -->
+      <GitHubSyncPanel />
+
       <!-- 分享按钮 -->
       <Button
         v-if="showShareUi"
