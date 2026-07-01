@@ -33,6 +33,7 @@ export const useIdeaBoardStore = defineStore('ideaBoard', () => {
 
   function persist() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notes.value))
+    window.dispatchEvent(new CustomEvent('md:data-changed'))
   }
 
   // Computed

@@ -85,6 +85,10 @@ export const useReadingStore = defineStore('reading', () => {
   /** 每个源上次自动刷新的时间戳 */
   const lastFetchMap = ref<Record<string, number>>({})
 
+  function triggerSync() {
+    window.dispatchEvent(new CustomEvent('md:data-changed'))
+  }
+
   // ── 计算属性 ─────────────────────────────────────────
   const categories = computed(() => {
     const cats = new Set(sources.value.map(s => s.category).filter(Boolean))
@@ -294,10 +298,12 @@ export const useReadingStore = defineStore('reading', () => {
   // ── 持久化 ───────────────────────────────────────────
   function saveSources() {
     localStorage.setItem(STORAGE_SOURCES, JSON.stringify(sources.value))
+    triggerSync()
   }
 
   function saveArticles() {
     localStorage.setItem(STORAGE_ARTICLES, JSON.stringify(articles.value))
+    triggerSync()
   }
 
   return {

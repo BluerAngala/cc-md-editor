@@ -326,6 +326,49 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     return localStorage.getItem(IDEA_BOARD_KEY) || '[]'
   }
 
+  // ── 自动同步 ──────────────────────────────────────
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null
+  const AUTO_SYNC_DEBOUNCE_MS = 5 * 60 * 1000 // 5 分钟
+  let watcherStarted = false
+
+  function scheduleAutoSync() {
+    if (!isConfigured.value)
+      return
+    if (debounceTimer)
+      clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null
+      void sync()
+    }, AUTO_SYNC_DEBOUNCE_MS)
+  }
+
+  function startAutoSyncWatcher() {
+    if (watcherStarted)
+      return
+    watcherStarted = true
+    // 编辑器文章变化
+    watch(
+      () => postStore.posts,
+      () => scheduleAutoSync(),
+      { deep: true },
+    )
+    // 阅读 / 想法库数据变化（同 tab 通过自定义事件，跨 tab 通过 storage 事件）
+    window.addEventListener('md:data-changed', () => scheduleAutoSync())
+    window.addEventListener('storage', (e) => {
+      if (e.key === READING_SOURCES_KEY
+        || e.key === READING_ARTICLES_KEY
+        || e.key === IDEA_BOARD_KEY) {
+        scheduleAutoSync()
+      }
+    })
+  }
+
+  // 配置完成后启动自动同步
+  watch(isConfigured, (ok) => {
+    if (ok)
+      startAutoSyncWatcher()
+  }, { immediate: true })
+
   return {
     token,
     lastSyncAt,
@@ -336,5 +379,6 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     setToken,
     clearToken,
     sync,
+    scheduleAutoSync,
   }
 })
