@@ -59,7 +59,7 @@ export default {
     mergeDescription: `将选中的 {count} 篇内容按顺序合并，请为合并结果命名`,
     mergePlaceholder: `输入合并后的标题…`,
     historyTitle: `历史记录`,
-    historyDescription: `每隔 30 秒自动保存，最多保留 10 条`,
+    historyDescription: `每隔 15 秒自动保存，最多 100 条（30 天过期）`,
     originalContent: `原文`,
     versionDiff: `版本对比`,
     compareLabel: `对比：`,

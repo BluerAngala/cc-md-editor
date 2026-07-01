@@ -657,7 +657,15 @@ onMounted(() => {
       datetime: formatLocalDateTime(),
     })
 
-    currentPost.history.length = Math.min(currentPost.history.length, 10)
+    // 30 天过期清理
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+    currentPost.history = currentPost.history.filter((h) => {
+      const ts = new Date(h.datetime).getTime()
+      return !ts || ts > thirtyDaysAgo
+    })
+
+    // 最多保留 100 条
+    currentPost.history.length = Math.min(currentPost.history.length, 100)
   }, 15 * 1000)
 })
 
