@@ -28,14 +28,9 @@ usePreferencesHotkey()
   <CodemirrorEditor v-else-if="currentView === 'editor'" />
   <IdeaBoard
     v-else-if="currentView === 'ideaBoard'"
-    @go-to-editor="uiStore.setCurrentView('editor')"
-    @go-to-landing="uiStore.setCurrentView('landing')"
   />
   <ReadingView
     v-else-if="currentView === 'reading'"
-    @go-to-editor="uiStore.setCurrentView('editor')"
-    @go-to-landing="uiStore.setCurrentView('landing')"
-    @go-to-idea-board="uiStore.setCurrentView('ideaBoard')"
   />
 
   <CommandPalette />

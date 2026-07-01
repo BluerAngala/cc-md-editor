@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { FileText, Home, LayoutGrid, Lightbulb, Plus, Search, Sparkles, Trash2 } from '@lucide/vue'
+import { LayoutGrid, Lightbulb, Plus, Search, Sparkles, Trash2 } from '@lucide/vue'
 import { computed, ref } from 'vue'
+import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
@@ -8,11 +9,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import AIDraftDialog from './AIDraftDialog.vue'
 import ExcalidrawWrapper from './ExcalidrawWrapper.vue'
 import MermaidAIDialog from './MermaidAIDialog.vue'
-
-const emit = defineEmits<{
-  goToEditor: []
-  goToLanding: []
-}>()
 
 const STORAGE_KEY = 'idea-board-scenes'
 
@@ -396,29 +392,7 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
 
       <div class="flex-1" />
 
-      <!-- AI 配置提示 -->
-
-      <TooltipProvider :delay-duration="300">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="outline" size="sm" @click="emit('goToLanding')">
-              <Home class="mr-1 h-4 w-4" />
-              首页
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>返回首页</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="outline" size="sm" @click="emit('goToEditor')">
-              <FileText class="mr-1 h-4 w-4" />
-              编辑器
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>前往 Markdown 编辑器</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <ViewNav />
     </header>
 
     <!-- 主体 -->

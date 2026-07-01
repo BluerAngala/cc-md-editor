@@ -1,17 +1,12 @@
 <script setup lang="ts">
-import { Home, Lightbulb, Newspaper, RefreshCcw, Search, Star } from '@lucide/vue'
+import { Newspaper, RefreshCcw, Search, Star } from '@lucide/vue'
 import { computed, ref } from 'vue'
+import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useReadingStore } from '@/stores/reading'
 import ArticleReader from './ArticleReader.vue'
 import SourceConfigDialog from './SourceConfigDialog.vue'
-
-const emit = defineEmits<{
-  goToEditor: []
-  goToLanding: []
-  goToIdeaBoard: []
-}>()
 
 const store = useReadingStore()
 
@@ -71,17 +66,7 @@ function formatDate(ts: number) {
         订阅管理
       </Button>
 
-      <Button variant="outline" size="sm" @click="emit('goToLanding')">
-        <Home class="mr-1 h-4 w-4" />
-        首页
-      </Button>
-      <Button variant="outline" size="sm" @click="emit('goToIdeaBoard')">
-        <Lightbulb class="mr-1 h-4 w-4 text-amber-500" />
-        想法库
-      </Button>
-      <Button variant="outline" size="sm" @click="emit('goToEditor')">
-        编辑器
-      </Button>
+      <ViewNav />
     </header>
 
     <!-- 主体 -->
