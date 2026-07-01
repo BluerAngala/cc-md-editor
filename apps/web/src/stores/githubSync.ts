@@ -121,9 +121,10 @@ async function applyAllSettings(data: Record<string, unknown>): Promise<void> {
 }
 
 function collectReadingData(): { sources: unknown[], articles: unknown[] } {
+  const s = useReadingStore()
   return {
-    sources: JSON.parse(lsGet(LS_READING_SOURCES) || '[]'),
-    articles: JSON.parse(lsGet(LS_READING_ARTICLES) || '[]'),
+    sources: s.sources as unknown[],
+    articles: s.articles as unknown[],
   }
 }
 
@@ -133,7 +134,7 @@ function applyReadingData(data: { sources: unknown[], articles: unknown[] }): vo
 }
 
 function collectIdeaBoardData(): unknown[] {
-  return JSON.parse(lsGet(LS_IDEA_BOARD) || '[]')
+  return useIdeaBoardStore().notes as unknown[]
 }
 
 function applyIdeaBoardData(data: unknown[]): void {
