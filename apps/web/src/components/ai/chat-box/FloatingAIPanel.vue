@@ -7,6 +7,7 @@ import {
   Copy,
   FileInput,
   MessageCircle,
+  Pencil,
   Plus,
   RefreshCcw,
   Send,
