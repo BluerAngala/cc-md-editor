@@ -6,9 +6,11 @@ import { useAIConfigStore } from '@/stores/aiConfig'
 import { useCssEditorStore } from '@/stores/cssEditor'
 import { useCustomComponentStore } from '@/stores/customComponent'
 import { useEditorStore } from '@/stores/editor'
+import { useIdeaBoardStore } from '@/stores/ideaBoard'
 import { useLocaleStore } from '@/stores/locale'
 import { usePostStore } from '@/stores/post'
 import { useQuickCommandsStore } from '@/stores/quickCommands'
+import { useReadingStore } from '@/stores/reading'
 import { useRenderStore } from '@/stores/render'
 import { useTemplateStore } from '@/stores/template'
 import { useThemeStore } from '@/stores/theme'
@@ -105,6 +107,12 @@ export async function hydrateSyncedSettings(appliedKeys: string[]): Promise<void
 
   if (keys.has(`quick_commands`))
     await quickCommandsStore.reloadFromStorage()
+
+  if (keys.has(`reading_sources`) || keys.has(`reading_articles`))
+    useReadingStore().reloadFromStorage()
+
+  if (keys.has(`idea-board-notes`))
+    useIdeaBoardStore().reloadFromStorage()
 
   await refreshPreview(keys)
 }

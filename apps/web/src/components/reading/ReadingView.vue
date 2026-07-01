@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RefreshCcw, Search, Star, Timer, Trash2 } from '@lucide/vue'
+import { CheckSquare, RefreshCcw, Search, Square, Star, Timer, Trash2, X } from '@lucide/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
@@ -12,12 +12,41 @@ const store = useReadingStore()
 
 const showSourceConfig = ref(false)
 const showStarredOnly = ref(false)
+const selectedIds = ref<Set<string>>(new Set())
+const isSelecting = computed(() => selectedIds.value.size > 0)
 
 const displayArticles = computed(() => {
   if (showStarredOnly.value)
     return store.filteredArticles.filter(a => a.starred)
   return store.filteredArticles
 })
+
+function toggleSelect(id: string) {
+  const s = new Set(selectedIds.value)
+  if (s.has(id))
+    s.delete(id)
+  else
+    s.add(id)
+  selectedIds.value = s
+}
+
+function selectAll() {
+  selectedIds.value = new Set(displayArticles.value.map(a => a.id))
+}
+
+function clearSelection() {
+  selectedIds.value = new Set()
+}
+
+function batchDelete() {
+  store.deleteArticles(selectedIds.value)
+  clearSelection()
+}
+
+function batchStar() {
+  store.starArticles(selectedIds.value)
+  clearSelection()
+}
 
 function formatDate(ts: number) {
   const d = new Date(ts)
@@ -129,13 +158,38 @@ onUnmounted(() => {
 
       <!-- 中栏：文章列表 -->
       <div class="w-80 border-r flex flex-col">
-        <div class="px-4 py-2.5 border-b flex items-center justify-between">
+        <!-- 批量操作栏 -->
+        <div v-if="isSelecting" class="px-4 py-2 border-b flex items-center gap-2 bg-primary/5">
+          <Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" @click="clearSelection">
+            <X class="h-3 w-3" />
+            {{ selectedIds.size }} 项已选
+          </Button>
+          <div class="flex-1" />
+          <Button variant="outline" size="sm" class="h-7 gap-1 text-xs" @click="batchStar">
+            <Star class="h-3 w-3" />
+            收藏
+          </Button>
+          <Button variant="outline" size="sm" class="h-7 gap-1 text-xs text-destructive hover:text-destructive" @click="batchDelete">
+            <Trash2 class="h-3 w-3" />
+            删除
+          </Button>
+          <Button variant="ghost" size="sm" class="h-7 text-xs" @click="selectAll">
+            全选
+          </Button>
+        </div>
+
+        <div v-if="!isSelecting" class="px-4 py-2.5 border-b flex items-center justify-between">
           <span class="text-sm text-muted-foreground">
             {{ displayArticles.length }} 篇文章
           </span>
-          <span v-if="store.loading" class="text-xs text-muted-foreground">
-            加载中...
-          </span>
+          <div class="flex items-center gap-2">
+            <span v-if="store.loading" class="text-xs text-muted-foreground">
+              加载中...
+            </span>
+            <Button variant="ghost" size="sm" class="h-6 px-1.5 text-xs text-muted-foreground" @click="selectAll">
+              多选
+            </Button>
+          </div>
         </div>
         <div class="flex-1 overflow-y-auto">
           <div
@@ -143,9 +197,19 @@ onUnmounted(() => {
             :key="article.id"
             class="group px-4 py-3 border-b cursor-pointer transition-colors hover:bg-muted/50"
             :class="{ 'bg-muted/30': store.activeArticleId === article.id }"
-            @click="store.setActiveArticle(article.id)"
+            @click="isSelecting ? toggleSelect(article.id) : store.setActiveArticle(article.id)"
           >
             <div class="flex items-start gap-2">
+              <!-- 复选框 -->
+              <button
+                v-if="isSelecting"
+                class="mt-0.5 shrink-0"
+                @click.stop="toggleSelect(article.id)"
+              >
+                <CheckSquare v-if="selectedIds.has(article.id)" class="h-4 w-4 text-primary" />
+                <Square v-else class="h-4 w-4 text-muted-foreground" />
+              </button>
+
               <div class="flex-1 min-w-0">
                 <p
                   class="text-sm leading-snug line-clamp-2"
@@ -157,7 +221,7 @@ onUnmounted(() => {
                   {{ article.sourceTitle }} · {{ formatDate(article.publishedAt) }}
                 </p>
               </div>
-              <div class="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div v-if="!isSelecting" class="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   @click.stop="store.toggleStar(article.id)"
                 >

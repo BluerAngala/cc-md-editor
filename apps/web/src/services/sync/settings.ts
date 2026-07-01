@@ -40,6 +40,11 @@ export const SYNC_SETTING_KEYS: string[] = [
   addPrefix(`templates`),
   addPrefix(`custom_components`),
   `quick_commands`,
+  // 资讯阅读
+  `reading_sources`,
+  `reading_articles`,
+  // 想法库
+  `idea-board-notes`,
 ]
 
 const META_KEY = addPrefix(`sync_settings_meta`)

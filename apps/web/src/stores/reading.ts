@@ -195,6 +195,29 @@ export const useReadingStore = defineStore('reading', () => {
     saveArticles()
   }
 
+  function deleteArticles(ids: Set<string>) {
+    articles.value = articles.value.filter(a => !ids.has(a.id))
+    if (activeArticleId.value && ids.has(activeArticleId.value))
+      activeArticleId.value = null
+    saveArticles()
+  }
+
+  function starArticles(ids: Set<string>) {
+    for (const article of articles.value) {
+      if (ids.has(article.id))
+        article.starred = true
+    }
+    saveArticles()
+  }
+
+  function unstarArticles(ids: Set<string>) {
+    for (const article of articles.value) {
+      if (ids.has(article.id))
+        article.starred = false
+    }
+    saveArticles()
+  }
+
   // ── 自动刷新 ────────────────────────────────────────
   function startAutoRefresh() {
     stopAutoRefresh()
@@ -220,6 +243,11 @@ export const useReadingStore = defineStore('reading', () => {
       startAutoRefresh()
     else
       stopAutoRefresh()
+  }
+
+  function reloadFromStorage() {
+    sources.value = loadFromStorage<RSSSource[]>(STORAGE_SOURCES, DEFAULT_SOURCES)
+    articles.value = loadFromStorage<Article[]>(STORAGE_ARTICLES, [])
   }
 
   // ── 持久化 ───────────────────────────────────────────
@@ -250,9 +278,13 @@ export const useReadingStore = defineStore('reading', () => {
     toggleStar,
     setActiveArticle,
     deleteArticle,
+    deleteArticles,
+    starArticles,
+    unstarArticles,
     startAutoRefresh,
     stopAutoRefresh,
     toggleAutoRefresh,
+    reloadFromStorage,
   }
 })
 

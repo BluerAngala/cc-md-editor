@@ -153,6 +153,11 @@ export const useIdeaBoardStore = defineStore('ideaBoard', () => {
     return lines.join('\n').trim()
   }
 
+  function reloadFromStorage() {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    notes.value = raw ? JSON.parse(raw) : []
+  }
+
   return {
     notes,
     activeGroup,
@@ -172,5 +177,6 @@ export const useIdeaBoardStore = defineStore('ideaBoard', () => {
     setActiveGroup,
     setSearch,
     exportToMarkdown,
+    reloadFromStorage,
   }
 })

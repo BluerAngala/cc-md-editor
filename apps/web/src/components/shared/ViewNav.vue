@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { ChevronDown, FileText, Home, Lightbulb, Newspaper } from '@lucide/vue'
+import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useSyncFooterMeta } from '@/composables/useSyncStatusMeta'
+import { isSyncUiEnabled } from '@/services/sync/client'
+import { useAuthStore } from '@/stores/auth'
 import { useUIStore } from '@/stores/ui'
 
 const uiStore = useUIStore()
+const authStore = useAuthStore()
+const { isLoggedIn } = storeToRefs(authStore)
+const { syncFooterIcon, syncFooterIconClass, syncTooltip } = useSyncFooterMeta()
+const showSyncUi = isSyncUiEnabled()
 const open = ref(false)
 
 const views = [
@@ -20,6 +28,10 @@ const currentView = views.find(v => v.id === uiStore.currentView) || views[0]
 function switchView(id: typeof views[number]['id']) {
   uiStore.setCurrentView(id)
   open.value = false
+}
+
+function openSyncDialog() {
+  uiStore.toggleShowSyncDialog(true)
 }
 </script>
 
@@ -45,4 +57,32 @@ function switchView(id: typeof views[number]['id']) {
       </button>
     </PopoverContent>
   </Popover>
+
+  <TooltipProvider :delay-duration="300">
+    <Tooltip v-if="showSyncUi">
+      <TooltipTrigger as-child>
+        <button
+          :aria-label="syncTooltip"
+          class="flex cursor-pointer items-center rounded-md p-1.5 transition-colors hover:bg-accent hover:text-foreground"
+          @click="openSyncDialog"
+        >
+          <img
+            v-if="isLoggedIn && authStore.user?.avatar"
+            :src="authStore.user.avatar"
+            :alt="authStore.user.login"
+            class="size-4 rounded-full"
+          >
+          <component
+            :is="syncFooterIcon"
+            v-else
+            class="size-4"
+            :class="syncFooterIconClass"
+          />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" :side-offset="6" class="text-xs text-muted-foreground">
+        <p>{{ isLoggedIn ? syncTooltip : '云同步' }}</p>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
 </template>
