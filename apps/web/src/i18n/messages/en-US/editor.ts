@@ -59,7 +59,7 @@ export default {
     mergeDescription: `Merge {count} selected posts in order. Name the result:`,
     mergePlaceholder: `Enter merged title…`,
     historyTitle: `History`,
-    historyDescription: `Auto-saved every 15 seconds, up to 100 versions (expires after 30 days)`,
+    historyDescription: `Auto-saved on focus loss, up to 100 versions`,
     originalContent: `Original`,
     versionDiff: `Compare versions`,
     compareLabel: `Compare:`,

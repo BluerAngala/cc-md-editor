@@ -564,6 +564,7 @@ onMounted(() => {
       clearTimeout(changeTimer.value)
       changeTimer.value = undefined
       commitEditorContentToPost()
+      saveHistorySnapshot()
     })
   })
 
@@ -571,12 +572,15 @@ onMounted(() => {
 
   // 切换标签/最小化时立即保存，防止内容丢失
   const handleVisibilityChange = () => {
-    if (document.visibilityState === `hidden`)
+    if (document.visibilityState === `hidden`) {
       commitEditorContentToPost()
+      saveHistorySnapshot()
+    }
   }
   // 窗口失去焦点时也保存（切换到其他应用）
   const handleWindowBlur = () => {
     commitEditorContentToPost()
+    saveHistorySnapshot()
   }
   document.addEventListener(`visibilitychange`, handleVisibilityChange)
   window.addEventListener(`blur`, handleWindowBlur)
@@ -640,39 +644,29 @@ watch(
   },
 )
 
-// 历史记录的定时器
-const historyTimer = ref<ReturnType<typeof setTimeout>>()
-onMounted(() => {
-  historyTimer.value = setInterval(() => {
-    const currentPost = posts.value[currentPostIndex.value]
+// 历史记录：失焦时保存，不再用定时器
+function saveHistorySnapshot() {
+  const currentPost = posts.value[currentPostIndex.value]
+  if (!currentPost)
+    return
 
-    const pre = (currentPost.history || [])[0]?.content
-    if (pre === currentPost.content) {
-      return
-    }
+  const pre = (currentPost.history || [])[0]?.content
+  if (pre === currentPost.content)
+    return
 
-    currentPost.history ??= []
-    currentPost.history.unshift({
-      content: currentPost.content,
-      datetime: formatLocalDateTime(),
-    })
+  currentPost.history ??= []
+  currentPost.history.unshift({
+    content: currentPost.content,
+    datetime: formatLocalDateTime(),
+  })
 
-    // 30 天过期清理
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-    currentPost.history = currentPost.history.filter((h) => {
-      const ts = new Date(h.datetime).getTime()
-      return !ts || ts > thirtyDaysAgo
-    })
-
-    // 最多保留 100 条
-    currentPost.history.length = Math.min(currentPost.history.length, 100)
-  }, 15 * 1000)
-})
+  // 最多保留 100 条
+  currentPost.history.length = Math.min(currentPost.history.length, 100)
+}
 
 onUnmounted(() => {
   editorStore.unregisterContentFlush()
   window.removeEventListener(MATHJAX_READY_EVENT, handleMathJaxReady)
-  clearTimeout(historyTimer.value)
   clearTimeout(changeTimer.value)
   document.removeEventListener(`keydown`, handleGlobalKeydown, { capture: false })
 })
