@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CheckSquare, RefreshCcw, Search, Square, Star, Trash2, X } from '@lucide/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import SyncButton from '@/components/shared/SyncButton.vue'
 import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -104,6 +105,8 @@ onUnmounted(() => {
       <Button variant="outline" size="sm" @click="showSourceConfig = true">
         订阅管理
       </Button>
+
+      <SyncButton />
     </header>
 
     <!-- 主体 -->

@@ -12,9 +12,10 @@ const ReadingView = defineAsyncComponent(() => import('@/components/reading/Read
 const CommandPalette = defineAsyncComponent(() => import('@/components/editor/dialogs/CommandPalette.vue'))
 const ConfirmDialog = defineAsyncComponent(() => import('@/components/shared/confirm-dialog/ConfirmDialog.vue'))
 const PreferencesDialog = defineAsyncComponent(() => import('@/components/editor/dialogs/PreferencesDialog.vue'))
+const UnifiedSyncDialog = defineAsyncComponent(() => import('@/components/editor/editor-header/UnifiedSyncDialog.vue'))
 
 const uiStore = useUIStore()
-const { isDark, currentView, isShowPreferencesDialog } = storeToRefs(uiStore)
+const { isDark, currentView, isShowPreferencesDialog, isShowSyncDialog } = storeToRefs(uiStore)
 
 usePlatformEnv()
 useAccountSyncBootstrap()
@@ -38,6 +39,7 @@ usePreferencesHotkey()
   <ConfirmDialog />
 
   <PreferencesDialog v-model:open="isShowPreferencesDialog" />
+  <UnifiedSyncDialog v-if="isShowSyncDialog" v-model:open="isShowSyncDialog" />
 
   <Toaster
     rich-colors

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { LayoutGrid, Lightbulb, Plus, Search, Sparkles, Trash2 } from '@lucide/vue'
 import { computed, ref } from 'vue'
+import SyncButton from '@/components/shared/SyncButton.vue'
 import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -388,6 +389,8 @@ for (const key of [OLD_KEY, OLD_SINGLE]) {
       </div>
 
       <div class="flex-1" />
+
+      <SyncButton />
     </header>
 
     <!-- 主体 -->

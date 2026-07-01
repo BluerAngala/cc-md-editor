@@ -26,7 +26,6 @@ const EditorStateDialog = defineAsyncComponent(() => import('@/components/editor
 const MarkdownHelpDialog = defineAsyncComponent(() => import('./MarkdownHelpDialog.vue'))
 const KeyboardShortcutsDialog = defineAsyncComponent(() => import('./KeyboardShortcutsDialog.vue'))
 const AccountDialog = defineAsyncComponent(() => import('./AccountDialog.vue'))
-const UnifiedSyncDialog = defineAsyncComponent(() => import('./UnifiedSyncDialog.vue'))
 const ShareDialog = defineAsyncComponent(() => import('./ShareDialog.vue'))
 
 const editorStore = useEditorStore()
@@ -40,7 +39,7 @@ const { editorRefresh } = useEditorRefresh()
 const { editor } = storeToRefs(editorStore)
 const { output } = storeToRefs(renderStore)
 const { primaryColor } = storeToRefs(themeStore)
-const { isOpenRightSlider, isOpenPostSlider, isShowSyncDialog, isShowAccountDialog, isShowShareDialog, isShowAboutDialog, isShowFundDialog, isShowEditorStateDialog, isShowMarkdownHelpDialog, isShowKeyboardShortcutsDialog, copyMode } = storeToRefs(uiStore)
+const { isOpenRightSlider, isOpenPostSlider, isShowAccountDialog, isShowShareDialog, isShowAboutDialog, isShowFundDialog, isShowEditorStateDialog, isShowMarkdownHelpDialog, isShowKeyboardShortcutsDialog, copyMode } = storeToRefs(uiStore)
 const { openShareDialog, toggleShowUploadImgDialog } = uiStore
 
 const isCopying = ref(false)
@@ -334,7 +333,6 @@ function copyToWeChat() {
   <MarkdownHelpDialog v-if="isShowMarkdownHelpDialog" v-model:open="isShowMarkdownHelpDialog" />
   <KeyboardShortcutsDialog v-if="isShowKeyboardShortcutsDialog" v-model:open="isShowKeyboardShortcutsDialog" />
   <AccountDialog v-if="isShowAccountDialog" v-model:open="isShowAccountDialog" />
-  <UnifiedSyncDialog v-if="isShowSyncDialog" v-model:open="isShowSyncDialog" />
   <ShareDialog v-if="isShowShareDialog" v-model:open="isShowShareDialog" />
 </template>
 
