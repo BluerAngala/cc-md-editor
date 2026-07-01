@@ -90,7 +90,7 @@ function formatDate(ts: number) {
       <!-- 文章正文 -->
       <div
         ref="contentRef"
-        class="article-content flex-1 overflow-y-auto px-8 py-6"
+        class="article-content flex-1 overflow-y-auto px-8 py-6 select-text cursor-text"
         @mouseup="handleSelect"
         v-html="article.content || article.summary"
       />

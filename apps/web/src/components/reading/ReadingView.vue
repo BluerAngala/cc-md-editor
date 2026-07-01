@@ -42,7 +42,7 @@ function formatDate(ts: number) {
 </script>
 
 <template>
-  <div class="flex h-screen flex-col select-none">
+  <div class="flex h-screen flex-col">
     <!-- Header -->
     <header class="flex items-center gap-3 border-b px-4 py-2">
       <Lightbulb class="text-lg text-amber-500" />
