@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Cloud, CloudOff, Loader2, RefreshCcw, X } from '@lucide/vue'
+import { Check, Cloud, CloudOff, ExternalLink, Loader2, RefreshCcw, X } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -101,6 +101,16 @@ async function handleSync() {
             <RefreshCcw class="h-3 w-3" :class="{ 'animate-spin': syncStore.status === 'syncing' }" />
             立即同步
           </Button>
+          <a
+            :href="`https://github.com/${syncStore.repoFullName || ''}`"
+            target="_blank"
+            class="inline-flex items-center"
+          >
+            <Button variant="outline" size="sm" class="h-7 gap-1 text-xs">
+              <ExternalLink class="h-3 w-3" />
+              查看仓库
+            </Button>
+          </a>
           <Button variant="outline" size="sm" class="h-7 text-xs" @click="syncStore.clearToken(); showPanel = false">
             断开
           </Button>

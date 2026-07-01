@@ -6,6 +6,7 @@ import { usePostStore } from '@/stores/post'
 const GITHUB_TOKEN_KEY = addPrefix('github_token')
 const LAST_SYNC_KEY = addPrefix('github_last_sync')
 const SYNCED_FILES_KEY = addPrefix('github_synced_files')
+const REPO_NAME_KEY = addPrefix('github_repo_name')
 
 /** 收集所有 localStorage 设置（含密钥，私有仓库不限制） */
 function collectAllSettings(): Record<string, unknown> {
@@ -68,7 +69,7 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
   const lastSyncAt = store.reactive(LAST_SYNC_KEY, 0)
   const status = ref<SyncStatus>('idle')
   const lastError = ref('')
-  const repoFullName = ref('')
+  const repoFullName = store.reactive(REPO_NAME_KEY, '')
 
   const isConfigured = computed(() => Boolean(token.value))
   const client = computed(() => isConfigured.value ? new GitHubSyncClient(() => token.value) : null)
@@ -80,6 +81,7 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
   function clearToken() {
     token.value = ''
     lastSyncAt.value = 0
+    repoFullName.value = ''
     writeSyncedFiles({})
   }
 
