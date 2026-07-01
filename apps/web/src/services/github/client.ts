@@ -7,10 +7,6 @@ const GITHUB_API = 'https://api.github.com'
 const REPO_NAME = 'cc-md-editor-data'
 const REPO_DESC = 'CC Markdown Editor 数据仓库（自动创建，请勿手动修改）'
 
-// Device Flow 不需要 client_secret，只需 client_id
-// 使用前需在 GitHub 创建 OAuth App 并启用 Device Flow
-const CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || ''
-
 interface DeviceCodeResponse {
   device_code: string
   user_code: string
@@ -75,17 +71,15 @@ export class GitHubSyncClient {
 
   /** 发起 Device Flow 授权 */
   static async startDeviceFlow(): Promise<DeviceCodeResponse> {
-    if (!CLIENT_ID)
-      throw new Error('未配置 VITE_GITHUB_CLIENT_ID 环境变量')
-
-    const res = await fetch('https://github.com/login/device/code', {
+    const res = await fetch('/.netlify/functions/github-device-flow?action=device_code', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ client_id: CLIENT_ID, scope: 'repo' }),
+      headers: { Accept: 'application/json' },
     })
 
-    if (!res.ok)
-      throw new Error(`Device Flow 启动失败: ${res.status}`)
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as Record<string, string>
+      throw new Error(body.error || `Device Flow 启动失败: ${res.status}`)
+    }
 
     return res.json() as Promise<DeviceCodeResponse>
   }
@@ -95,14 +89,10 @@ export class GitHubSyncClient {
     const { promise, resolve, reject } = Promise.withResolvers<string>()
     const poll = async () => {
       try {
-        const res = await fetch('https://github.com/login/oauth/access_token', {
+        const res = await fetch('/.netlify/functions/github-device-flow?action=access_token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({
-            client_id: CLIENT_ID,
-            device_code: deviceCode,
-            grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-          }),
+          body: JSON.stringify({ device_code: deviceCode }),
         })
         const data = await res.json() as AccessTokenResponse
 
