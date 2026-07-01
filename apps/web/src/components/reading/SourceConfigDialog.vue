@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Loader2, Plus, Radio, Timer, Trash2, X } from '@lucide/vue'
+import { Loader2, Plus, Radio, Shield, Timer, Trash2, X } from '@lucide/vue'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { LEGAL_SOURCES } from '@/stores/legalSources'
 import { useReadingStore } from '@/stores/reading'
 
 const emit = defineEmits<{
@@ -54,6 +55,29 @@ function useRoute(route: { name: string, path: string }) {
   newTitle.value = route.name.split('/').pop() || route.name
   newCategory.value = 'RSSHub'
   discoveredRoutes.value = []
+}
+
+function addLegalSources() {
+  const existingUrls = new Set([
+    ...store.sources.map(s => s.url),
+    ...store.collectors.map(s => s.url),
+  ])
+  let added = 0
+  for (const src of LEGAL_SOURCES) {
+    if (existingUrls.has(src.url))
+      continue
+    if (src.type === 'json-api' || src.type === 'jsonp-api') {
+      // JSON/JSONP 源作为 RSS 源添加，fetchAll 会识别并使用专用 fetch
+      store.addSource(`legal://${src.id}`, src.name, src.category, 60)
+    }
+    else if (src.selectors) {
+      store.addCollector(src.url, src.name, src.category, src.selectors, src.description || '', 60)
+    }
+    added++
+  }
+  if (added > 0) {
+    setTimeout(() => store.fetchAll(), 500)
+  }
 }
 </script>
 
@@ -107,6 +131,15 @@ function useRoute(route: { name: string, path: string }) {
               {{ route.name }}
             </button>
           </div>
+        </div>
+
+        <!-- 一键添加法律/政策源 -->
+        <div class="mt-3 flex items-center gap-2">
+          <Button variant="outline" size="sm" class="h-7 gap-1 text-xs" @click="addLegalSources">
+            <Shield class="h-3 w-3" />
+            一键添加法律/政策源（10个）
+          </Button>
+          <span class="text-[10px] text-muted-foreground">政府网、央视网、最高法、司法部、市监局等</span>
         </div>
       </div>
 

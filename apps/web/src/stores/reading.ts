@@ -391,6 +391,75 @@ export const useReadingStore = defineStore('reading', () => {
     }
   }
 
+  // ── 法律/政策数据源 ──────────────────────────────────
+
+  /** 中国政府网·最新政策（JSON API） */
+  async function fetchGovPolicy(maxItems = 10): Promise<Article[]> {
+    try {
+      const res = await window.fetch(
+        CORS_PROXY + encodeURIComponent('https://www.gov.cn/zhengce/zuixin/ZUIXINZHENGCE.json'),
+        { signal: AbortSignal.timeout(15000) },
+      )
+      if (!res.ok)
+        return []
+      const data = await res.json()
+      const items = Array.isArray(data) ? data : []
+      return items.slice(0, maxItems).map((item: any, i: number) => ({
+        id: `gov-policy-${item.URL?.match(/content_(\d+)\.htm/)?.[1] || i}`,
+        sourceId: 'gov-policy',
+        sourceTitle: '中国政府网',
+        title: item.TITLE || '无标题',
+        link: item.URL || '',
+        content: '',
+        summary: item.SUB_TITLE || '',
+        author: '',
+        publishedAt: item.DOCRELPUBTIME ? new Date(item.DOCRELPUBTIME).getTime() : Date.now(),
+        read: false,
+        starred: false,
+        type: 'collector' as const,
+      }))
+    }
+    catch (e) {
+      console.warn('[GovPolicy] Fetch failed:', e)
+      return []
+    }
+  }
+
+  /** 央视网·法治频道（JSONP API） */
+  async function fetchCctvLaw(maxItems = 10): Promise<Article[]> {
+    try {
+      const res = await window.fetch(
+        CORS_PROXY + encodeURIComponent('https://news.cctv.com/2019/07/gaiban/cmsdatainterface/page/law_1.jsonp?cb=law'),
+        { signal: AbortSignal.timeout(15000) },
+      )
+      if (!res.ok)
+        return []
+      let text = await res.text()
+      // 剥离 JSONP 包裹：law({...})
+      text = text.replace(/^law\(/, '').replace(/\);?$/, '')
+      const data = JSON.parse(text)
+      const items = data?.data?.list || []
+      return items.slice(0, maxItems).map((item: any, i: number) => ({
+        id: `cctv-law-${item.url?.match(/ARTI[\w-]+/)?.[0] || i}`,
+        sourceId: 'cctv-law',
+        sourceTitle: '央视网·法治',
+        title: item.title || '无标题',
+        link: item.url || '',
+        content: '',
+        summary: item.brief || '',
+        author: '',
+        publishedAt: item.focus_date ? new Date(item.focus_date).getTime() : Date.now(),
+        read: false,
+        starred: false,
+        type: 'collector' as const,
+      }))
+    }
+    catch (e) {
+      console.warn('[CctvLaw] Fetch failed:', e)
+      return []
+    }
+  }
+
   async function fetchAll() {
     loading.value = true
     error.value = ''
@@ -400,6 +469,16 @@ export const useReadingStore = defineStore('reading', () => {
         Promise.allSettled(
           sources.value.map(async (src) => {
             try {
+              // 法律/政策 JSON 源
+              if (src.url.startsWith('legal://')) {
+                const id = src.url.replace('legal://', '')
+                if (id === 'gov-policy')
+                  return fetchGovPolicy()
+                if (id === 'cctv-law')
+                  return fetchCctvLaw()
+                return []
+              }
+              // 标准 RSS 源
               const feed = await fetchFeed(src.url)
               const srcTitle = feed.title || src.title
               return feed.items.map(item => ({
@@ -509,21 +588,31 @@ export const useReadingStore = defineStore('reading', () => {
   // ── 自动刷新（按订阅源间隔） ──────────────────────
   async function fetchSource(src: RSSSource) {
     try {
-      const feed = await fetchFeed(src.url)
-      const srcTitle = feed.title || src.title
-      const newArticles = feed.items.map(item => ({
-        id: `art-${src.id}-${item.guid || item.link || Date.now()}`,
-        sourceId: src.id,
-        sourceTitle: srcTitle,
-        title: item.title || '无标题',
-        link: item.link || '',
-        content: item.content || item.contentSnippet || '',
-        summary: item.contentSnippet?.slice(0, 200) || item.content?.replace(/<[^>]*>/g, '').slice(0, 200) || '',
-        author: item.creator || item.author || '',
-        publishedAt: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
-        read: false,
-        starred: false,
-      } as Article))
+      let newArticles: Article[] = []
+      if (src.url.startsWith('legal://')) {
+        const id = src.url.replace('legal://', '')
+        if (id === 'gov-policy')
+          newArticles = await fetchGovPolicy()
+        else if (id === 'cctv-law')
+          newArticles = await fetchCctvLaw()
+      }
+      else {
+        const feed = await fetchFeed(src.url)
+        const srcTitle = feed.title || src.title
+        newArticles = feed.items.map(item => ({
+          id: `art-${src.id}-${item.guid || item.link || Date.now()}`,
+          sourceId: src.id,
+          sourceTitle: srcTitle,
+          title: item.title || '无标题',
+          link: item.link || '',
+          content: item.content || item.contentSnippet || '',
+          summary: item.contentSnippet?.slice(0, 200) || item.content?.replace(/<[^>]*>/g, '').slice(0, 200) || '',
+          author: item.creator || item.author || '',
+          publishedAt: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
+          read: false,
+          starred: false,
+        } as Article))
+      }
       const existingIds = new Set(articles.value.map(a => a.id))
       const toAdd = newArticles.filter(a => !existingIds.has(a.id))
       if (toAdd.length) {
@@ -636,6 +725,8 @@ export const useReadingStore = defineStore('reading', () => {
     fetchPageHTML,
     fetchFullText,
     discoverRSSHubRoutes,
+    fetchGovPolicy,
+    fetchCctvLaw,
     // RSS
     addSource,
     updateSourceInterval,
