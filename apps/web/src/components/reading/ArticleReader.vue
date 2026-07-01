@@ -4,7 +4,6 @@ import { ExternalLink, Lightbulb, Quote, Star } from '@lucide/vue'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { useIdeaBoardStore } from '@/stores/ideaBoard'
 import { useReadingStore } from '@/stores/reading'
 
 const props = defineProps<{
@@ -12,24 +11,47 @@ const props = defineProps<{
 }>()
 
 const readingStore = useReadingStore()
-const ideaStore = useIdeaBoardStore()
 
 const quoteText = ref('')
 const ideaText = ref('')
 const ideaSaved = ref(false)
 
+const SCENE_STORAGE_KEY = 'idea-board-scenes'
+
 function saveIdea() {
   if (!ideaText.value.trim())
     return
 
-  let content = ''
-  if (quoteText.value.trim()) {
-    content += `📖 摘要：${quoteText.value.trim()}\n\n`
-  }
-  content += `💡 想法：${ideaText.value.trim()}`
+  // 构造描述：摘要 + 想法
+  let desc = ''
+  if (quoteText.value.trim())
+    desc += `📖 ${quoteText.value.trim()}`
+  if (ideaText.value.trim())
+    desc += `${desc ? '\n' : ''}💡 ${ideaText.value.trim()}`
 
-  const title = props.article.title.slice(0, 30)
-  ideaStore.addNote(`[${title}] ${content}`, 'yellow', '阅读笔记')
+  // 直接写入 IdeaBoard 的场景存储
+  try {
+    const raw = localStorage.getItem(SCENE_STORAGE_KEY)
+    const scenes: any[] = raw ? JSON.parse(raw) : []
+    const now = Date.now()
+    scenes.unshift({
+      id: now.toString(36) + Math.random().toString(36).slice(2, 8),
+      title: props.article.title.slice(0, 30),
+      desc,
+      color: 0,
+      group: '阅读笔记',
+      x: 20 + Math.random() * 100,
+      y: 20 + Math.random() * 100,
+      w: 220,
+      h: 140,
+      elements: [],
+      createdAt: now,
+      updatedAt: now,
+    })
+    localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes))
+  }
+  catch { /* ignore */ }
+
   quoteText.value = ''
   ideaText.value = ''
   ideaSaved.value = true
