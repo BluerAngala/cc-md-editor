@@ -343,6 +343,23 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
     return sync(scope, true)
   }
 
+  /** 递归删除远端目录下所有文件 */
+  async function deleteDir(repo: string, dirPath: string): Promise<void> {
+    const c = client.value!
+    try {
+      const entries = await c.listFiles(repo, dirPath)
+      for (const entry of entries) {
+        if (entry.type === 'dir')
+          await deleteDir(repo, entry.path)
+        else
+          await c.deleteFile(repo, entry.path, `reset: delete ${entry.name}`, entry.sha)
+      }
+    }
+    catch {
+      // 目录可能已删除，忽略
+    }
+  }
+
   /** 清空远端仓库所有文件并用本地数据重建（根治乱码） */
   async function resetRemote(): Promise<void> {
     if (!client.value)
@@ -353,20 +370,19 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
 
     try {
       const repo = storedRepoName.value
-      const c = client.value
 
-      // 1. 删除仓库中所有现有文件
-      const rootFiles = await c.listFiles(repo, '')
-      for (const f of rootFiles) {
-        if (f.type === 'dir') {
-          // 删除目录下所有文件
-          const dirFiles = await c.listFiles(repo, f.path)
-          for (const df of dirFiles)
-            await c.deleteFile(repo, df.path, `reset: delete ${df.name}`, df.sha)
+      // 1. 递归删除仓库中所有文件
+      try {
+        const rootFiles = await client.value.listFiles(repo, '')
+        for (const f of rootFiles) {
+          if (f.type === 'dir')
+            await deleteDir(repo, f.path)
+          else
+            await client.value.deleteFile(repo, f.path, `reset: delete ${f.name}`, f.sha)
         }
-        else {
-          await c.deleteFile(repo, f.path, `reset: delete ${f.name}`, f.sha)
-        }
+      }
+      catch {
+        // 仓库可能为空或部分文件已删除，继续重建
       }
 
       // 2. 推送所有本地数据
@@ -377,7 +393,7 @@ export const useGitHubSyncStore = defineStore('githubSync', () => {
       // 3. 推送所有文章
       for (const post of postStore.posts) {
         const fileName = `${PATH_POSTS}/${post.id}.md`
-        await c.writeFile(repo, fileName, post.content, `init: ${post.title}`)
+        await client.value.writeFile(repo, fileName, post.content, `init: ${post.title}`)
       }
 
       lastSyncAt.value = Date.now()
