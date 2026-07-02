@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { CheckSquare, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, RefreshCcw, Search, Settings, Square, Star, Trash2, X } from '@lucide/vue'
+import { CheckSquare, Globe, Moon, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, RefreshCcw, Search, Settings, Square, Star, Sun, Trash2, X } from '@lucide/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import AIConfig from '@/components/ai/chat-box/AIConfig.vue'
 import SyncButton from '@/components/shared/SyncButton.vue'
 import ViewNav from '@/components/shared/ViewNav.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useLocaleStore } from '@/stores/locale'
 import { useReadingStore } from '@/stores/reading'
+import { useUIStore } from '@/stores/ui'
 import ArticleReader from './ArticleReader.vue'
 import SourceConfigDialog from './SourceConfigDialog.vue'
 
 const store = useReadingStore()
+const uiStore = useUIStore()
+const localeStore = useLocaleStore()
 
 const showSourceConfig = ref(false)
 const showAIConfig = ref(false)
@@ -135,6 +139,28 @@ function handleKeydown(e: KeyboardEvent) {
       </Button>
 
       <SyncButton />
+
+      <!-- 语言切换 -->
+      <Button
+        variant="ghost"
+        size="sm"
+        class="h-7 gap-1 text-xs"
+        @click="localeStore.setLocale(localeStore.locale === 'zh-CN' ? 'en-US' : 'zh-CN')"
+      >
+        <Globe class="h-3.5 w-3.5" />
+        {{ localeStore.locale === 'zh-CN' ? '中文' : 'EN' }}
+      </Button>
+
+      <!-- 主题切换 -->
+      <Button
+        variant="ghost"
+        size="sm"
+        class="h-7 w-7 p-0"
+        @click="uiStore.toggleDark()"
+      >
+        <Sun v-if="uiStore.isDark" class="h-4 w-4" />
+        <Moon v-else class="h-4 w-4" />
+      </Button>
     </header>
 
     <!-- 主体 -->

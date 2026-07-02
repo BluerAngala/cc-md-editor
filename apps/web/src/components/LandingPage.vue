@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { FileText, Lightbulb, Newspaper, Settings } from '@lucide/vue'
+import { FileText, Globe, Lightbulb, Moon, Newspaper, Settings, Sun } from '@lucide/vue'
 import { onMounted } from 'vue'
+import { useLocaleStore } from '@/stores/locale'
 import { useUIStore } from '@/stores/ui'
 
 const uiStore = useUIStore()
+const localeStore = useLocaleStore()
 
 onMounted(() => {
-  // 首页挂载后立即后台预加载编辑器、想法库和阅读模块
   import('@/components/editor/CodemirrorEditor.vue')
   import('@/components/idea-board/IdeaBoard.vue')
   import('@/components/reading/ReadingView.vue')
@@ -15,14 +16,35 @@ onMounted(() => {
 
 <template>
   <div class="flex h-screen items-center justify-center bg-background">
-    <!-- 设置按钮 -->
-    <button
-      class="absolute right-6 top-6 flex h-9 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
-      @click="uiStore.toggleShowPreferencesDialog()"
-    >
-      <Settings class="h-4 w-4" />
-      设置
-    </button>
+    <!-- 右上角工具栏 -->
+    <div class="absolute right-6 top-6 flex items-center gap-2">
+      <!-- 语言切换 -->
+      <button
+        class="flex h-9 items-center gap-1.5 rounded-lg border bg-card px-2.5 text-xs text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+        @click="localeStore.setLocale(localeStore.locale === 'zh-CN' ? 'en-US' : 'zh-CN')"
+      >
+        <Globe class="h-3.5 w-3.5" />
+        {{ localeStore.locale === 'zh-CN' ? '中文' : 'EN' }}
+      </button>
+
+      <!-- 主题切换 -->
+      <button
+        class="flex h-9 w-9 items-center justify-center rounded-lg border bg-card shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+        @click="uiStore.toggleDark()"
+      >
+        <Sun v-if="uiStore.isDark" class="h-4 w-4" />
+        <Moon v-else class="h-4 w-4" />
+      </button>
+
+      <!-- 设置 -->
+      <button
+        class="flex h-9 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+        @click="uiStore.toggleShowPreferencesDialog()"
+      >
+        <Settings class="h-4 w-4" />
+        设置
+      </button>
+    </div>
 
     <div class="flex flex-col items-center gap-8">
       <div class="text-center">
