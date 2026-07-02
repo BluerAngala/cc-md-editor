@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { Loader2, Plus, Radio, Shield, Timer, Trash2, X } from '@lucide/vue'
+import { Globe, Loader2, Plus, Radio, Timer, Trash2, X } from '@lucide/vue'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { LEGAL_SOURCES } from '@/stores/legalSources'
 import { useReadingStore } from '@/stores/reading'
 
 const emit = defineEmits<{
@@ -24,7 +23,17 @@ const REFRESH_OPTIONS = [
   { value: 30, label: '30分钟' },
   { value: 60, label: '1小时' },
   { value: 120, label: '2小时' },
+  { value: 360, label: '6小时' },
+  { value: 1440, label: '24小时' },
 ]
+
+/** 统一源列表：RSS + 采集器 */
+function getAllSources() {
+  return [
+    ...store.sources.map(s => ({ ...s, sourceType: 'rss' as const, url: s.url })),
+    ...store.collectors.map(s => ({ ...s, sourceType: 'collector' as const })),
+  ]
+}
 
 function handleAdd() {
   if (!newUrl.value.trim())
@@ -41,13 +50,9 @@ async function handleDiscover() {
     return
   discovering.value = true
   discoveredRoutes.value = []
-  try {
-    discoveredRoutes.value = await store.discoverRSSHubRoutes(newUrl.value.trim())
-  }
+  try { discoveredRoutes.value = await store.discoverRSSHubRoutes(newUrl.value.trim()) }
   catch { /* ignore */ }
-  finally {
-    discovering.value = false
-  }
+  finally { discovering.value = false }
 }
 
 function useRoute(route: { name: string, path: string }) {
@@ -57,48 +62,36 @@ function useRoute(route: { name: string, path: string }) {
   discoveredRoutes.value = []
 }
 
-function addLegalSources() {
-  const existingUrls = new Set([
-    ...store.sources.map(s => s.url),
-    ...store.collectors.map(s => s.url),
-  ])
-  let added = 0
-  for (const src of LEGAL_SOURCES) {
-    if (existingUrls.has(src.url))
-      continue
-    if (src.type === 'json-api' || src.type === 'jsonp-api') {
-      // JSON/JSONP 源作为 RSS 源添加，fetchAll 会识别并使用专用 fetch
-      store.addSource(`legal://${src.id}`, src.name, src.category, 60)
-    }
-    else if (src.selectors) {
-      store.addCollector(src.url, src.name, src.category, src.selectors, src.description || '', 60)
-    }
-    added++
-  }
-  if (added > 0) {
-    setTimeout(() => store.fetchAll(), 500)
-  }
+function removeSource(src: { id: string, sourceType: 'rss' | 'collector' }) {
+  if (src.sourceType === 'collector')
+    store.removeCollector(src.id)
+  else
+    store.removeSource(src.id)
+}
+
+function updateInterval(src: { id: string, sourceType: 'rss' | 'collector' }, minutes: number) {
+  if (src.sourceType === 'collector')
+    store.updateCollectorInterval(src.id, minutes)
+  else
+    store.updateSourceInterval(src.id, minutes)
 }
 </script>
 
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="emit('close')">
-    <div class="flex h-[70vh] w-[600px] max-w-[95vw] flex-col rounded-xl border bg-background shadow-2xl">
+    <div class="flex h-[75vh] w-[680px] max-w-[95vw] flex-col rounded-xl border bg-background shadow-2xl">
       <!-- Header -->
       <div class="flex items-center justify-between border-b px-4 py-3">
         <h2 class="text-base font-semibold">
-          订阅管理
+          源管理
         </h2>
         <Button variant="ghost" size="icon" class="h-7 w-7" @click="emit('close')">
           <X class="h-4 w-4" />
         </Button>
       </div>
 
-      <!-- 添加订阅源 -->
+      <!-- 添加源 -->
       <div class="border-b p-4">
-        <p class="text-xs font-medium text-muted-foreground mb-2">
-          添加订阅源
-        </p>
         <div class="flex gap-2">
           <Input v-model="newUrl" placeholder="RSS 地址或任意网站 URL" class="h-8 text-xs flex-1" />
           <Input v-model="newTitle" placeholder="标题（可选）" class="h-8 text-xs w-28" />
@@ -114,7 +107,7 @@ function addLegalSources() {
           </Button>
         </div>
         <p class="mt-1.5 text-[10px] text-muted-foreground">
-          支持标准 RSS/Atom 格式。输入任意网站 URL 点击「发现」自动查找 RSS 源（via RSSHub）
+          支持 RSS/Atom 格式，输入任意网站 URL 可通过 RSSHub 自动发现 RSS 源。采集管理请使用「采集管理」入口。
         </p>
         <!-- RSSHub 发现结果 -->
         <div v-if="discoveredRoutes.length" class="mt-2 rounded-md border bg-muted/30 p-2">
@@ -132,30 +125,35 @@ function addLegalSources() {
             </button>
           </div>
         </div>
-
-        <!-- 一键添加法律/政策源 -->
-        <div class="mt-3 flex items-center gap-2">
-          <Button variant="outline" size="sm" class="h-7 gap-1 text-xs" @click="addLegalSources">
-            <Shield class="h-3 w-3" />
-            一键添加法律/政策源（10个）
-          </Button>
-          <span class="text-[10px] text-muted-foreground">政府网、央视网、最高法、司法部、市监局等</span>
-        </div>
       </div>
 
-      <!-- 已订阅列表 -->
+      <!-- 统一源列表 -->
       <div class="flex-1 overflow-y-auto">
         <div
-          v-for="src in store.sources"
+          v-for="src in getAllSources()"
           :key="src.id"
           class="flex items-center justify-between border-b px-4 py-2.5 hover:bg-muted/50 transition-colors"
         >
           <div class="min-w-0 flex-1">
-            <p class="text-xs font-medium truncate">
-              {{ src.title }}
-            </p>
+            <div class="flex items-center gap-1.5">
+              <p class="text-xs font-medium truncate">
+                {{ src.title }}
+              </p>
+              <span
+                v-if="src.sourceType === 'collector'"
+                class="rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] text-blue-500"
+              >
+                采集
+              </span>
+              <span
+                v-if="src.url.startsWith('legal://')"
+                class="rounded bg-green-500/10 px-1.5 py-0.5 text-[9px] text-green-500"
+              >
+                API
+              </span>
+            </div>
             <p class="text-[10px] text-muted-foreground truncate">
-              {{ src.url }}
+              {{ src.sourceType === 'collector' && src.description ? src.description : src.url }}
             </p>
           </div>
           <div class="flex items-center gap-2 shrink-0 ml-2">
@@ -164,7 +162,7 @@ function addLegalSources() {
               <select
                 class="rounded border bg-background px-1.5 py-0.5 text-[10px]"
                 :value="src.refreshInterval"
-                @change="store.updateSourceInterval(src.id, Number(($event.target as HTMLSelectElement).value))"
+                @change="updateInterval(src, Number(($event.target as HTMLSelectElement).value))"
               >
                 <option v-for="opt in REFRESH_OPTIONS" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
@@ -174,15 +172,16 @@ function addLegalSources() {
             <span class="rounded-full bg-muted px-2 py-0.5 text-[10px]">
               {{ src.category }}
             </span>
-            <Button variant="ghost" size="icon" class="h-6 w-6 text-destructive" @click="store.removeSource(src.id)">
+            <Button variant="ghost" size="icon" class="h-6 w-6 text-destructive" @click="removeSource(src)">
               <Trash2 class="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
-        <div v-if="!store.sources.length" class="flex h-32 flex-col items-center justify-center gap-2 text-xs text-muted-foreground/50">
-          <span>暂无订阅源</span>
+        <div v-if="!getAllSources().length" class="flex h-32 flex-col items-center justify-center gap-2 text-xs text-muted-foreground/50">
+          <Globe class="h-8 w-8" />
+          <span>暂无数据源</span>
           <Button variant="outline" size="sm" class="h-7 text-xs" @click="store.resetToDefaults()">
-            恢复默认订阅源
+            恢复默认源
           </Button>
         </div>
       </div>

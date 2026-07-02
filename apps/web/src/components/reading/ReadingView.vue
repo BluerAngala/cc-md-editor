@@ -8,13 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useReadingStore } from '@/stores/reading'
 import ArticleReader from './ArticleReader.vue'
-import CollectorConfigDialog from './CollectorConfigDialog.vue'
 import SourceConfigDialog from './SourceConfigDialog.vue'
 
 const store = useReadingStore()
 
 const showSourceConfig = ref(false)
-const showCollectorConfig = ref(false)
 const showAIConfig = ref(false)
 const showStarredOnly = ref(false)
 const activeListId = ref<string | null>(null)
@@ -128,11 +126,7 @@ function handleKeydown(e: KeyboardEvent) {
       </Button>
 
       <Button variant="outline" size="sm" @click="showSourceConfig = true">
-        订阅管理
-      </Button>
-
-      <Button variant="outline" size="sm" @click="showCollectorConfig = true">
-        采集管理
+        源管理
       </Button>
 
       <Button variant="outline" size="sm" class="gap-1" @click="showAIConfig = true">
@@ -347,11 +341,8 @@ function handleKeydown(e: KeyboardEvent) {
       </div>
     </div>
 
-    <!-- 订阅管理对话框 -->
+    <!-- 源管理对话框 -->
     <SourceConfigDialog v-if="showSourceConfig" @close="showSourceConfig = false" />
-
-    <!-- 采集管理对话框 -->
-    <CollectorConfigDialog v-if="showCollectorConfig" @close="showCollectorConfig = false" />
 
     <!-- AI 配置对话框 -->
     <div v-if="showAIConfig" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showAIConfig = false">

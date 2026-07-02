@@ -157,6 +157,20 @@ export interface Article {
 const DEFAULT_SOURCES: RSSSource[] = [
   { id: 'solidot', url: 'https://feeds.feedburner.com/solidot', title: '奇客Solidot', category: '科技', addedAt: Date.now(), refreshInterval: 30 },
   { id: '36kr', url: 'https://36kr.com/feed', title: '36氪', category: '商业', addedAt: Date.now(), refreshInterval: 30 },
+  // 法律/政策源（JSON API）
+  { id: 'gov-policy', url: 'legal://gov-policy', title: '中国政府网·最新政策', category: '政策法规', addedAt: Date.now(), refreshInterval: 60 },
+  { id: 'cctv-law', url: 'legal://cctv-law', title: '央视网·法治频道', category: '法治资讯', addedAt: Date.now(), refreshInterval: 60 },
+]
+
+const DEFAULT_COLLECTORS: CollectorSource[] = [
+  { id: 'gzlawyer', url: 'https://www.gzlawyer.org/notices', title: '广州律协', category: '律师协会', addedAt: Date.now(), refreshInterval: 120, selectors: { item: 'a[href*="info"]', title: '', link: '', content: '', summary: '', author: '', date: '.date, .time, time' }, description: '广州律师协会通知公告' },
+  { id: 'chinacourt-qa', url: 'https://www.chinacourt.cn/article/index/id/MzAwNDAwNTBIApMEAAA.shtml', title: '中国法院网·法律问答', category: '司法案例', addedAt: Date.now(), refreshInterval: 120, selectors: { item: 'a[href*="/article/"]', title: '', link: '', content: '', summary: '', author: '', date: '.right, .date, time' }, description: '中国法院网法律问答' },
+  { id: 'chinacourt-case', url: 'https://www.chinacourt.cn/article/index/id/MzAwNDAwNTAwNyACAAA.shtml', title: '中国法院网·案例点评', category: '司法案例', addedAt: Date.now(), refreshInterval: 120, selectors: { item: 'a[href*="/article/"]', title: '', link: '', content: '', summary: '', author: '', date: '.right, .date, time' }, description: '中国法院网案例点评' },
+  { id: 'court-judicial', url: 'https://www.court.gov.cn/fabu/gengduo/17.html', title: '最高法·司法文件', category: '司法文件', addedAt: Date.now(), refreshInterval: 120, selectors: { item: 'a[href*="court.gov.cn"]', title: '', link: '', content: '', summary: '', author: '', date: 'span, .date, time' }, description: '最高人民法院司法文件' },
+  { id: 'court-interpretation', url: 'https://www.court.gov.cn/fabu/gengduo/16.html', title: '最高法·司法解释', category: '司法文件', addedAt: Date.now(), refreshInterval: 120, selectors: { item: 'a[href*="court.gov.cn"]', title: '', link: '', content: '', summary: '', author: '', date: 'span, .date, time' }, description: '最高人民法院司法解释' },
+  { id: 'moj-law', url: 'http://www.moj.gov.cn/pub/sfbgw/flfggz/flfg/', title: '司法部·最新发布', category: '政策法规', addedAt: Date.now(), refreshInterval: 120, selectors: { item: 'a[href*="moj.gov.cn"]', title: '', link: '', content: '', summary: '', author: '', date: 'span, .date, time' }, description: '司法部法律法规' },
+  { id: 'samr-law', url: 'https://www.samr.gov.cn/flfg/', title: '市监局·法规', category: '政策法规', addedAt: Date.now(), refreshInterval: 120, selectors: { item: 'a[href*="samr.gov.cn"]', title: '', link: '', content: '', summary: '', author: '', date: 'span, .date, time' }, description: '市场监管总局法规' },
+  { id: 'ai-hot', url: 'https://aihot.virxact.com/', title: 'AI热点资讯', category: '科技资讯', addedAt: Date.now(), refreshInterval: 60, selectors: { item: 'a[href]', title: '', link: '', content: '', summary: '', author: '', date: 'span, .date, time' }, description: 'AI 热点新闻聚合' },
 ]
 
 export const useReadingStore = defineStore('reading', () => {
@@ -173,7 +187,7 @@ export const useReadingStore = defineStore('reading', () => {
   const lastFetchMap = ref<Record<string, number>>({})
 
   // ── 采集器数据 ───────────────────────────────────────
-  const collectors = ref<CollectorSource[]>(loadFromStorage<CollectorSource[]>(STORAGE_COLLECTORS, []))
+  const collectors = ref<CollectorSource[]>(loadFromStorage<CollectorSource[]>(STORAGE_COLLECTORS, DEFAULT_COLLECTORS))
   const collectorLoading = ref(false)
   const collectorError = ref('')
 
